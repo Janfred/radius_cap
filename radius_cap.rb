@@ -13,7 +13,7 @@ iface = PacketFu::Utils.default_int
 # Syntax:
 # {
 #   last_updated: Timestamp, // when last seen (for timing out states)
-#   proxystate: [],          // current proxystate (set on outgoing communication)
+#   state: [],               // current state (set on outgoing communication)
 #   udp_data: {              // current udp data (set on incoming communication)
 #     ip: IPAddr,            //   source ip addr
 #     port: Port,            //   source udp port
@@ -27,11 +27,11 @@ iface = PacketFu::Utils.default_int
 def insert_in_packetflow(pkt)
   if(pkt.udp[:dst][:port] == 1812)
     # This is an incoming packet
-    if pkt.proxystate.nil?
+    if pkt.state.nil?
       # Probably a completely new request
       state = {
         last_updated: Time.now,
-        proxystate: nil,
+        state: nil,
         udp_data: {
           ip: pkt.udp[:src][:ip],
           port: pkt.udp[:src][:port],
@@ -44,14 +44,14 @@ def insert_in_packetflow(pkt)
       @packetflow << state
     else
       # Proxystate exists, so this is ongoing communication
-      p = @packetflow.select{ |x| x[:proxystate] == pkt.proxystate }
+      p = @packetflow.select{ |x| x[:state] == pkt.state }
       if p.empty?
-        $stderr.puts "Could not find EAP state 0x#{pkt.proxystate.pack('C*').unpack('H*').first}"
+        $stderr.puts "Could not find EAP state 0x#{pkt.state.pack('C*').unpack('H*').first}"
         return
       end
       if p.length > 1
         puts p.inspect
-        $stderr.puts "Found multiple EAP States for 0x#{pkt.proxystate.pack('C*').unpack('H*').first}"
+        $stderr.puts "Found multiple EAP States for 0x#{pkt.state.pack('C*').unpack('H*').first}"
         return
       end
       flow = p.first
@@ -83,7 +83,7 @@ def insert_in_packetflow(pkt)
     flow = p.first
 
     # Now we check what we were sending
-    if pkt.packettype == RadiusPacket::Type::ACCEPT || RadiusPacket::Type::REJECT
+    if pkt.packettype == RadiusPacket::Type::ACCEPT || pkt.packettype == RadiusPacket::Type::REJECT
       # This is the final answer.
 
       flow[:pkt] << pkt
@@ -95,12 +95,12 @@ def insert_in_packetflow(pkt)
       parse_eap(flow)
     else
       # This is ongoing communication
-      if pkt.proxystate.nil? then
-        $stderr.puts "Ongoing communication without proxy state set."
+      if pkt.state.nil? then
+        $stderr.puts "Outgoing communication without state set."
         return
       end
       flow[:last_updated] = Time.now
-      flow[:proxystate] = pkt.proxystate
+      flow[:state] = pkt.state
       flow[:pkt] << pkt
     end
   end
@@ -109,14 +109,15 @@ def insert_in_packetflow(pkt)
   t = Time.now
   old = @packetflow.select { |x| (t-x[:last_updated]) > 30}
   old.each do |o|
-    puts "Timing out 0x#{o[:proxystate].pack('C*').unpack('H*').first}" if o[:proxystate]
-    puts "Timing out state without proxystate" unless o[:proxystate]
+    puts "Timing out 0x#{o[:state].pack('C*').unpack('H*').first}" if o[:state]
+    puts "Timing out state without state variable" unless o[:state]
     @packetflow.delete o
   end
 end
 
 def parse_eap(data)
-  puts "Parsing data:"
+  puts "------------------"
+  puts "EAP: Parsing data:"
   puts data.inspect
 end
 

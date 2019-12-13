@@ -1,5 +1,7 @@
 class PacketLengthNotValidError < StandardError
 end
+class PacketMultipleState < StandardError
+end
 
 class RadiusPacket
   module Type
@@ -69,7 +71,7 @@ class RadiusPacket
   attr_reader :attributes
   attr_reader :eap
   attr_reader :udp
-  attr_reader :proxystate
+  attr_reader :state
 
   def initialize(pkt)
     if pkt.udp_len < 20 then
@@ -94,7 +96,7 @@ class RadiusPacket
     @authenticator = @raw_data[4..19]
 
     @attributes = []
-    @proxystate = nil
+    @state = nil
 
     cur_ptr = 20
     while cur_ptr < @length do
@@ -104,10 +106,10 @@ class RadiusPacket
       attribute[:data] = @raw_data[cur_ptr+2..cur_ptr+attribute[:length]-1]
       attributes << attribute
       cur_ptr += attribute[:length]
-      if attribute[:type] == RadiusPacket::Attribute::PROXYSTATE then
-        # There should be only one proxy state
-        raise PacketMultipleProxyState, 'multiple proxy state attributes present' unless @proxystate.nil?
-        @proxystate = attribute[:data]
+      if attribute[:type] == RadiusPacket::Attribute::STATE then
+        # There should be only one state
+        raise PacketMultipleState, 'multiple state attributes present' unless @state.nil?
+        @state = attribute[:data]
       end
     end
 
@@ -155,6 +157,7 @@ class RadiusPacket
         when RadiusPacket::Attribute::REPLYMESSAGE
         when RadiusPacket::Attribute::REMOTEACCESSSERVICE
         when RadiusPacket::Attribute::STATE
+          str += " State: 0x#{a[:data].pack('C*').unpack('H*').first}"
         when RadiusPacket::Attribute::VENDORSPECIFIC
         when RadiusPacket::Attribute::SESSIONTIMEOUT
         when RadiusPacket::Attribute::CALLEDSTATIONID
@@ -162,6 +165,7 @@ class RadiusPacket
           str += " Calling-Station-Id: #{a[:data].pack('C*')}"
         when RadiusPacket::Attribute::NASIDENTIFIER
         when RadiusPacket::Attribute::PROXYSTATE
+          str += " Proxy-State: 0x#{a[:data].pack('C*').unpack('H*').first}"
         when RadiusPacket::Attribute::ACCTSESSIONID
         when RadiusPacket::Attribute::ACCTMULTISESSIONID
         when RadiusPacket::Attribute::EVENTTIMESTAMP
