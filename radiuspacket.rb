@@ -1,3 +1,5 @@
+class PacketLengthNotValidError < StandardError
+end
 
 class RadiusPacket
   module Type
@@ -61,20 +63,39 @@ class RadiusPacket
 
   attr_reader :raw_data
   attr_reader :packettype
+  attr_reader :identifier
   attr_reader :length
   attr_reader :authenticator
   attr_reader :attributes
+  attr_reader :eap
+  attr_reader :udp
+  attr_reader :proxystate
 
   def initialize(pkt)
     if pkt.udp_len < 20 then
       raise 'Length of packet violates RFC2865'
     end
+
+    # Save UDP Header information (needed for matching packets
+    @udp = {src: {ip: pkt.ip_saddr, port: pkt.udp_sport}, dst: {ip: pkt.ip_daddr, port: pkt.udp_dport}}
+
     @raw_data = pkt.payload.unpack('C*')
+
+    # Parse Radius Headers
     @packettype = @raw_data[0]
     @identifier = @raw_data[1]
-    @length = @raw_data[2]*256 + @rawdata[3]
+    @length = @raw_data[2]*256 + @raw_data[3]
+
+    # This case should actually not happen, but it happened. (I hate IP fragmentation)
+    if @length != @raw_data.length then
+      raise PacketLengthNotValidError, "Raw data length #{@raw_data.length} does not match identified length #{@length}"
+    end
+
     @authenticator = @raw_data[4..19]
+
     @attributes = []
+    @proxystate = nil
+
     cur_ptr = 20
     while cur_ptr < @length do
       attribute = {}
@@ -83,7 +104,97 @@ class RadiusPacket
       attribute[:data] = @raw_data[cur_ptr+2..cur_ptr+attribute[:length]-1]
       attributes << attribute
       cur_ptr += attribute[:length]
+      if attribute[:type] == RadiusPacket::Attribute::PROXYSTATE then
+        # There should be only one proxy state
+        raise PacketMultipleProxyState, 'multiple proxy state attributes present' unless @proxystate.nil?
+        @proxystate = attribute[:data]
+      end
     end
 
+    parse_eap
+  end
+
+  def parse_eap
+    @attributes.each do |a|
+      next unless a[:type] == RadiusPacket::Attribute::EAPMESSAGE
+      @eap ||= []
+      @eap += a[:data]
+    end
+  end
+
+  def inspect
+    str  = "#<#{self.class.name}: "
+    str += case @packettype
+      when RadiusPacket::Type::REQUEST
+        "Request"
+      when RadiusPacket::Type::ACCEPT
+        "Accept"
+      when RadiusPacket::Type::REJECT
+        "Reject"
+      when RadiusPacket::Type::CHALLENGE
+        "Challenge"
+      else
+        "UNKNOWN!"
+    end
+    str += ' id:0x%02X' % @identifier
+    @attributes.each do |a|
+      case a[:type]
+        when RadiusPacket::Attribute::USERNAME
+          str += " Username: #{a[:data].pack('C*')}"
+        when RadiusPacket::Attribute::USERPASSWORD
+        when RadiusPacket::Attribute::NASIPADDRESS
+        when RadiusPacket::Attribute::NASPORT
+        when RadiusPacket::Attribute::SERVICETYPE
+        when RadiusPacket::Attribute::FRAMEDPROTOCOL
+        when RadiusPacket::Attribute::FRAMEDIPADDRESS
+        when RadiusPacket::Attribute::FRAMEDIPNETMASK
+        when RadiusPacket::Attribute::FRAMEDROUTING
+        when RadiusPacket::Attribute::FRAMEDMTU
+        when RadiusPacket::Attribute::FRAMEDCOMPRESSION
+        when RadiusPacket::Attribute::LOGINIPHOST
+        when RadiusPacket::Attribute::REPLYMESSAGE
+        when RadiusPacket::Attribute::REMOTEACCESSSERVICE
+        when RadiusPacket::Attribute::STATE
+        when RadiusPacket::Attribute::VENDORSPECIFIC
+        when RadiusPacket::Attribute::SESSIONTIMEOUT
+        when RadiusPacket::Attribute::CALLEDSTATIONID
+        when RadiusPacket::Attribute::CALLINGSTATIONID
+          str += " Calling-Station-Id: #{a[:data].pack('C*')}"
+        when RadiusPacket::Attribute::NASIDENTIFIER
+        when RadiusPacket::Attribute::PROXYSTATE
+        when RadiusPacket::Attribute::ACCTSESSIONID
+        when RadiusPacket::Attribute::ACCTMULTISESSIONID
+        when RadiusPacket::Attribute::EVENTTIMESTAMP
+        when RadiusPacket::Attribute::NASPORTTYPE
+        when RadiusPacket::Attribute::TUNNELTYPE
+        when RadiusPacket::Attribute::TUNNELMEDIUMTYPE
+        when RadiusPacket::Attribute::TUNNELCLIENTENDPOINT
+        when RadiusPacket::Attribute::CONNECTINFO
+        when RadiusPacket::Attribute::CONFIGURATIONTOKEN
+        when RadiusPacket::Attribute::EAPMESSAGE
+        when RadiusPacket::Attribute::MESSAGEAUTHENTICATOR
+        when RadiusPacket::Attribute::TUNNELPRIVATEGROUPID
+        when RadiusPacket::Attribute::NASPORTID
+        when RadiusPacket::Attribute::CUI
+        when RadiusPacket::Attribute::NASIPV6ADDRESS
+        when RadiusPacket::Attribute::FRAMEDINTERFACEID
+        when RadiusPacket::Attribute::FRAMEDIPV6PREFIX
+        when RadiusPacket::Attribute::EAPKEYNAME
+        when RadiusPacket::Attribute::OPERATORNAME
+        when RadiusPacket::Attribute::LOCATIONINFORMATION
+        when RadiusPacket::Attribute::LOCATIONDATA
+        when RadiusPacket::Attribute::LOCATIONCAPABLE
+        when RadiusPacket::Attribute::MOBILITYDOMAINID
+        when RadiusPacket::Attribute::WLANPAIRWISECIPHER
+        when RadiusPacket::Attribute::WLANGROUPCIPHER
+        when RadiusPacket::Attribute::WLANAKMSUITE
+        when RadiusPacket::Attribute::WLANGROUPMGMTCIPHER
+        when RadiusPacket::Attribute::WLANRFBAND
+        else
+          str += " Unknown Type #{a[:type]}"
+      end
+    end
+    str += ">"
+    return str
   end
 end
