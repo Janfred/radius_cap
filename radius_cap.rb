@@ -74,13 +74,9 @@ def insert_in_packetflow(pkt)
       return
     end
     if p.length > 1
-      puts "\n\n\n"
       $stderr.puts "Found multiple requests from #{pkt.udp[:dst][:ip]}:#{pkt.udp[:dst][:port]} and ID #{pkt.identifier}"
-      puts p.inspect
-      puts "\n\n\n"
-      return
     end
-    flow = p.first
+    flow = p.last
 
     # Now we check what we were sending
     if pkt.packettype == RadiusPacket::Type::ACCEPT || pkt.packettype == RadiusPacket::Type::REJECT
@@ -107,7 +103,7 @@ def insert_in_packetflow(pkt)
 
   # Now do housekeeping
   t = Time.now
-  old = @packetflow.select { |x| (t-x[:last_updated]) > 30}
+  old = @packetflow.select { |x| (t-x[:last_updated]) > 10}
   old.each do |o|
     puts "Timing out 0x#{o[:state].pack('C*').unpack('H*').first}" if o[:state]
     puts "Timing out state without state variable" unless o[:state]
