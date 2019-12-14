@@ -5,6 +5,8 @@ require 'irb'
 require './radiuspacket.rb'
 require './eappacket.rb'
 
+class EAPFraParseError < StandardError
+end
 
 include PacketFu
 
@@ -123,34 +125,104 @@ def parse_eap(data)
   end
 
   # Initial EAP communication
-  if eap.first.code != EAPPacket::Code::RESPONSE || eap.first.type EAPPacket::Type::IDENTITY then
+  if (eap.first.code != EAPPacket::Code::RESPONSE || eap.first.type != EAPPacket::Type::IDENTITY) then
     $stderr.puts "First code was no EAP Response or Identity"
     return
   end
   identity = eap.first.type_data.unpack('C*')
-  eap.shift
 
-  # TLS Client Hello
-  eap_start = eap.shift
-  case eap_start.type 
-    when EAPPacket::Type::TTLS,
-         EAPPacket::Type::PEAP:
-      # Check if start flag is set
-      if eap_start.length != 6 then
-        $stderr.puts "Invalid length for EAP-TLS Start"
+  supported_eap_method = false
+
+  eap_reply = nil
+  while eap_reply.nil? || eap_reply.type != EAPPacket::Type::NAK do
+    eap.shift
+    if eap.length < 2 then
+      $stderr.puts "Length to short for EAP Method agreement"
+      return
+    end
+    # Initial eap handshake.
+    # The Server offers a specific method (e.g. TTLS)
+    # The Client can deny this (NAK) and send its own desired authentication mechanism
+    eap_start = eap.shift
+    case eap_start.type
+      when EAPPacket::Type::TTLS,
+           EAPPacket::Type::PEAP
+        # Check if start flag is set
+        if eap_start.length != 6 then
+          $stderr.puts "Invalid length for EAP-TLS Start"
+          return
+        end
+        if eap_start.type_data[0] != EAPPacket::TLSFlags::START
+        end
+        supported_eap_method = true
+      when EAPPacket::Type::EAPPWD,
+           EAPPacket::Type::MD5CHALLENGE
+        # These methods are not implemented.
+        # The Client could still reply with a NAK, in this case we can
+        # continue to parse.
+        supported_eap_method = false
+      else
+        $stderr.puts "Unknown EAP Type #{eap_start.type}"
         return
-      end
-      
-    when EAPPacket::Type::EAPPWD,
-         EAPPacket::Type::MD5CHALLENGE:
-      # EAPPWD
-      return
-    else:
-      $stderr.puts "Unknown EAP Type #{eap_start.type}"
-      return
+    end
+    eap_reply = eap.first
+  end
+
+  # If the client didn't NAK the unsupported method, we cant continue parsing
+  return unless supported_eap_method
+
+  cur = :tls_clienthello
+
+  eap_tls_frag = nil
+  begin
+    eap_tls_frag = read_eaptls_fragment(eap, eap_reply.type)
+  rescue EAPFragParseError => e
+    return
   end
 
   binding.irb
+end
+
+def read_eaptls_fragment(eap, eap_type)
+  more_fragments = false
+  length = nil
+  data = []
+  begin
+    more_fragments = false
+    frag = eap.shift
+    if frag.type != eap_type then
+      $stderr.puts 'Found fragment without matching eap type'
+      raise EAPFragParseError
+    end
+    flags = frag.type_data[0]
+    cur_ptr = 1
+    if flags & EAPPacket::TLSFlags::LENGTHINCLUDED then
+      ind_length = frag.type_data[1]*256*256*256 + frag.type_data[2]*256*256 + frag.type_data[3]*256+frag_data[4]
+      length ||= ind_length
+      # If a length is included, it should be the same among all eap packets
+      if length != ind_length
+        $stderr.puts 'Found fragment with bogous length'
+        raise EAPFragParseError
+      end
+      cur_ptr += 4
+    end
+    if flags & EAPPacket::TLSFlags::MOREFRAGMENTS then
+      more_fragments = true
+    end
+    data += frag.type_data[cur_ptr..-1]
+    if more_fragments then
+      reply = eap.shift
+      if reply.type != eap_type then
+        $stderr.puts 'Reply packet had different type'
+        raise EAPFragParseError
+      end
+      unless reply.type_data[0] & ( EAPPacket::TLSFlags::LENGTHINCLUDED | EAPPacket::TLSFlags::MOREFRAGMENTS | EAPPacket::TLSFlags::START ) || reply.length != 6 then
+        $stderr.puts 'EAP-TLS fragment with MoreFragments set was not acked.'
+        return
+      end
+    end
+  end while more_fragments
+  data
 end
 
 cap = Capture.new(:iface => iface, :start => true)
