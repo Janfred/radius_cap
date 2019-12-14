@@ -17,15 +17,16 @@ class EAPPacket
   end
 
   module TLSFlags
-    LENGTHINCLUDED = 0x8000
-    MOREFRAGMENTS  = 0x4000
-    START          = 0x2000
+    LENGTHINCLUDED = 0x80
+    MOREFRAGMENTS  = 0x40
+    START          = 0x20
   end
 
   attr_accessor :code
   attr_accessor :identifier
   attr_accessor :length
   attr_accessor :type
+  attr_accessor :type_data
 
   def initialize(data)
     @code = data[0]

@@ -3,6 +3,7 @@
 require 'packetfu'
 require 'irb'
 require './radiuspacket.rb'
+require './eappacket.rb'
 
 
 include PacketFu
@@ -115,6 +116,41 @@ def parse_eap(data)
   puts "------------------"
   puts "EAP: Parsing data:"
   puts data.inspect
+
+  eap = []
+  data[:pkt].each do |p|
+    eap << EAPPacket.new(p.eap)
+  end
+
+  # Initial EAP communication
+  if eap.first.code != EAPPacket::Code::RESPONSE || eap.first.type EAPPacket::Type::IDENTITY then
+    $stderr.puts "First code was no EAP Response or Identity"
+    return
+  end
+  identity = eap.first.type_data.unpack('C*')
+  eap.shift
+
+  # TLS Client Hello
+  eap_start = eap.shift
+  case eap_start.type 
+    when EAPPacket::Type::TTLS,
+         EAPPacket::Type::PEAP:
+      # Check if start flag is set
+      if eap_start.length != 6 then
+        $stderr.puts "Invalid length for EAP-TLS Start"
+        return
+      end
+      
+    when EAPPacket::Type::EAPPWD,
+         EAPPacket::Type::MD5CHALLENGE:
+      # EAPPWD
+      return
+    else:
+      $stderr.puts "Unknown EAP Type #{eap_start.type}"
+      return
+  end
+
+  binding.irb
 end
 
 cap = Capture.new(:iface => iface, :start => true)
