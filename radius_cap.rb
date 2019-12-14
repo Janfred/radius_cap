@@ -6,7 +6,7 @@ require './radiuspacket.rb'
 require './eappacket.rb'
 require './localconfig.rb'
 
-class EAPFraParseError < StandardError
+class EAPFragParseError < StandardError
 end
 
 include PacketFu
@@ -135,7 +135,7 @@ def parse_eap(data)
   supported_eap_method = false
 
   eap_reply = nil
-  while eap_reply.nil? || eap_reply.type != EAPPacket::Type::NAK do
+  while eap_reply.nil? || eap_reply.type == EAPPacket::Type::NAK do
     eap.shift
     if eap.length < 2 then
       $stderr.puts "Length to short for EAP Method agreement"
@@ -198,7 +198,7 @@ def read_eaptls_fragment(eap, eap_type)
     flags = frag.type_data[0]
     cur_ptr = 1
     if flags & EAPPacket::TLSFlags::LENGTHINCLUDED then
-      ind_length = frag.type_data[1]*256*256*256 + frag.type_data[2]*256*256 + frag.type_data[3]*256+frag_data[4]
+      ind_length = frag.type_data[1]*256*256*256 + frag.type_data[2]*256*256 + frag.type_data[3]*256+frag.type_data[4]
       length ||= ind_length
       # If a length is included, it should be the same among all eap packets
       if length != ind_length
