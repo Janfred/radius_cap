@@ -197,8 +197,8 @@ def read_eaptls_fragment(eap, eap_type)
     end
     flags = frag.type_data[0]
     cur_ptr = 1
-    if flags & EAPPacket::TLSFlags::LENGTHINCLUDED then
-      ind_length = frag.type_data[1]*256*256*256 + frag.type_data[2]*256*256 + frag.type_data[3]*256+frag.type_data[4]
+    if (flags & EAPPacket::TLSFlags::LENGTHINCLUDED) != 0 then
+      ind_length = frag.type_data[1]*256*256*256 + frag.type_data[2]*256*256 + frag.type_data[3]*256 + frag.type_data[4]
       length ||= ind_length
       # If a length is included, it should be the same among all eap packets
       if length != ind_length
@@ -207,7 +207,7 @@ def read_eaptls_fragment(eap, eap_type)
       end
       cur_ptr += 4
     end
-    if flags & EAPPacket::TLSFlags::MOREFRAGMENTS then
+    if (flags & EAPPacket::TLSFlags::MOREFRAGMENTS) != 0 then
       more_fragments = true
     end
     data += frag.type_data[cur_ptr..-1]
@@ -217,7 +217,7 @@ def read_eaptls_fragment(eap, eap_type)
         $stderr.puts 'Reply packet had different type'
         raise EAPFragParseError
       end
-      unless reply.type_data[0] & ( EAPPacket::TLSFlags::LENGTHINCLUDED | EAPPacket::TLSFlags::MOREFRAGMENTS | EAPPacket::TLSFlags::START ) || reply.length != 6 then
+      unless (reply.type_data[0] & ( EAPPacket::TLSFlags::LENGTHINCLUDED | EAPPacket::TLSFlags::MOREFRAGMENTS | EAPPacket::TLSFlags::START )) != 0 || reply.length != 6 then
         $stderr.puts 'EAP-TLS fragment with MoreFragments set was not acked.'
         return
       end
