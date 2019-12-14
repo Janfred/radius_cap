@@ -4,6 +4,7 @@ require 'packetfu'
 require 'irb'
 require './radiuspacket.rb'
 require './eappacket.rb'
+require './localconfig.rb'
 
 class EAPFraParseError < StandardError
 end
@@ -129,7 +130,7 @@ def parse_eap(data)
     $stderr.puts "First code was no EAP Response or Identity"
     return
   end
-  identity = eap.first.type_data.unpack('C*')
+  identity = eap.first.type_data.pack('C*')
 
   supported_eap_method = false
 
@@ -233,7 +234,7 @@ cap.stream.each do |p|
   # Skip all fragmented ip addresses
   next if pkt.ip_frag & 0x2000 != 0
   # only look on copied packets
-  next if ([pkt.ip_daddr, pkt.ip_saddr] & ['10.11.0.216', '10.11.0.217']).empty?
+  next if ([pkt.ip_daddr, pkt.ip_saddr] & @config[:ipaddrs]).empty?
   # Skip non-udp packets
   next unless pkt.is_udp?
   # Skip packets for other port then radius
