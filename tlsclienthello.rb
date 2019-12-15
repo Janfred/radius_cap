@@ -89,7 +89,7 @@ class TLSClientHello
     @extensions = []
     exten_len = 0
 
-    if data.len < cur_ptr then
+    if data.length < cur_ptr then
       # No extensions present
       return
     end
