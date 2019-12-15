@@ -9,13 +9,16 @@ module TLSTypes
     CLIENTHELLO = 0x01
   end
   module Extensions
+    ServerName           =     0
     StatusRequest        =     5
     SupportedGroups      =    10
     ECPointFormats       =    11
     SignatureAlgorithms  =    13
+    Heartbeat            =    15
     SignedCertTimestamp  =    18
     EncryptThenHMAC      =    22
     ExtendedMasterSecret =    23
+    SessionTicket        =    35
     RenegotiationInfo    = 65281
   end
 end
@@ -41,6 +44,8 @@ class TLSClientHello
     end
     @extensions.each do |e|
       case e[:type]
+        when TLSTypes::Extensions::ServerName
+          str += " ServerName"
         when TLSTypes::Extensions::StatusRequest
           str += " StatusRequest"
         when TLSTypes::Extensions::SupportedGroups
@@ -49,12 +54,16 @@ class TLSClientHello
           str += " ECPointFormats"
         when TLSTypes::Extensions::SignatureAlgorithms
           str += " SignatureAlgorithms"
+        when TLSTypes::Extensions::Heartbeat
+          str += " Heartbeat"
         when TLSTypes::Extensions::SignedCertTimestamp
           str += " SignedCertTimestamp"
         when TLSTypes::Extensions::EncryptThenHMAC
           str += " EncryptThenHMAC"
         when TLSTypes::Extensions::ExtendedMasterSecret
           str += " ExtendedMasterSecret"
+        when TLSTypes::Extensions::SessionTicket
+          str += " SessionTicket"
         when TLSTypes::Extensions::RenegotiationInfo
           str += " RenegotiationInfo"
         else
