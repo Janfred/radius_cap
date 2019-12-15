@@ -174,9 +174,16 @@ def parse_eap(data)
 
   cur = :tls_clienthello
 
-  eap_tls_frag = nil
+  eap_tls_clienthello = nil
   begin
-    eap_tls_frag = read_eaptls_fragment(eap, eap_reply.type)
+    eap_tls_clienthello = read_eaptls_fragment(eap, eap_reply.type)
+  rescue EAPFragParseError => e
+    return
+  end
+
+  eap_tls_serverhello = nil
+  begin
+    eap_tls_serverhello = read_eaptls_fragment(eap, eap_reply.type)
   rescue EAPFragParseError => e
     return
   end
@@ -217,7 +224,7 @@ def read_eaptls_fragment(eap, eap_type)
         $stderr.puts 'Reply packet had different type'
         raise EAPFragParseError
       end
-      unless (reply.type_data[0] & ( EAPPacket::TLSFlags::LENGTHINCLUDED | EAPPacket::TLSFlags::MOREFRAGMENTS | EAPPacket::TLSFlags::START )) != 0 || reply.length != 6 then
+      if (reply.type_data[0] & ( EAPPacket::TLSFlags::LENGTHINCLUDED | EAPPacket::TLSFlags::MOREFRAGMENTS | EAPPacket::TLSFlags::START )) != 0 || reply.length != 6 then
         $stderr.puts 'EAP-TLS fragment with MoreFragments set was not acked.'
         return
       end
