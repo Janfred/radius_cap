@@ -181,6 +181,7 @@ def parse_eap(data)
   end
 
   clienthello = TLSClientHello.new(eap_tls_clienthello)
+  puts clienthello.inspect
 
   eap_tls_serverhello = nil
   begin

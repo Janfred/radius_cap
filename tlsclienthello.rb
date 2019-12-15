@@ -8,6 +8,13 @@ module TLSTypes
   module HandshakeType
     CLIENTHELLO = 0x01
   end
+  module Extensions
+    SupportedGroups      = 10
+    ECPointFormats       = 11
+    SignatureAlgorithms  = 13
+    EncryptThenHMAC      = 22
+    ExtendedMasterSecret = 23
+  end
 end
 
 class TLSClientHello
@@ -21,6 +28,33 @@ class TLSClientHello
   attr_reader :ciphersuites
   attr_reader :compression
   attr_reader :extensions
+
+  def inspect
+    str  = "#<#{self.class.name}:"
+    str += " v1.2" if @innververs == 0x0303
+    str += " Cipher:"
+    @ciphersuites.each do |c|
+      str += " 0x%02X%02X" % c
+    end
+    @extensions.each do |e|
+      case e[:type]
+        when SupportedGroups
+          str += " SupportedGroups"
+        when ECPointFormats
+          str += " ECPointFormats"
+        when SignatureAlgorithms
+          str += " SignatureAlgorithms"
+        when EncryptThenHMAC
+          str += " EncryptThenHMAC"
+        when ExtendedMasterSecret
+          str += " ExtendedMasterSecret"
+        else
+          $stderr.puts "Unsupported TLS Extension #{e[:type]}"
+      end
+    end
+    str += ">"
+    return str
+  end
 
   def initialize(data)
     raise TLSClientHelloError unless data[0] == TLSTypes::RecordType::HANDSHAKE
