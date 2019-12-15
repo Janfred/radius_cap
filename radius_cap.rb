@@ -5,6 +5,7 @@ require 'irb'
 require './radiuspacket.rb'
 require './eappacket.rb'
 require './tlsclienthello.rb'
+require './tlsserverhello.rb'
 require './localconfig.rb'
 
 class EAPFragParseError < StandardError
@@ -55,7 +56,6 @@ def insert_in_packetflow(pkt)
         return
       end
       if p.length > 1
-        #puts p.inspect
         $stderr.puts "Found multiple EAP States for 0x#{pkt.state.pack('C*').unpack('H*').first}"
         return
       end
@@ -73,7 +73,7 @@ def insert_in_packetflow(pkt)
     # But we are terminating the communication with Accept/Reject Packets.
 
     # First find matching state
-    p = @packetflow.select { |x| x[:udp_data] = {ip: pkt.udp[:dst][:ip], port: pkt.udp[:dst][:port], id: pkt.identifier} }
+    p = @packetflow.select { |x| x[:udp_data] == {ip: pkt.udp[:dst][:ip], port: pkt.udp[:dst][:port], id: pkt.identifier} }
     if p.empty?
       $stderr.puts "Could not find a matching request from #{pkt.udp[:dst][:ip]}:#{pkt.udp[:dst][:port]} and ID #{pkt.identifier}"
       return
@@ -110,8 +110,8 @@ def insert_in_packetflow(pkt)
   t = Time.now
   old = @packetflow.select { |x| (t-x[:last_updated]) > 10}
   old.each do |o|
-    puts "Timing out 0x#{o[:state].pack('C*').unpack('H*').first}" if o[:state]
-    puts "Timing out state without state variable" unless o[:state]
+    $stderr.puts "Timing out 0x#{o[:state].pack('C*').unpack('H*').first}" if o[:state]
+    $stderr.puts "Timing out state without state variable" unless o[:state]
     @packetflow.delete o
   end
 end
@@ -123,6 +123,7 @@ def parse_eap(data)
 
   eap = []
   data[:pkt].each do |p|
+    next if p.eap.nil?
     eap << EAPPacket.new(p.eap)
   end
 
@@ -139,7 +140,7 @@ def parse_eap(data)
   while eap_reply.nil? || eap_reply.type == EAPPacket::Type::NAK do
     eap.shift
     if eap.length < 2 then
-      $stderr.puts "Length to short for EAP Method agreement"
+      # Length to short for EAP Method agreement, probably because of immediate reject
       return
     end
     # Initial eap handshake.
@@ -193,6 +194,13 @@ def parse_eap(data)
   rescue EAPFragParseError => e
     return
   end
+
+  begin
+    serverhello = TLSServerHello.new(eap_tls_serverhello)
+  rescue TLSServerHelloError => e
+    return
+  end
+  puts serverhello.inspect
 
   #binding.irb
 end
@@ -273,7 +281,7 @@ cap.stream.each do |p|
     # IT SHOULD BE CATCHED BY THE FRAGMENT STATEMENT #
     ##################################################
     # TODO: Remove irb binding
-    puts e.message
+    $stderr.puts e.message
     binding.irb
   rescue => e
     # This is here for debugging.

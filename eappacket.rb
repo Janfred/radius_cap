@@ -8,7 +8,7 @@ class EAPPacket
   module Type
     IDENTITY     =  1
     NAK          =  3
-    MD5CHALLENGE =  5
+    MD5CHALLENGE =  4
     TLS          = 13
     TTLS         = 21
     PEAP         = 25
@@ -39,7 +39,7 @@ class EAPPacket
 
     return if @code == EAPPacket::Code::SUCCESS || @code == EAPPacket::Code::FAILURE
 
-    raise PacketLengthNotValidError, 'Packet to short' if @length < 5
+    raise PacketLengthNotValidError, 'Packet too short' if @length < 5
 
     @type = data[4]
     @type_data = data[5..-1]
