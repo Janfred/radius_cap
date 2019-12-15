@@ -55,7 +55,7 @@ def insert_in_packetflow(pkt)
         return
       end
       if p.length > 1
-        puts p.inspect
+        #puts p.inspect
         $stderr.puts "Found multiple EAP States for 0x#{pkt.state.pack('C*').unpack('H*').first}"
         return
       end
@@ -117,9 +117,9 @@ def insert_in_packetflow(pkt)
 end
 
 def parse_eap(data)
-  puts "------------------"
-  puts "EAP: Parsing data:"
-  puts data.inspect
+  #puts "------------------"
+  #puts "EAP: Parsing data:"
+  #puts data.inspect
 
   eap = []
   data[:pkt].each do |p|
@@ -194,7 +194,7 @@ def parse_eap(data)
     return
   end
 
-  binding.irb
+  #binding.irb
 end
 
 def read_eaptls_fragment(eap, eap_type)
@@ -206,6 +206,10 @@ def read_eaptls_fragment(eap, eap_type)
     frag = eap.shift
     if frag.type != eap_type then
       $stderr.puts 'Found fragment without matching eap type'
+      raise EAPFragParseError
+    end
+    unless frag.type_data.length > 0 then
+      $stderr.puts 'Empty fragment. Interesting.'
       raise EAPFragParseError
     end
     flags = frag.type_data[0]
@@ -255,12 +259,12 @@ cap.stream.each do |p|
 
   # Print out debug info, just for now to monitor progress
   packet_info = [pkt.ip_saddr, pkt.ip_daddr, pkt.size, pkt.proto.last]
-  puts "%-15s -> %-15s %-4d %s" % packet_info
+  #puts "%-15s -> %-15s %-4d %s" % packet_info
 
   begin
     # Parse Radius packets
     rp = RadiusPacket.new(pkt)
-    puts rp.inspect
+    #puts rp.inspect
     #binding.irb
     insert_in_packetflow(rp)
   rescue PacketLengthNotValidError => e
