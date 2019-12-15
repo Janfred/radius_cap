@@ -9,11 +9,14 @@ module TLSTypes
     CLIENTHELLO = 0x01
   end
   module Extensions
-    SupportedGroups      = 10
-    ECPointFormats       = 11
-    SignatureAlgorithms  = 13
-    EncryptThenHMAC      = 22
-    ExtendedMasterSecret = 23
+    StatusRequest        =     5
+    SupportedGroups      =    10
+    ECPointFormats       =    11
+    SignatureAlgorithms  =    13
+    SignedCertTimestamp  =    18
+    EncryptThenHMAC      =    22
+    ExtendedMasterSecret =    23
+    RenegotiationInfo    = 65281
   end
 end
 
@@ -38,16 +41,22 @@ class TLSClientHello
     end
     @extensions.each do |e|
       case e[:type]
+        when TLSTypes::Extensions::StatusRequest
+          str += " StatusRequest"
         when TLSTypes::Extensions::SupportedGroups
           str += " SupportedGroups"
         when TLSTypes::Extensions::ECPointFormats
           str += " ECPointFormats"
         when TLSTypes::Extensions::SignatureAlgorithms
           str += " SignatureAlgorithms"
+        when TLSTypes::Extensions::SignedCertTimestamp
+          str += " SignedCertTimestamp"
         when TLSTypes::Extensions::EncryptThenHMAC
           str += " EncryptThenHMAC"
         when TLSTypes::Extensions::ExtendedMasterSecret
           str += " ExtendedMasterSecret"
+        when TLSTypes::Extensions::RenegotiationInfo
+          str += " RenegotiationInfo"
         else
           $stderr.puts "Unsupported TLS Extension #{e[:type]}"
       end

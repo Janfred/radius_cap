@@ -180,7 +180,11 @@ def parse_eap(data)
     return
   end
 
-  clienthello = TLSClientHello.new(eap_tls_clienthello)
+  begin
+    clienthello = TLSClientHello.new(eap_tls_clienthello)
+  rescue TLSClientHelloError => e
+    return
+  end
   puts clienthello.inspect
 
   eap_tls_serverhello = nil
