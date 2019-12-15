@@ -77,7 +77,7 @@ class TLSClientHello
     cipher_end = cur_ptr+cipher_len
     @ciphersuites = []
     while cur_ptr < cipher_end do
-      @ciphersuites << data[cur_ptr]*256 + data[cur_ptr+1]
+      @ciphersuites << [data[cur_ptr], data[cur_ptr+1]]
       cur_ptr += 2
     end
 
