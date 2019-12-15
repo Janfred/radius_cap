@@ -4,6 +4,7 @@ require 'packetfu'
 require 'irb'
 require './radiuspacket.rb'
 require './eappacket.rb'
+require './tlsclienthello.rb'
 require './localconfig.rb'
 
 class EAPFragParseError < StandardError
@@ -172,14 +173,14 @@ def parse_eap(data)
   # If the client didn't NAK the unsupported method, we cant continue parsing
   return unless supported_eap_method
 
-  cur = :tls_clienthello
-
   eap_tls_clienthello = nil
   begin
     eap_tls_clienthello = read_eaptls_fragment(eap, eap_reply.type)
   rescue EAPFragParseError => e
     return
   end
+
+  clienthello = TLSClientHello.new(eap_tls_clienthello)
 
   eap_tls_serverhello = nil
   begin
