@@ -38,15 +38,15 @@ class TLSClientHello
     end
     @extensions.each do |e|
       case e[:type]
-        when SupportedGroups
+        when TLSTypes::Extensions::SupportedGroups
           str += " SupportedGroups"
-        when ECPointFormats
+        when TLSTypes::Extensions::ECPointFormats
           str += " ECPointFormats"
-        when SignatureAlgorithms
+        when TLSTypes::Extensions::SignatureAlgorithms
           str += " SignatureAlgorithms"
-        when EncryptThenHMAC
+        when TLSTypes::Extensions::EncryptThenHMAC
           str += " EncryptThenHMAC"
-        when ExtendedMasterSecret
+        when TLSTypes::Extensions::ExtendedMasterSecret
           str += " ExtendedMasterSecret"
         else
           $stderr.puts "Unsupported TLS Extension #{e[:type]}"
