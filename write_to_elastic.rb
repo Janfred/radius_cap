@@ -6,10 +6,11 @@ class ElasticHelper
   @@waitcond = nil
   @@client
 
-  def self.initialize_elasticdata
+  def self.initialize_elasticdata(debug=false)
     @@elasticdata = []
     @@elasticdata.extend(MonitorMixin)
     @@waitcond = @@elasticdata.new_cond
+    @@client = Elasticsearch::Client.new log: false unless debug
   end
 
   def self.elasticdata
@@ -29,7 +30,6 @@ class ElasticHelper
   end
 end
 
-ElasticHelper.client = Elasticsearch::Client.new log: false
 
 def convert_data_to_elasticsearch(data)
   to_insert = {id: nil, data: {}}
@@ -42,7 +42,8 @@ def convert_data_to_elasticsearch(data)
   to_insert
 end
 
-def insert_into_elastic(raw_data)
+def insert_into_elastic(raw_data, debug=false)
   to_ins = convert_data_to_elasticsearch(raw_data)
-  ElasticHelper.client.index index: 'tlshandshakes', type: 'tlshandshake', id: to_ins[:id], body: to_ins[:data]
+  ElasticHelper.client.index index: 'tlshandshakes', type: 'tlshandshake', id: to_ins[:id], body: to_ins[:data] unless debug
+  puts to_ins if debug
 end

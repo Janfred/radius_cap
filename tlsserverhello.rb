@@ -6,11 +6,30 @@ class TLSServerHello
   attr_reader :innervers
   attr_reader :random
   attr_reader :sessionid
-  attr_reader :chipher
+  attr_reader :cipher
   attr_reader :compression
   attr_reader :extensions
   attr_reader :certificates
   attr_reader :additional
+
+  def to_h
+    to_ret = {}
+    to_ret[:version] = case @innervers
+      when [0x03, 0x03]; "TLSv1.2";
+      when [0x03, 0x02]; "TLSv1.1";
+      when [0x03, 0x01]; "TLSv1.0";
+      else
+        "Unknown"
+    end
+    to_ret[:renegotiation] = !!@byexten[TLSTypes::Extensions::RenegotiationInfo]
+    to_ret[:extendedmastersecret] = !!@byexten[TLSTypes::Extensions::ExtendedMasterSecret]
+    if @byexten[TLSTypes::Extensions::SupportedVersions] then
+      to_ret[:version] = "TLSv1.3" if @byexten[TLSTypes::Extensions::SupportedVersions] == [0x03, 0x04]
+    end
+    to_ret[:cipher] = "0x%02X%02X" % @cipher
+    to_ret
+  end
+
 
   def inspect
     str  = "#<#{self.class.name}:"
@@ -106,6 +125,7 @@ class TLSServerHello
     raise TLSServerHelloError if data.length < cur_ptr
 
     @extensions = []
+    @byexten = {}
     # Extensions
     if data.length <= cur_ptr then
       # No extensions present
@@ -122,6 +142,7 @@ class TLSServerHello
       exten[:data] = data[cur_ptr, exten[:length]]
       cur_ptr += exten[:length]
       @extensions << exten
+      @byexten[exten[:type]] = exten[:data]
     end
   end
   def parse_certificate(data)

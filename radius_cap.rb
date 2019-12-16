@@ -251,7 +251,7 @@ def parse_eap(data)
   rescue TLSServerHelloError => e
     return
   end
-  #puts serverhello.inspect
+  elastic_data[:tlsserverhello] = serverhello.to_h
 
   ## Hier muss das ganze dann in elasticsearch gepumpt werden
   ElasticHelper.elasticdata.synchronize do
@@ -310,11 +310,6 @@ def read_eaptls_fragment(eap, eap_type)
   data
 end
 
-#pcap_file = PacketFu::PcapNG::File.new
-#pcap_array = pcap_file.file_to_array(filename: './debugcapture2.pcapng')
-#pcap_id = 0
-#pcap_array.each do |p|
-
 pktbuf = []
 pktbuf.extend(MonitorMixin)
 empty_cond = pktbuf.new_cond
@@ -371,11 +366,16 @@ Thread.start do
         # TODO: remove irb binding
         puts e.inspect
         puts e.backtrace.join "\n"
-#        binding.irb
+        binding.irb
       end
     end
   end
 end
+
+#pcap_file = PacketFu::PcapNG::File.new
+#pcap_array = pcap_file.file_to_array(filename: './debugcapture2.pcapng')
+#pcap_id = 0
+#pcap_array.each do |p|
 
 iface = PacketFu::Utils.default_int
 cap = Capture.new(:iface => iface, :start => true, :filter => 'port 1812')
@@ -386,4 +386,20 @@ cap.stream.each do |p|
      pktbuf.push p
      empty_cond.signal
    end
+end
+
+pktbufempty = false
+until pktbufempty do
+  pktbuf.synchronize do
+    pktbufempty = pktbuf.empty?
+  end
+  sleep 1
+end
+
+elasticempty = false
+until elasticempty do
+  ElasticHelper.elasticdata.synchronize do
+    elasticempty = ElasticHelper.elasticdata.empty?
+  end
+  sleep 1
 end
