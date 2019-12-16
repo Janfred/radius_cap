@@ -11,9 +11,11 @@ require './eappacket.rb'
 require './tlsclienthello.rb'
 require './tlsserverhello.rb'
 require './localconfig.rb'
+require './write_to_elastic.rb'
 
 class EAPFragParseError < StandardError
 end
+
 
 include PacketFu
 
@@ -31,9 +33,6 @@ include PacketFu
 #
 # }
 @packetflow = []
-
-@clienthello = {}
-@clienthello.extend(MonitorMixin)
 
 def insert_in_packetflow(pkt)
   if(pkt.udp[:dst][:port] == 1812)
@@ -121,10 +120,41 @@ def insert_in_packetflow(pkt)
   end
 end
 
+def normalize_mac(mac)
+  mac.downcase!
+  m_d = mac.match /^([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2})$/
+  if m_d && m_d.length == 7 then
+    return m_d[1,6].join ":"
+  end
+  return "ff:ff:ff:ff:ff:ff"
+end
+
 def parse_eap(data)
   #puts "------------------"
   #puts "EAP: Parsing data:"
   #puts data.inspect
+
+  firstpkt = data[:pkt].first
+  return if firstpkt.nil?
+  username_a = firstpkt.attributes.select{|x| x[:type] == RadiusPacket::Attribute::USERNAME }
+  return if username_a.length != 1
+  username = username_a.first[:data].pack('C*')
+  return if username.split("@").length != 2
+
+  mac_a = firstpkt.attributes.select{|x| x[:type] == RadiusPacket::Attribute::CALLINGSTATIONID }
+  return if mac_a.length != 1
+  mac = mac_a.first[:data].pack('C*')
+
+  # Normalize mac-address
+  macaddr = normalize_mac(mac)
+
+  elastic_data = {
+    username: username,
+    mac: macaddr,
+    eapmethod: nil,
+    tlsclienthello: nil,
+    tlsserverhello: nil
+  }
 
   eap = []
   data[:pkt].each do |p|
@@ -144,6 +174,7 @@ def parse_eap(data)
   identity = eap.first.type_data.pack('C*')
 
   supported_eap_method = false
+  eap_method = 0
 
   eap_reply = nil
   while eap_reply.nil? || eap_reply.type == EAPPacket::Type::NAK do
@@ -168,9 +199,10 @@ def parse_eap(data)
         if eap_start.type_data[0] != EAPPacket::TLSFlags::START
         end
         supported_eap_method = true
+        eap_method = eap_start.type
       when EAPPacket::Type::EAPPWD,
            EAPPacket::Type::MD5CHALLENGE,
-           EAPPacket::TYpe::MSEAP
+           EAPPacket::Type::MSEAP
         # These methods are not implemented.
         # The Client could still reply with a NAK, in this case we can
         # continue to parse.
@@ -185,6 +217,14 @@ def parse_eap(data)
   # If the client didn't NAK the unsupported method, we cant continue parsing
   return unless supported_eap_method
 
+  elastic_data[:eapmethod] = case eap_method
+    when EAPPacket::Type::TTLS; "TTLS";
+    when EAPPacket::Type::PEAP; "PEAP";
+    when EAPPacket::Type::TLS;  "TLS";
+    else
+      "Unknown"
+  end
+
   eap_tls_clienthello = nil
   begin
     eap_tls_clienthello = read_eaptls_fragment(eap, eap_reply.type)
@@ -197,7 +237,7 @@ def parse_eap(data)
   rescue TLSClientHelloError => e
     return
   end
-  puts clienthello.to_h
+  elastic_data[:tlsclienthello] = clienthello.to_h
 
   eap_tls_serverhello = nil
   begin
@@ -213,7 +253,11 @@ def parse_eap(data)
   end
   #puts serverhello.inspect
 
-  #binding.irb
+  ## Hier muss das ganze dann in elasticsearch gepumpt werden
+  ElasticHelper.elasticdata.synchronize do
+    ElasticHelper.elasticdata.push elastic_data
+    ElasticHelper.waitcond.signal
+  end
 end
 
 def read_eaptls_fragment(eap, eap_type)
@@ -275,6 +319,18 @@ pktbuf = []
 pktbuf.extend(MonitorMixin)
 empty_cond = pktbuf.new_cond
 
+ElasticHelper.initialize_elasticdata
+
+Thread.start do
+  loop do
+    ElasticHelper.elasticdata.synchronize do
+      ElasticHelper.waitcond.wait_while { ElasticHelper.elasticdata.empty? }
+      toins = ElasticHelper.elasticdata.shift
+      insert_into_elastic(toins)
+    end
+  end
+end
+
 Thread.start do
   loop do
     pktbuf.synchronize do
@@ -313,7 +369,9 @@ Thread.start do
       rescue => e
         # This is here for debugging.
         # TODO: remove irb binding
-        #binding.irb
+        puts e.inspect
+        puts e.backtrace.join "\n"
+#        binding.irb
       end
     end
   end

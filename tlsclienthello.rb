@@ -71,12 +71,18 @@ class TLSClientHello
     end
     if @byexten[TLSTypes::Extensions::SupportedGroups] then
       to_ret[:supportedgroups] = parse_supported_groups(@byexten[TLSTypes::Extensions::SupportedGroups])
+    else
+      to_ret[:supportedgroups] = []
     end
     if @byexten[TLSTypes::Extensions::StatusRequest] then
       to_ret[:statusrequest] = parse_status_request(@byexten[TLSTypes::Extensions::StatusRequest])
+    else
+      to_ret[:statusrequest] = []
     end
     if @byexten[TLSTypes::Extensions::SignatureAlgorithms] then
       to_ret[:signaturealgorithms] = parse_signature_algorithms(@byexten[TLSTypes::Extensions::SignatureAlgorithms])
+    else
+      to_ret[:signaturealgorithms] = []
     end
     to_ret[:ciphersuites] = @ciphersuites.map {|c| "0x%02X%02X" % c}
     to_ret

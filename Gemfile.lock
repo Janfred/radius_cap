@@ -1,6 +1,18 @@
 GEM
   remote: https://rubygems.org/
   specs:
+    elasticsearch (7.4.0)
+      elasticsearch-api (= 7.4.0)
+      elasticsearch-transport (= 7.4.0)
+    elasticsearch-api (7.4.0)
+      multi_json
+    elasticsearch-transport (7.4.0)
+      faraday
+      multi_json
+    faraday (0.17.1)
+      multipart-post (>= 1.2, < 3)
+    multi_json (1.14.1)
+    multipart-post (2.1.1)
     packetfu (1.1.13)
       pcaprub
     pcaprub (0.13.0)
@@ -9,6 +21,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  elasticsearch
   packetfu
 
 BUNDLED WITH
