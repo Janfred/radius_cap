@@ -16,8 +16,6 @@ end
 
 include PacketFu
 
-iface = PacketFu::Utils.default_int
-
 # This is for state saves.
 # Syntax:
 # {
@@ -254,8 +252,16 @@ def read_eaptls_fragment(eap, eap_type)
   data
 end
 
+#pcap_file = PacketFu::PcapNG::File.new
+#pcap_array = pcap_file.file_to_array(filename: './debugcapture2.pcapng')
+#pcap_id = 0
+#pcap_array.each do |p|
+
+iface = PacketFu::Utils.default_int
 cap = Capture.new(:iface => iface, :start => true)
 cap.stream.each do |p|
+#  pcap_id += 1
+#  puts "Packet #{pcap_id}"
   pkt = Packet.parse p
   # Skip all packets other then ip
   next unless pkt.is_ip?
