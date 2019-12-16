@@ -5,6 +5,7 @@ require 'bundler/setup'
 
 require 'packetfu'
 require 'irb'
+require 'monitor'
 require './radiuspacket.rb'
 require './eappacket.rb'
 require './tlsclienthello.rb'
@@ -30,6 +31,9 @@ include PacketFu
 #
 # }
 @packetflow = []
+
+@clienthello = {}
+@clienthello.extend(MonitorMixin)
 
 def insert_in_packetflow(pkt)
   if(pkt.udp[:dst][:port] == 1812)
@@ -128,6 +132,10 @@ def parse_eap(data)
     eap << EAPPacket.new(p.eap)
   end
 
+  if eap.empty?
+    $stderr.puts "No EAP Packets present"
+    return
+  end
   # Initial EAP communication
   if (eap.first.code != EAPPacket::Code::RESPONSE || eap.first.type != EAPPacket::Type::IDENTITY) then
     $stderr.puts "First code was no EAP Response or Identity"
@@ -150,7 +158,8 @@ def parse_eap(data)
     eap_start = eap.shift
     case eap_start.type
       when EAPPacket::Type::TTLS,
-           EAPPacket::Type::PEAP
+           EAPPacket::Type::PEAP,
+           EAPPacket::Type::TLS
         # Check if start flag is set
         if eap_start.length != 6 then
           $stderr.puts "Invalid length for EAP-TLS Start"
@@ -160,7 +169,8 @@ def parse_eap(data)
         end
         supported_eap_method = true
       when EAPPacket::Type::EAPPWD,
-           EAPPacket::Type::MD5CHALLENGE
+           EAPPacket::Type::MD5CHALLENGE,
+           EAPPacket::TYpe::MSEAP
         # These methods are not implemented.
         # The Client could still reply with a NAK, in this case we can
         # continue to parse.
@@ -187,7 +197,7 @@ def parse_eap(data)
   rescue TLSClientHelloError => e
     return
   end
-  puts clienthello.inspect
+  puts clienthello.to_h
 
   eap_tls_serverhello = nil
   begin
@@ -201,7 +211,7 @@ def parse_eap(data)
   rescue TLSServerHelloError => e
     return
   end
-  puts serverhello.inspect
+  #puts serverhello.inspect
 
   #binding.irb
 end
@@ -213,6 +223,10 @@ def read_eaptls_fragment(eap, eap_type)
   begin
     more_fragments = false
     frag = eap.shift
+    if frag.nil? then
+      $stderr.puts 'Reached end while scanning EAP Fragment'
+      raise EAPFragParseError
+    end
     if frag.type != eap_type then
       $stderr.puts 'Found fragment without matching eap type'
       raise EAPFragParseError
@@ -257,44 +271,61 @@ end
 #pcap_id = 0
 #pcap_array.each do |p|
 
+pktbuf = []
+pktbuf.extend(MonitorMixin)
+empty_cond = pktbuf.new_cond
+
+Thread.start do
+  loop do
+    pktbuf.synchronize do
+      empty_cond.wait_while { pktbuf.empty? }
+      p = pktbuf.shift
+      pkt = Packet.parse p
+      # Skip all packets other then ip
+      next unless pkt.is_ip?
+      # Skip all fragmented ip addresses
+      next if pkt.ip_frag & 0x2000 != 0
+      # only look on copied packets
+      next if ([pkt.ip_daddr, pkt.ip_saddr] & @config[:ipaddrs]).empty?
+      # Skip non-udp packets
+      next unless pkt.is_udp?
+      # Skip packets for other port then radius
+      next unless [pkt.udp_sport, pkt.udp_dport].include? 1812
+
+      # Print out debug info, just for now to monitor progress
+      packet_info = [pkt.ip_saddr, pkt.ip_daddr, pkt.size, pkt.proto.last]
+      #puts "%-15s -> %-15s %-4d %s" % packet_info
+
+      begin
+        # Parse Radius packets
+        rp = RadiusPacket.new(pkt)
+        #puts rp.inspect
+        #binding.irb
+        insert_in_packetflow(rp)
+      rescue PacketLengthNotValidError => e
+        ##################################################
+        # THIS IS A CASE THAT SHOULDN'T OCCUR.           #
+        # IT SHOULD BE CATCHED BY THE FRAGMENT STATEMENT #
+        ##################################################
+        # TODO: Remove irb binding
+        $stderr.puts e.message
+        #binding.irb
+      rescue => e
+        # This is here for debugging.
+        # TODO: remove irb binding
+        #binding.irb
+      end
+    end
+  end
+end
+
 iface = PacketFu::Utils.default_int
-cap = Capture.new(:iface => iface, :start => true)
+cap = Capture.new(:iface => iface, :start => true, :filter => 'port 1812')
 cap.stream.each do |p|
 #  pcap_id += 1
 #  puts "Packet #{pcap_id}"
-  pkt = Packet.parse p
-  # Skip all packets other then ip
-  next unless pkt.is_ip?
-  # Skip all fragmented ip addresses
-  next if pkt.ip_frag & 0x2000 != 0
-  # only look on copied packets
-  next if ([pkt.ip_daddr, pkt.ip_saddr] & @config[:ipaddrs]).empty?
-  # Skip non-udp packets
-  next unless pkt.is_udp?
-  # Skip packets for other port then radius
-  next unless [pkt.udp_sport, pkt.udp_dport].include? 1812
-
-  # Print out debug info, just for now to monitor progress
-  packet_info = [pkt.ip_saddr, pkt.ip_daddr, pkt.size, pkt.proto.last]
-  #puts "%-15s -> %-15s %-4d %s" % packet_info
-
-  begin
-    # Parse Radius packets
-    rp = RadiusPacket.new(pkt)
-    #puts rp.inspect
-    #binding.irb
-    insert_in_packetflow(rp)
-  rescue PacketLengthNotValidError => e
-    ##################################################
-    # THIS IS A CASE THAT SHOULDN'T OCCUR.           #
-    # IT SHOULD BE CATCHED BY THE FRAGMENT STATEMENT #
-    ##################################################
-    # TODO: Remove irb binding
-    $stderr.puts e.message
-    binding.irb
-  rescue => e
-    # This is here for debugging.
-    # TODO: remove irb binding
-    binding.irb
-  end
+   pktbuf.synchronize do
+     pktbuf.push p
+     empty_cond.signal
+   end
 end

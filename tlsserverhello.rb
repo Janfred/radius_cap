@@ -14,9 +14,9 @@ class TLSServerHello
 
   def inspect
     str  = "#<#{self.class.name}:"
-    str += " v1.2" if @innververs == 0x0303
-    str += " Cipher:"
-    str += " 0x%02X%02X" % @cipher
+    #str += " v1.2" if @innververs == 0x0303
+    #str += " Cipher:"
+    #str += " 0x%02X%02X" % @cipher
     @extensions.each do |e|
       case e[:type]
         when TLSTypes::Extensions::ServerName
@@ -58,7 +58,7 @@ class TLSServerHello
     cur_ptr = 0
     while cur_ptr < data.length do
       outertype = data[cur_ptr]
-      @outervers = data[cur_ptr+1]*256 + data[cur_ptr+2]
+      @outervers = data[cur_ptr+1, 2]
       outerlength = data[cur_ptr+3]*256 + data[cur_ptr+4]
       cur_ptr += 5
       type = data[cur_ptr]
@@ -83,7 +83,7 @@ class TLSServerHello
   end
 
   def parse_serverhello(data)
-    @innervers = data[0]*256 + data[1]
+    @innervers = data[0, 2]
     cur_ptr = 2
 
     @random = data[cur_ptr, 32]
@@ -102,6 +102,8 @@ class TLSServerHello
     # Compression
     @compression = data[cur_ptr]
     cur_ptr += 1
+
+    raise TLSServerHelloError if data.length < cur_ptr
 
     @extensions = []
     # Extensions
