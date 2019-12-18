@@ -1,3 +1,5 @@
+require './tlsciphersuites.rb'
+
 class TLSServerHelloError < StandardError
 end
 
@@ -27,6 +29,8 @@ class TLSServerHello
       to_ret[:version] = "TLSv1.3" if @byexten[TLSTypes::Extensions::SupportedVersions] == [0x03, 0x04]
     end
     to_ret[:cipher] = "0x%02X%02X" % @cipher
+    to_ret[:cipherdata] = {}
+    to_ret[:cipherdata]["FS"] = TLSCipherSuite.by_arr(@cipher)[:pfs]
     to_ret
   end
 
