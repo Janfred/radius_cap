@@ -162,3 +162,48 @@ class TLSCipherSuite
 
   ]
 end
+
+class TLSSignatureScheme
+  @@signatureschemes = [
+    # SigScheme     Name
+    [ [0x02, 0x01], "rsa_pkcs1_sha1"],
+    [ [0x02, 0x02], "SHA1 DSA"],
+    [ [0x02, 0x03], "ecdsa_sha1"],
+    [ [0x03, 0x01], "SHA224 RSA"],
+    [ [0x03, 0x02], "SHA224 DSA"],
+    [ [0x03, 0x03], "SHA224 ECDSA"],
+    [ [0x04, 0x01], "rsa_pkcs1_sha256"],
+    [ [0x04, 0x02], "SHA256 DSA"],
+    [ [0x04, 0x03], "ecdsa_secp256r1_sha256"],
+    [ [0x05, 0x01], "rsa_pkcs1_sha384"],
+    [ [0x05, 0x02], "SHA384 DSA"],
+    [ [0x05, 0x03], "ecdsa_secp384r1_sha384"],
+    [ [0x06, 0x01], "rsa_pkcs1_sha512"],
+    [ [0x06, 0x02], "SHA512 DSA"],
+    [ [0x06, 0x03], "ecdsa_secp521r1_sha512"],
+    [ [0x08, 0x04], "rsa_pss_rsae_sha256"],
+    [ [0x08, 0x05], "rsa_pss_rsae_sha384"],
+    [ [0x08, 0x06], "rsa_pss_rsae_sha512"],
+    [ [0x08, 0x07], "ed25519"],
+    [ [0x08, 0x08], "ed448"],
+    [ [0x08, 0x09], "rsa_pss_pss_sha256"],
+    [ [0x08, 0x0A], "rsa_pss_pss_sha384"],
+    [ [0x08, 0x0B], "rsa_pss_pss_sha512"],
+  ]
+
+  def self.by_hexstr (val)
+    ar = [val[2, 4]].pack("H*").unpack("C*")
+    by_arr(ar)
+  end
+
+  def self.by_arr (val)
+    p = @@signatureschemes.select { |x| x[0] == val}
+    return if p.empty?
+    return if p.length != 1
+    cipher_to_h(p.first)
+  end
+
+  def self.cipher_to_h(val)
+    {code: val[0], name: val[1]}
+  end
+end
