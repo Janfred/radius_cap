@@ -85,6 +85,17 @@ class TLSClientHello
       to_ret[:signaturealgorithms] = []
     end
     to_ret[:ciphersuites] = @ciphersuites.map {|c| "0x%02X%02X" % c}
+    to_ret[:cipherdata] = {}
+    cdata = TLSCipherSuite.new(@ciphersuites)
+    to_ret[:cipherdata][:pfs_avail] = cdata.pfs_avail?
+    to_ret[:cipherdata][:only_pfs] = cdata.only_pfs?
+    to_ret[:cipherdata][:anull] = cdata.anull_present?
+    to_ret[:cipherdata][:enull] = cdata.enull_present?
+    to_ret[:cipherdata][:rc4] = cdata.rc4_present?
+    to_ret[:cipherdata][:tripledes] = cdata.tripledes_present?
+    to_ret[:cipherdata][:des] = cdata.des_present?
+    to_ret[:cipherdata][:humanreadable] = cdata.humanreadable
+    to_ret[:cipherdata][:cipherset] = cdata.cipherset
     to_ret
   end
 
