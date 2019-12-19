@@ -36,6 +36,8 @@ class TLSServerHello
     to_ret[:cipherdata]["encry"] = cdata[:encryption]
     to_ret[:cipherdata]["keyx"] = cdata[:keyxchange]
     to_ret[:cipherdata]["name"] = cdata[:name]
+    to_ret[:stapling] = @ocsp_included
+    to_ret[:keyexchange] = @keyexchange.to_h if @keyexchange
     to_ret
   end
 
@@ -83,6 +85,7 @@ class TLSServerHello
     return str
   end
   def initialize(data)
+    @ocsp_included = false
     cur_ptr = 0
     while cur_ptr < data.length do
       outertype = data[cur_ptr]
@@ -103,6 +106,8 @@ class TLSServerHello
           parse_serverkeyexchange data[cur_ptr+4, length]
         when TLSTypes::HandshakeType::SERVERHELLODONE
           parse_serverhellodone data[cur_ptr+4, length]
+        when TLSTypes::HandshakeType::CERTIFICATESTATUS
+          parse_certificatestatus data[cur_ptr+4, length]
         else
           $stderr.puts "Unknown TLS Handshaketype #{type}"
       end
@@ -169,6 +174,11 @@ class TLSServerHello
   end
   def parse_serverkeyexchange(data)
     # Not yet implemented
+    @keyexchange = TLSServerKeyExchange.parse(data, @cipher)
+    return
+  end
+  def parse_certificatestatus(data)
+    @ocsp_included = true
     return
   end
   def parse_serverhellodone(data)

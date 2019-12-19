@@ -305,8 +305,29 @@ class TLSServerKeyExchange
       @curve_type = data[0]
       if @curve_type == TLSServerKeyExchange::ECDHE::NAMED_CURVE
         curve = data[1, 2]
+        if curve == [0x00, 0x17] then
+          @curve_name = TLSSupportedGroups.by_arr(curve)
+          curve_length = data[3]
+          cur_ptr = 4
+          curve_pubkey = data[cur_ptr, curve_length]
+          cur_ptr += curve_length
+          @curve_sig_algo = TLSSignatureScheme.by_arr(data[cur_ptr, 2])
+          cur_ptr += 2
+          sig_length = data[cur_ptr]*256 + data[cur_ptr+1]
+          cur_ptr += 2
+          sig = data[cur_ptr, sig_length]
+        else
+          $stderr.puts "Unsupported Curve #{data[1, 2]}"
+        end
       else
         $stderr.puts "Unknown Curve type #{@curve_type}"
+      end
+    end
+    def to_h
+      if @curve_sig_algo && @curve_name then
+        {sig_scheme: @curve_sig_algo[:name], curve_name: @curve_name[:name]}
+      else
+        {}
       end
     end
   end

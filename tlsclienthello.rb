@@ -11,6 +11,7 @@ module TLSTypes
     CERTIFICATE       = 11
     SERVERKEYEXCHANGE = 12
     SERVERHELLODONE   = 14
+    CERTIFICATESTATUS = 22
   end
   module Extensions
     ServerName           =     0
