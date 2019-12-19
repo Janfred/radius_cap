@@ -1,4 +1,40 @@
 class TLSCipherSuite
+  def initialize(ciphersuite)
+    @external_cs = ciphersuite
+    @internal_cs = @external_cs.map { |c| c.class == Array ? TLSCipherSuite.by_arr(c) : TLSCipherSuite.by_hexstr(c) }
+    @internal_cs.delete nil
+  end
+
+  def humanreadable
+    @internal_cs.map {|x| x[:name]}
+  end
+
+  def cipherset
+    @internal_cs.map {|x| "0x%02X%02X" % x[:code]}.join " "
+  end
+
+  def pfs_avail?
+    @internal_cs.select {|x| x[:pfs] }.length > 0
+  end
+  def only_pfs?
+    @internal_cs.select {|x| !x[:pfs] && !x[:scsv]}.empty?
+  end
+  def anull_present?
+    !@internal_cs.select {|x| x[:auth].nil? && !x[:scsv]}.empty?
+  end
+  def enull_present?
+    !@internal_cs.select {|x| x[:encryption].nil? && !x[:scsv]}.empty?
+  end
+  def rc4_present?
+    !@internal_cs.select {|x| !x[:encryption].nil? && x[:encryption].match(/^RC4/)}.empty?
+  end
+  def tripledes_present?
+    !@internal_cs.select {|x| x[:encryption] == "3DES"}.empty?
+  end
+  def des_present?
+    !@internal_cs.select {|x| !x[:encryption].nil? && x[:encryption].match(/^DES/)}.empty?
+  end
+
   def self.by_hexstr (val)
     ar = [val[2, 4]].pack("H*").unpack("C*")
     by_arr(ar)
@@ -6,6 +42,7 @@ class TLSCipherSuite
 
   def self.by_arr (val)
     p = @@ciphersuites.select { |x| x[0] == val}
+    $stderr.puts "Unknown Ciphersuite #{val}" if p.empty?
     return if p.empty?
     return if p.length != 1
     cipher_to_h(p.first)
@@ -119,6 +156,7 @@ class TLSCipherSuite
     [ [0xC0, 0x13], "ECDHE", "RSA",     "AES128",      "CBC", "SHA",      true,  false, "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA"],
     [ [0xC0, 0x14], "ECDHE", "RSA",     "AES256",      "CBC", "SHA",      true,  false, "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA"],
     [ [0xC0, 0x1B], "SRP",   "SHA RSA", "3DES",        "CBC", "SHA",      true,  false, "TLS_SRP_SHA_RSA_WITH_3DES_EDE_CBC_SHA"],
+    [ [0xC0, 0x1C], "SRP",   "SHA DSS", "3DES",        "CBC", "SHA",      true,  false, "TLS_SRP_SHA_DSS_WITH_3DES_EDE_CBC_SHA"],
     [ [0xC0, 0x1D], "SRP",   "SHA",     "AES128",      "CBC", "SHA",      true,  false, "TLS_SRP_SHA_WITH_AES_128_CBC_SHA"],
     [ [0xC0, 0x1E], "SRP",   "SHA RSA", "AES128",      "CBC", "SHA",      true,  false, "TLS_SRP_SHA_RSA_WITH_AES_128_CBC_SHA"],
     [ [0xC0, 0x1F], "SRP",   "SHA DSS", "AES128",      "CBC", "SHA",      true,  false, "TLS_SRP_SHA_DSS_WITH_AES_128_CBC_SHA"],
