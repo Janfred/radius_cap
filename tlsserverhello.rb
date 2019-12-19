@@ -30,7 +30,12 @@ class TLSServerHello
     end
     to_ret[:cipher] = "0x%02X%02X" % @cipher
     to_ret[:cipherdata] = {}
-    to_ret[:cipherdata]["FS"] = TLSCipherSuite.by_arr(@cipher)[:pfs]
+    cdata = TLSCipherSuite.by_arr(@cipher)
+    to_ret[:cipherdata]["FS"] = cdata[:pfs]
+    to_ret[:cipherdata]["auth"] = cdata[:auth]
+    to_ret[:cipherdata]["encry"] = cdata[:encryption]
+    to_ret[:cipherdata]["keyx"] = cdata[:keyxchange]
+    to_ret[:cipherdata]["name"] = cdata[:name]
     to_ret
   end
 
