@@ -335,8 +335,15 @@ class TLSServerKeyExchange
   class DHE
     def initialize(data)
     end
+    def to_h
+    end
   end
 
   def self.parse(data, cipher)
+    if TLSCipherSuite.by_arr(cipher)[:keyxchange] == "ECDHE" then
+      return TLSServerKeyExchange::ECDHE.new(data)
+    else
+      return nil
+    end
   end
 end
