@@ -307,7 +307,10 @@ class TLSServerKeyExchange
         curve = data[1, 2]
         case curve
           when [0x00, 0x17], #secp256r1
-               [0x00, 0x1D]  #x25519
+               [0x00, 0x18], #secp384r1
+               [0x00, 0x19], #secp521r1
+               [0x00, 0x1D], #x25519
+               [0x00, 0x1E]  #x448
             @curve_name = TLSSupportedGroups.by_arr(curve)
             curve_length = data[3]
             cur_ptr = 4
