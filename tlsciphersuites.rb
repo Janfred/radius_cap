@@ -322,6 +322,8 @@ class TLSServerKeyExchange
             cur_ptr += 2
             sig = data[cur_ptr, sig_length]
           else
+            @curve_name = {name: "Unsupported (#{"0x%02X%02X" % curve})"}
+            @curve_sig_algo = {name: "Not captured"}
             $stderr.puts "Unsupported Curve #{data[1, 2]}"
         end
       else
