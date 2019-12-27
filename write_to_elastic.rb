@@ -1,5 +1,6 @@
 require 'elasticsearch'
 require 'digest'
+require './macvendor.rb'
 
 class ElasticHelper
   @@elasticdata = []
@@ -11,6 +12,7 @@ class ElasticHelper
     @@elasticdata.extend(MonitorMixin)
     @@waitcond = @@elasticdata.new_cond
     @@client = Elasticsearch::Client.new log: false unless debug
+    MacVendor.initialize
   end
 
   def self.elasticdata
@@ -36,6 +38,7 @@ def convert_data_to_elasticsearch(data)
   to_insert[:data][:scheme_ver] = data[:scheme_ver]
   to_insert[:data][:realm] = data[:username].split("@")[1]
   to_insert[:data][:oui] = data[:mac].split(":")[0,3].join(":")
+  to_insert[:data][:vendor] = MacVendor.by_oid(to_insert[:data][:oui])
   to_insert[:data][:eapmethod] = data[:eapmethod]
   to_insert[:data][:tlsclienthello] = data[:tlsclienthello]
   to_insert[:data][:tlsserverhello] = data[:tlsserverhello]
