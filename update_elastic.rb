@@ -35,7 +35,7 @@ data["hits"]["hits"].each do |hit|
     body["tlsclienthello"]["cipherdata"]["cipherset"] + "|" +
     body["tlsclienthello"]["cipherdata"]["supported_group_set"] + "|" +
     body["tlsclienthello"]["cipherdata"]["signature_algorithm_set"] + "|"
-    (body["tlsclienthello"]["statusrequest"] == [] ? "False" : body["tlsclienthello"]["statusrequest"]) + "|" +
+    (body["tlsclienthello"]["statusrequest"].nil? || body["tlsclienthello"]["statusrequest"] == [] ? "False" : body["tlsclienthello"]["statusrequest"]) + "|" +
     (body["tlsclienthello"]["renegotiation"] ? "True" : "False") + "|"
     (body["tlsclienthello"]["extendedmastersecret"] ? "True" : "False") )
 
