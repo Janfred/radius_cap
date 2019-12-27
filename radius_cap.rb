@@ -12,6 +12,7 @@ require './tlsclienthello.rb'
 require './tlsserverhello.rb'
 require './localconfig.rb'
 require './write_to_elastic.rb'
+require './macvendor.rb'
 
 class EAPFragParseError < StandardError
 end
@@ -151,7 +152,7 @@ def parse_eap(data)
   elastic_data = {
     username: username,
     mac: macaddr,
-    scheme_ver: 1,
+    scheme_ver: 2,
     eapmethod: nil,
     tlsclienthello: nil,
     tlsserverhello: nil

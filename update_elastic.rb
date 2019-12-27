@@ -4,6 +4,10 @@ require 'bundler/setup'
 require 'elasticsearch'
 require 'digest'
 require './tlsciphersuites.rb'
+require './macvendor.rb'
+
+
+MacVendor.initialize
 
 client = Elasticsearch::Client.new log: false
 
@@ -11,6 +15,7 @@ loop do
 
 #data = client.search index: 'tlshandshakes', body: { size: 50, query: { bool: { must_not: { exists: { field: "tlsserverhello.cipherdata.auth" } } } } }
 #data = client.search index: 'tlshandshakes', body: { size: 50, query: { bool: { must_not: { exists: { field: "tlsclienthello.cipherdata.humanreadable" } } } } }
+data = client.search index: 'tlshandshakes', body: { size: 50, query: { bool: { must_not: { exists: { field: "scheme_ver" } } } } }
 
 puts data["hits"]["hits"].length
 
@@ -19,8 +24,12 @@ break if data["hits"]["hits"].length == 0
 data["hits"]["hits"].each do |hit|
   body = hit["_source"]
 
-  body["tlsclienthello"]["cipherdata"]["supported_group_set"] = body["tlsclienthello"]["supportedgroups"].join(" ")
-  body["tlsclienthello"]["cipherdata"]["signature_algorithm_set"] = body["tlsclienthello"]["signaturealgorithms"].join(" ")
+  body["scheme_ver"] = 2
+
+  body["vendor"] = MacVendor.by_oid(body["oid"])
+
+  body["tlsclienthello"]["cipherdata"]["supported_group_set"] = body["tlsclienthello"]["supportedgroups"].join('+')
+  body["tlsclienthello"]["cipherdata"]["signature_algorithm_set"] = body["tlsclienthello"]["signaturealgorithms"].join('+')
   body["tlsclienthello"]["fingerprinting"]["v1"] = Digest::SHA2.hexdigest(
     body["tlsclienthellp"]["version"] + "|" +
     body["tlsclienthello"]["cipherdata"]["cipherset"] + "|" +
