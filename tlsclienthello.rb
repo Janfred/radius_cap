@@ -1,4 +1,5 @@
 require 'digest'
+require './tlsciphersuites.rb'
 
 class TLSClientHelloError < StandardError
 end
@@ -102,7 +103,7 @@ class TLSClientHello
 
     to_ret[:cipherdata][:supported_group_set] = to_ret[:supportedgroups].join('+') || ""
     to_ret[:cipherdata][:signature_algorithm_set] = to_ret[:signaturealgorithms].join('+') || ""
-    
+
     to_ret[:cipherdata][:supported_group_set] ||= ""
     to_ret[:cipherdata][:signature_algorithm_set] ||= ""
 
@@ -125,32 +126,11 @@ class TLSClientHello
     cur_ptr = 2
     to_ret = []
     while cur_ptr < data.length do
-      to_ret << case data[cur_ptr, 2]
-        when [0x02, 0x01]; "rsa_pkcs1_sha1";
-        when [0x02, 0x02]; "SHA1 DSA";
-        when [0x02, 0x03]; "ecdsa_sha1";
-        when [0x03, 0x01]; "SHA224 RSA";
-        when [0x03, 0x02]; "SHA224 DSA";
-        when [0x03, 0x03]; "SHA224 ECDSA";
-        when [0x04, 0x01]; "rsa_pkcs1_sha256";
-        when [0x04, 0x02]; "SHA256 DSA";
-        when [0x04, 0x03]; "ecdsa_secp256r1_sha256";
-        when [0x05, 0x01]; "rsa_pkcs1_sha384";
-        when [0x05, 0x02]; "SHA384 DSA";
-        when [0x05, 0x03]; "ecdsa_secp384r1_sha384";
-        when [0x06, 0x01]; "rsa_pkcs1_sha512";
-        when [0x06, 0x02]; "SHA512 DSA";
-        when [0x06, 0x03]; "ecdsa_secp521r1_sha512";
-        when [0x08, 0x04]; "rsa_pss_rsae_sha256";
-        when [0x08, 0x05]; "rsa_pss_rsae_sha384";
-        when [0x08, 0x06]; "rsa_pss_rsae_sha512";
-        when [0x08, 0x07]; "ed25519";
-        when [0x08, 0x08]; "ed448";
-        when [0x08, 0x09]; "rsa_pss_pss_sha256";
-        when [0x08, 0x0A]; "rsa_pss_pss_sha384";
-        when [0x08, 0x0B]; "rsa_pss_pss_sha512";
-        else
-          "Unknown (#{data[cur_ptr, 2]})"
+      algo = TLSSignatureScheme.by_arr(data[cur_ptr, 2])
+      if algo.nil? then
+        to_ret << "Unknown (#{data[cur_ptr, 2]})"
+      else
+        to_ret << algo[:name]
       end
       cur_ptr += 2
     end
@@ -173,39 +153,11 @@ class TLSClientHello
     cur_ptr = 2
     to_ret = []
     while cur_ptr < data.length do
-      to_ret << case data[cur_ptr, 2]
-        when [0x00, 0x01]; "sect163k1";
-        when [0x00, 0x02]; "sect163r1";
-        when [0x00, 0x03]; "sect163r2";
-        when [0x00, 0x04]; "sect193r1";
-        when [0x00, 0x05]; "sect193r2";
-        when [0x00, 0x06]; "sect233k1";
-        when [0x00, 0x07]; "sect233r1";
-        when [0x00, 0x08]; "sect239k1";
-        when [0x00, 0x09]; "sect283k1";
-        when [0x00, 0x0a]; "sect283r1";
-        when [0x00, 0x0b]; "sect409k1";
-        when [0x00, 0x0c]; "sect409r1";
-        when [0x00, 0x0d]; "sect571k1";
-        when [0x00, 0x0e]; "sect571r1";
-        when [0x00, 0x0f]; "secp160k1";
-        when [0x00, 0x10]; "secp160r1";
-        when [0x00, 0x11]; "secp160r2";
-        when [0x00, 0x12]; "secp192k1";
-        when [0x00, 0x13]; "secp192r1";
-        when [0x00, 0x14]; "secp224k1";
-        when [0x00, 0x15]; "secp224r1";
-        when [0x00, 0x16]; "secp256k1";
-        when [0x00, 0x17]; "secp256r1";
-        when [0x00, 0x18]; "secp384r1";
-        when [0x00, 0x19]; "secp521r1";
-        when [0x00, 0x1a]; "brainpoolP256r1";
-        when [0x00, 0x1b]; "brainpoolP384r1";
-        when [0x00, 0x1c]; "brainpoolP512r1";
-        when [0x00, 0x1d]; "x25519";
-        when [0x00, 0x1e]; "x448";
-        else
-          "Unknown (#{data[cur_ptr, 2]})"
+      algo = TLSSupportedGroups.by_arr(data[cur_ptr, 2])
+      if algo.nil?
+        to_ret << "Unknown (#{data[cur_ptr, 2]})"
+      else
+        to_ret << algo[:name]
       end
       cur_ptr += 2
     end

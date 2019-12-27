@@ -279,6 +279,11 @@ class TLSSupportedGroups
     [ [0x00, 0x1c], "brainpoolP512r1"],
     [ [0x00, 0x1d], "x25519"],
     [ [0x00, 0x1e], "x448"],
+    [ [0x01, 0x00], "ffdhe2048"],
+    [ [0x01, 0x01], "ffdhe3072"],
+    [ [0x01, 0x02], "ffdhe4096"],
+    [ [0x01, 0x03], "ffdhe6144"],
+    [ [0x01, 0x04], "ffdhe8192"],
   ]
 
   def self.by_hexstr (val)
