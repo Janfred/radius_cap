@@ -12,7 +12,7 @@ class ElasticHelper
     @@elasticdata.extend(MonitorMixin)
     @@waitcond = @@elasticdata.new_cond
     @@client = Elasticsearch::Client.new log: false unless debug
-    MacVendor.initialize
+    MacVendor.init_data
   end
 
   def self.elasticdata
