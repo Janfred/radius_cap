@@ -100,15 +100,20 @@ class TLSClientHello
     to_ret[:cipherdata][:humanreadable] = cdata.humanreadable
     to_ret[:cipherdata][:cipherset] = cdata.cipherset
 
-    to_ret[:cipherdata][:supported_group_set] = to_ret[:supportedgroups].join(" ")
-    to_ret[:cipherdata][:signature_algorithm_set] to_ret[:signaturealgorithms].join(" ")
+    to_ret[:cipherdata][:supported_group_set] = to_ret[:supportedgroups].join('+') || ""
+    to_ret[:cipherdata][:signature_algorithm_set] = to_ret[:signaturealgorithms].join('+') || ""
+    
+    to_ret[:cipherdata][:supported_group_set] ||= ""
+    to_ret[:cipherdata][:signature_algorithm_set] ||= ""
+
+    to_ret[:fingerprinting] = {}
 
     to_ret[:fingerprinting][:v1] = Digest::SHA2.hexdigest(
       to_ret[:version] + "|" +
       to_ret[:cipherdata][:cipherset] + "|" +
       to_ret[:cipherdata][:supported_group_set] + "|" +
       to_ret[:cipherdata][:signature_algorithm_set] + "|" +
-      (to_ret[:cipherdata][:statusrequest] == [] ? "False" : to_ret[:cipherdata][:statusrequest]) + "|" +
+      ((to_ret[:cipherdata][:statusrequest].nil? || to_ret[:cipherdata][:statusrequest] == []) ? "False" : to_ret[:cipherdata][:statusrequest]) + "|" +
       (to_ret[:renegotiation] ? "True" : "False") + "|" +
       (to_ret[:extendedmastersecret] ? "True" : "False") )
     to_ret
