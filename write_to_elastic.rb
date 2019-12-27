@@ -33,6 +33,7 @@ end
 
 def convert_data_to_elasticsearch(data)
   to_insert = {id: nil, data: {}}
+  to_insert[:data][:scheme_ver] = data[:scheme_ver]
   to_insert[:data][:realm] = data[:username].split("@")[1]
   to_insert[:data][:oui] = data[:mac].split(":")[0,3].join(":")
   to_insert[:data][:eapmethod] = data[:eapmethod]

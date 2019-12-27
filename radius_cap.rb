@@ -151,6 +151,7 @@ def parse_eap(data)
   elastic_data = {
     username: username,
     mac: macaddr,
+    scheme_ver: 1,
     eapmethod: nil,
     tlsclienthello: nil,
     tlsserverhello: nil
@@ -359,14 +360,18 @@ Thread.start do
         # IT SHOULD BE CATCHED BY THE FRAGMENT STATEMENT #
         ##################################################
         # TODO: Remove irb binding
+        puts e.message
+        puts e.backtrace.join "\n"
+        puts p.unpack("H*").first
         $stderr.puts e.message
         #binding.irb
       rescue => e
         # This is here for debugging.
         # TODO: remove irb binding
-        puts e.inspect
+        puts e.message
         puts e.backtrace.join "\n"
-        binding.irb
+        puts p.unpack("H*").first
+        #binding.irb
       end
     end
   end
