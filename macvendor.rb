@@ -1,5 +1,5 @@
 class MacVendor
-  def self.initialize
+  def self.init_data
     @@vendorhash = {}
     File.open("./oui.txt") do |f|
       f.each do |line|

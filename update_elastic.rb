@@ -7,7 +7,7 @@ require './tlsciphersuites.rb'
 require './macvendor.rb'
 
 
-MacVendor.initialize
+MacVendor.init_data
 
 client = Elasticsearch::Client.new log: false
 
@@ -15,7 +15,7 @@ loop do
 
 #data = client.search index: 'tlshandshakes', body: { size: 50, query: { bool: { must_not: { exists: { field: "tlsserverhello.cipherdata.auth" } } } } }
 #data = client.search index: 'tlshandshakes', body: { size: 50, query: { bool: { must_not: { exists: { field: "tlsclienthello.cipherdata.humanreadable" } } } } }
-data = client.search index: 'tlshandshakes', body: { size: 50, query: { bool: { must_not: { exists: { field: "scheme_ver" } } } } }
+data = client.search index: 'tlshandshakes', body: { size: 50, query: { bool: { must_not: { exists: { field: "vendor" } } } } }
 
 puts data["hits"]["hits"].length
 
@@ -26,18 +26,19 @@ data["hits"]["hits"].each do |hit|
 
   body["scheme_ver"] = 2
 
-  body["vendor"] = MacVendor.by_oid(body["oid"])
+  body["vendor"] = MacVendor.by_oid(body["oui"])
 
-  body["tlsclienthello"]["cipherdata"]["supported_group_set"] = body["tlsclienthello"]["supportedgroups"].join('+')
-  body["tlsclienthello"]["cipherdata"]["signature_algorithm_set"] = body["tlsclienthello"]["signaturealgorithms"].join('+')
-  body["tlsclienthello"]["fingerprinting"]["v1"] = Digest::SHA2.hexdigest(
-    body["tlsclienthellp"]["version"] + "|" +
-    body["tlsclienthello"]["cipherdata"]["cipherset"] + "|" +
-    body["tlsclienthello"]["cipherdata"]["supported_group_set"] + "|" +
-    body["tlsclienthello"]["cipherdata"]["signature_algorithm_set"] + "|"
-    (body["tlsclienthello"]["statusrequest"] == [] ? "False" : body["tlsclienthello"]["statusrequest"]) + "|" +
-    (body["tlsclienthello"]["renegotiation"] ? "True" : "False") + "|"
-    (body["tlsclienthello"]["extendedmastersecret"] ? "True" : "False") )
+#  body["tlsclienthello"]["cipherdata"]["supported_group_set"] = body["tlsclienthello"]["supportedgroups"].join('+')
+#  body["tlsclienthello"]["cipherdata"]["signature_algorithm_set"] = body["tlsclienthello"]["signaturealgorithms"].join('+')
+#  body["tlsclienthello"]["fingerprinting"] ||= {}
+#  body["tlsclienthello"]["fingerprinting"]["v1"] = Digest::SHA2.hexdigest(
+#    body["tlsclienthello"]["version"] + "|" +
+#    body["tlsclienthello"]["cipherdata"]["cipherset"] + "|" +
+#    body["tlsclienthello"]["cipherdata"]["supported_group_set"] + "|" +
+#    body["tlsclienthello"]["cipherdata"]["signature_algorithm_set"] + "|" +
+#    ((body["tlsclienthello"]["statusrequest"].nil? || body["tlsclienthello"]["statusrequest"] == []) ? "False" : body["tlsclienthello"]["statusrequest"]) + "|" +
+#    (body["tlsclienthello"]["renegotiation"] ? "True" : "False") + "|" +
+#    (body["tlsclienthello"]["extendedmastersecret"] ? "True" : "False") )
 
   #cipher = TLSCipherSuite.new(body["tlsclienthello"]["ciphersuites"])
 
