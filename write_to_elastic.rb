@@ -36,6 +36,7 @@ end
 def convert_data_to_elasticsearch(data)
   to_insert = {id: nil, data: {}}
   to_insert[:data][:scheme_ver] = data[:scheme_ver]
+  to_insert[:data][:capture_ver] = data[:capture_ver]
   to_insert[:data][:realm] = data[:username].split("@")[1]
   to_insert[:data][:oui] = data[:mac].split(":")[0,3].join(":")
   to_insert[:data][:vendor] = MacVendor.by_oid(to_insert[:data][:oui])

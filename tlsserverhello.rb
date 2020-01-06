@@ -38,6 +38,8 @@ class TLSServerHello
     to_ret[:cipherdata]["name"] = cdata[:name]
     to_ret[:stapling] = @ocsp_included
     to_ret[:keyexchange] = @keyexchange.to_h if @keyexchange
+    # If no keyexchange is present, set to None to distinguish between not captured (before this change) and captured, but not existent
+    to_ret[:keyexchange] ||= [sig_scheme: "None", curve_name: "None"]
     to_ret
   end
 
