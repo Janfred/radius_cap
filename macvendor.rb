@@ -11,6 +11,6 @@ class MacVendor
     end
   end
   def self.by_oid(oid)
-    @@vendorhash[oid]
+    @@vendorhash[oid] || "UNKNOWN"
   end
 end
