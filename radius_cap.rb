@@ -14,6 +14,8 @@ require './localconfig.rb'
 require './write_to_elastic.rb'
 require './macvendor.rb'
 
+@config[:debug] = false if @config[:debug].nil?
+
 class EAPFragParseError < StandardError
 end
 
@@ -317,14 +319,14 @@ pktbuf = []
 pktbuf.extend(MonitorMixin)
 empty_cond = pktbuf.new_cond
 
-ElasticHelper.initialize_elasticdata
+ElasticHelper.initialize_elasticdata @config[:debug]
 
 Thread.start do
   loop do
     ElasticHelper.elasticdata.synchronize do
       ElasticHelper.waitcond.wait_while { ElasticHelper.elasticdata.empty? }
       toins = ElasticHelper.elasticdata.shift
-      insert_into_elastic(toins)
+      insert_into_elastic(toins, @config[:debug])
     end
   end
 end
