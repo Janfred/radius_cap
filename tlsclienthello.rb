@@ -109,12 +109,12 @@ class TLSClientHello
 
     to_ret[:fingerprinting] = {}
 
-    to_ret[:fingerprinting][:v1] = Digest::SHA2.hexdigest(
+    to_ret[:fingerprinting][:v2] = Digest::SHA2.hexdigest(
       to_ret[:version] + "|" +
       to_ret[:cipherdata][:cipherset] + "|" +
       to_ret[:cipherdata][:supported_group_set] + "|" +
       to_ret[:cipherdata][:signature_algorithm_set] + "|" +
-      ((to_ret[:cipherdata][:statusrequest].nil? || to_ret[:cipherdata][:statusrequest] == []) ? "False" : to_ret[:cipherdata][:statusrequest]) + "|" +
+      ((to_ret[:statusrequest].nil? || to_ret[:statusrequest] == []) ? "False" : to_ret[:statusrequest]) + "|" +
       (to_ret[:renegotiation] ? "True" : "False") + "|" +
       (to_ret[:extendedmastersecret] ? "True" : "False") )
     to_ret
