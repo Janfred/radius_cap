@@ -176,7 +176,7 @@ class TLSServerHello
   end
   def parse_serverkeyexchange(data)
     # Not yet implemented
-    @keyexchange = TLSServerKeyExchange.parse(data, @cipher)
+    @keyexchange = TLSServerKeyExchange.parse(data, @cipher, @innervers)
     return
   end
   def parse_certificatestatus(data)

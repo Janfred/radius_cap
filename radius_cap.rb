@@ -153,7 +153,7 @@ def parse_eap(data)
     username: username,
     mac: macaddr,
     scheme_ver: 2,
-    capture_ver: 1,
+    capture_ver: 2,
     eapmethod: nil,
     tlsclienthello: nil,
     tlsserverhello: nil
