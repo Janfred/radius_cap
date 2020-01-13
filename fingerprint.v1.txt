@@ -1,0 +1,5 @@
+063d93bff412ae151862393b7a83132e26ce47ef92bc01dad46e40480b153b6e|Debian Testing libssl 1.1.1d wpa_supplicant
+3ee8c8065913422d3d2c5c31f11f216ff3ebc2ed8485b7e57b88f12717d718c4|Windows 8.1
+72b8140931125ce5fd60cb76d42ffa076eca5e263f18d671242f5e60b38ca1c6|CyanogenOS 12.1 Android 5.1.1 Security Patch Level 2015-11-01
+7a6d113d4dbdb92ebec3fcdce5a9a29d30d0082615d6a8ec2d1802b5f87f7459|LineageOS 14.1 Android 7.1.2 Security Patch Level 2019-02-05
+fafb02cbcae5bc1701f4008c9431e06d65fb9fc47621e645cb2e55b68e688361|Windows 8.1
