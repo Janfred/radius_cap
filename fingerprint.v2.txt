@@ -1,6 +1,12 @@
-063d93bff412ae151862393b7a83132e26ce47ef92bc01dad46e40480b153b6e|Debian Testing libssl 1.1.1d wpa_supplicant
-3ee8c8065913422d3d2c5c31f11f216ff3ebc2ed8485b7e57b88f12717d718c4|Windows 8.1
-72b8140931125ce5fd60cb76d42ffa076eca5e263f18d671242f5e60b38ca1c6|CyanogenOS 12.1 Android 5.1.1 Security Patch Level 2015-11-01
-7a6d113d4dbdb92ebec3fcdce5a9a29d30d0082615d6a8ec2d1802b5f87f7459|LineageOS 14.1 Android 7.1.2 Security Patch Level 2019-02-05
-fafb02cbcae5bc1701f4008c9431e06d65fb9fc47621e645cb2e55b68e688361|Windows 8.1
-be4ff4dc9438a01d2332dc5ef59ca91eb32ccbc5c0c58f4dcbaa1da3e20c4d5d|Android 8.0.0 Security Patch Level 2019-11-01
+Fingerprint                                                     |OS Class |OS Version    |Detail
+063d93bff412ae151862393b7a83132e26ce47ef92bc01dad46e40480b153b6e|Linux    |Debian Testing|Debian Testing libssl 1.1.1d wpa_supplicant
+3ee8c8065913422d3d2c5c31f11f216ff3ebc2ed8485b7e57b88f12717d718c4|Windows  |Windows 8.1   |Windows 8.1
+72b8140931125ce5fd60cb76d42ffa076eca5e263f18d671242f5e60b38ca1c6|Android  |Android 5.1.1 |CyanogenOS 12.1 Android 5.1.1 Security Patch Level 2015-11-01
+75c9790da72d308206f2fc66d3b91324d00d0a09d4ad234e21d4f3ae29451efc|Android  |Android 9     |Android 9 Security Patch Level 2019-12-01
+7a6d113d4dbdb92ebec3fcdce5a9a29d30d0082615d6a8ec2d1802b5f87f7459|Android  |Android 7.1.2 |LineageOS 14.1 Android 7.1.2 Security Patch Level 2019-02-05
+a2c589223545fa08f8ab034e6823f0b1e35186e42619111dab390abf84469e6a|Apple    |iOS/MacOS     |Apple (different devices)
+be4ff4dc9438a01d2332dc5ef59ca91eb32ccbc5c0c58f4dcbaa1da3e20c4d5d|Android  |Android 8.0.0 |Android 8.0.0 Security Patch Level 2019-11-01
+c1f86fa1c9b4db8fe296953b46c27a4376fff8fc7116b4f34665b0a0c0a29bad|Windows  |Windows 7     |Windows 7 Professional SP 1
+cd0eb9f2b285540d4e55b3cb038b5dd11e9a97f6787e1de52d09ec03ab7e9de5|Windows  |Windows 8.1   |Windows 8.1 Pro
+f96560be8e87ad852c6d2c322fd6efcb61dfa7de569ea5d5460d61a76ec90215|Android  |Android 6.0.1 |OxygenOS 3.6.1 Android 6.0.1 Security Patch Level 2017-10-01
+fafb02cbcae5bc1701f4008c9431e06d65fb9fc47621e645cb2e55b68e688361|Windows  |windows 8.1   |Windows 8.1
