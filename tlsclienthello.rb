@@ -1,5 +1,6 @@
 require 'digest'
 require './tlsciphersuites.rb'
+require './fingerprint.rb'
 
 class TLSClientHelloError < StandardError
 end
@@ -117,6 +118,9 @@ class TLSClientHello
       ((to_ret[:statusrequest].nil? || to_ret[:statusrequest] == []) ? "False" : to_ret[:statusrequest]) + "|" +
       (to_ret[:renegotiation] ? "True" : "False") + "|" +
       (to_ret[:extendedmastersecret] ? "True" : "False") )
+
+    to_ret[:fingerprinting][:osdetails] = Fingerprint.to_h(to_ret[:fingerprinting][:v2])
+
     to_ret
   end
 
