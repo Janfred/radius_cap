@@ -9,4 +9,4 @@ be4ff4dc9438a01d2332dc5ef59ca91eb32ccbc5c0c58f4dcbaa1da3e20c4d5d|Android  |Andro
 c1f86fa1c9b4db8fe296953b46c27a4376fff8fc7116b4f34665b0a0c0a29bad|Windows  |Windows 7     |Windows 7 Professional SP 1
 cd0eb9f2b285540d4e55b3cb038b5dd11e9a97f6787e1de52d09ec03ab7e9de5|Windows  |Windows 8.1   |Windows 8.1 Pro
 f96560be8e87ad852c6d2c322fd6efcb61dfa7de569ea5d5460d61a76ec90215|Android  |Android 6.0.1 |OxygenOS 3.6.1 Android 6.0.1 Security Patch Level 2017-10-01
-fafb02cbcae5bc1701f4008c9431e06d65fb9fc47621e645cb2e55b68e688361|Windows  |windows 8.1   |Windows 8.1
+fafb02cbcae5bc1701f4008c9431e06d65fb9fc47621e645cb2e55b68e688361|Windows  |Windows 8.1   |Windows 8.1
