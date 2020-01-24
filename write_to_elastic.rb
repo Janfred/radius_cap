@@ -35,6 +35,7 @@ end
 
 def convert_data_to_elasticsearch(data)
   to_insert = {id: nil, data: {}}
+  to_insert[:data][:last_seen] = Time.now
   to_insert[:data][:scheme_ver] = data[:scheme_ver]
   to_insert[:data][:capture_ver] = data[:capture_ver]
   to_insert[:data][:realm] = data[:username].split("@")[1]
