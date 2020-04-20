@@ -207,6 +207,9 @@ end
 class TLSSignatureScheme
   @@signatureschemes = [
     # SigScheme     Name
+    [ [0x01, 0x01], "MD5 RSA"],
+    [ [0x01, 0x02], "MD5 DSA"],
+    [ [0x01, 0x03], "MD5 ECDSA"],
     [ [0x02, 0x01], "rsa_pkcs1_sha1"],
     [ [0x02, 0x02], "SHA1 DSA"],
     [ [0x02, 0x03], "ecdsa_sha1"],
