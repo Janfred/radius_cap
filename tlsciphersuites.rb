@@ -43,8 +43,7 @@ class TLSCipherSuite
   def self.by_arr (val)
     p = @@ciphersuites.select { |x| x[0] == val}
     $stderr.puts "Unknown Ciphersuite #{val}" if p.empty?
-    return if p.empty?
-    return if p.length != 1
+    return {code: val, keyxchange: nil, auth: nil, encryption: nil, mode: nil, mac: nil, pfs: false, scsv: false, tlsv13: false, name: "UNKNOWN_0x#{val.pack("C*").unpack("H*")}"} if p.empty? || p.length != 1
     cipher_to_h(p.first)
   end
 
@@ -65,7 +64,9 @@ class TLSCipherSuite
     [ [0x00, 0x08], "RSA",   "RSA",     "DES-40",      "CBC", "SHA",      false, false, false, "TLS_RSA_EXPORT_WITH_DES40_CBC_SHA"],
     [ [0x00, 0x09], "RSA",   "RSA",     "DES",         "CBC", "SHA",      false, false, false, "TLS_RSA_WITH_DES_CBC_SHA"],
     [ [0x00, 0x0A], "RSA",   "RSA",     "3DES",        "CBC", "SHA",      false, false, false, "TLS_RSA_WITH_3DES_EDE_CBC_SHA"],
+    [ [0x00, 0x0C], "DH",    "DSS",     "DES",         "CBC", "SHA",      false, false, false, "TLS_DH_DSS_WITH_DES_CBC_SHA"],
     [ [0x00, 0x0D], "DH",    "DSS",     "3DES",        "CBC", "SHA",      false, false, false, "TLS_DH_DSS_WITH_3DES_EDE_CBC_SHA"],
+    [ [0x00, 0x0F], "DH",    "RSA",     "DES",         "CBC", "SHA",      false, false, false, "TLS_DH_RSA_WITH_DES_CBC_SHA"],
     [ [0x00, 0x10], "DH",    "RSA",     "3DES",        "CBC", "SHA",      false, false, false, "TLS_DH_RSA_WITH_3DES_EDE_CBC_SHA"],
     [ [0x00, 0x11], "DHE",   "DSS",     "DES-40",      "CBC", "SHA",      true,  false, false, "TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"],
     [ [0x00, 0x12], "DHE",   "DSS",     "DES",         "CBC", "SHA",      true,  false, false, "TLS_DHE_DSS_WITH_DES_CBC_SHA"],
@@ -106,6 +107,7 @@ class TLSCipherSuite
     [ [0x00, 0x69], "DH",    "RSA",     "AES256",      "CBC", "SHA256",   false, false, false, "TLS_DH_RSA_WITH_AES_256_CBC_SHA256"],
     [ [0x00, 0x6A], "DHE",   "DSS",     "AES256",      "CBC", "SHA256",   true,  false, false, "TLS_DHE_DSS_WITH_AES_256_CBC_SHA256"],
     [ [0x00, 0x6B], "DHE",   "RSA",     "AES256",      "CBC", "SHA256",   true,  false, false, "TLS_DHE_RSA_WITH_AES_256_CBC_SHA256"],
+    [ [0x00, 0x81], nil,     nil,       nil,           nil,   nil,        false, false, false, "TLS_GOSTR341001_WITH_28147_CNT_IMIT"],
     [ [0x00, 0x84], "RSA",   "RSA",     "CAMELLIA256", "CBC", "SHA256",   false, false, false, "TLS_RSA_WITH_CAMELLIA_256_CBC_SHA"],
     [ [0x00, 0x85], "DH",    "DSS",     "CAMELLIA256", "CBC", "SHA256",   false, false, false, "TLS_DH_DSS_WITH_CAMELLIA_256_CBC_SHA"],
     [ [0x00, 0x86], "DH",    "RSA",     "CAMELLIA256", "CBC", "SHA256",   false, false, false, "TLS_DH_RSA_WITH_CAMELLIA_256_CBC_SHA"],
@@ -197,6 +199,7 @@ class TLSCipherSuite
     [ [0xCC, 0xA8], "ECDHE", "RSA",     "CHACHA20",    nil,   "POLY1305", true,  false, false, "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256"],
     [ [0xCC, 0xA9], "ECDHE", "ECDSA",   "CHACHA20",    nil,   "POLY1305", true,  false, false, "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256"],
     [ [0xCC, 0xAA], "DHE",   "RSA",     "CHACHA20",    nil,   "POLY1305", true,  false, false, "TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256"],
+    [ [0xFF, 0x85], nil,     nil,       nil,           nil,   nil,        false, false, false, "PRIVATE_0xFF_0x85"],
 
   ]
 end
@@ -236,8 +239,7 @@ class TLSSignatureScheme
 
   def self.by_arr (val)
     p = @@signatureschemes.select { |x| x[0] == val}
-    return if p.empty?
-    return if p.length != 1
+    return {code: val, name: "UNKNOWN_0x#{val.pack("C*").unpack("H*").first}"} if p.empty? || p.length != 1
     sigscheme_to_h(p.first)
   end
 
@@ -293,8 +295,7 @@ class TLSSupportedGroups
 
   def self.by_arr (val)
     p = @@supportedgroups.select { |x| x[0] == val }
-    return if p.empty?
-    return if p.length != 1
+    return {code: val, name: "UNKNOWN_#{val.pack("C*").unpack("H*").first}"} if p.empty? || p.length != 1
     group_to_h(p.first)
   end
 
