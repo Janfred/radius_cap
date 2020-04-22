@@ -15,6 +15,7 @@ require './write_to_elastic.rb'
 require './macvendor.rb'
 
 @config[:debug] = false if @config[:debug].nil?
+@config[:eap_timeout] ||= 60
 
 class EAPFragParseError < StandardError
 end
@@ -115,7 +116,7 @@ def insert_in_packetflow(pkt)
 
   # Now do housekeeping
   t = Time.now
-  old = @packetflow.select { |x| (t-x[:last_updated]) > 10}
+  old = @packetflow.select { |x| (t-x[:last_updated]) > @config[:eap_timeout]}
   old.each do |o|
     $stderr.puts "Timing out 0x#{o[:state].pack('C*').unpack('H*').first}" if o[:state]
     $stderr.puts "Timing out state without state variable" unless o[:state]
