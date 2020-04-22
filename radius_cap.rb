@@ -61,10 +61,12 @@ def insert_in_packetflow(pkt)
       p = @packetflow.select{ |x| x[:state] == pkt.state }
       if p.empty?
         $stderr.puts "Could not find EAP state 0x#{pkt.state.pack('C*').unpack('H*').first}"
+        # TODO Insert Packet in debug output
         return
       end
       if p.length > 1
         $stderr.puts "Found multiple EAP States for 0x#{pkt.state.pack('C*').unpack('H*').first}"
+        # TODO Insert Packet in debug output
         return
       end
       flow = p.first
@@ -84,6 +86,7 @@ def insert_in_packetflow(pkt)
     p = @packetflow.select { |x| x[:udp_data] == {ip: pkt.udp[:dst][:ip], port: pkt.udp[:dst][:port], id: pkt.identifier} }
     if p.empty?
       $stderr.puts "Could not find a matching request from #{pkt.udp[:dst][:ip]}:#{pkt.udp[:dst][:port]} and ID #{pkt.identifier}"
+      # TODO Insert Packet in debug output
       return
     end
     if p.length > 1
@@ -101,11 +104,16 @@ def insert_in_packetflow(pkt)
       @packetflow.delete flow
 
       # Hand over to EAP Parsing
-      parse_eap(flow)
+      begin
+        parse_eap(flow)
+      rescue => e
+        # TODO Insert the parsed packet flow in the debug output
+      end
     else
       # This is ongoing communication
       if pkt.state.nil? then
         $stderr.puts "Outgoing communication without state set."
+        # TODO Insert the parsed packet flow in the debug output
         return
       end
       flow[:last_updated] = Time.now
@@ -120,6 +128,7 @@ def insert_in_packetflow(pkt)
   old.each do |o|
     $stderr.puts "Timing out 0x#{o[:state].pack('C*').unpack('H*').first}" if o[:state]
     $stderr.puts "Timing out state without state variable" unless o[:state]
+    # TODO Here we should insert the captured packets in the debug output.
     @packetflow.delete o
   end
 end
@@ -340,10 +349,12 @@ Thread.start do
       pkt = Packet.parse p
       # Skip all packets other then ip
       next unless pkt.is_ip?
-      # Skip all fragmented ip addresses
+      # Skip all fragmented ip packets
       next if pkt.ip_frag & 0x2000 != 0
       # only look on copied packets
       next if ([pkt.ip_daddr, pkt.ip_saddr] & @config[:ipaddrs]).empty?
+      # Skip packets with ignored ip addresses
+      next unless ([pkt.ip_daddr, pkt.ip_saddr] & @config[:ignoreips]).empty?
       # Skip non-udp packets
       next unless pkt.is_udp?
       # Skip packets for other port then radius
@@ -353,18 +364,20 @@ Thread.start do
       packet_info = [pkt.ip_saddr, pkt.ip_daddr, pkt.size, pkt.proto.last]
       #puts "%-15s -> %-15s %-4d %s" % packet_info
 
+      rp = nil
+
       begin
         # Parse Radius packets
         rp = RadiusPacket.new(pkt)
         #puts rp.inspect
         #binding.irb
-        insert_in_packetflow(rp)
       rescue PacketLengthNotValidError => e
         ##################################################
         # THIS IS A CASE THAT SHOULDN'T OCCUR.           #
         # IT SHOULD BE CATCHED BY THE FRAGMENT STATEMENT #
         ##################################################
         # TODO: Remove irb binding
+        puts "PacketLengthNotValidError!"
         puts e.message
         puts e.backtrace.join "\n"
         puts p.unpack("H*").first
@@ -373,10 +386,18 @@ Thread.start do
       rescue => e
         # This is here for debugging.
         # TODO: remove irb binding
+        puts "General error in Parsing!"
         puts e.message
         puts e.backtrace.join "\n"
         puts p.unpack("H*").first
         #binding.irb
+      end
+      begin
+        insert_in_packetflow(rp)
+      rescue => e
+        puts "Error in Packetflow!"
+        puts e.message
+        puts e.backtrace.join "\n"
       end
     end
   end
