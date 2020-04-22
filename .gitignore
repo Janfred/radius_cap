@@ -1,3 +1,4 @@
 /localconfig.rb
 /.bundle
 /vendor/bundle
+/.idea
