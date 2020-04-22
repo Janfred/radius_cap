@@ -18,24 +18,24 @@ module TLSTypes
     CERTIFICATESTATUS = 22
   end
   module Extensions
-    ServerName           =     0
-    StatusRequest        =     5
-    SupportedGroups      =    10
-    ECPointFormats       =    11
-    SignatureAlgorithms  =    13
-    Heartbeat            =    15
-    SignedCertTimestamp  =    18
-    EncryptThenHMAC      =    22
-    ExtendedMasterSecret =    23
-    SessionTicket        =    35
-    SupportedVersions    =    43
-    PSKKeyExchangeModes  =    45
-    KeyShare             =    51
-    RenegotiationInfo    = 65281
+    SERVER_NAME             =     0
+    STATUS_REQUEST          =     5
+    SUPPORTED_GROUPS        =    10
+    EC_POINT_FORMATS        =    11
+    SIGNATURE_ALGORITHMS    =    13
+    HEARTBEAT               =    15
+    SIGNED_CERT_TIMESTAMP   =    18
+    ENCRYPT_THEN_HMAC       =    22
+    EXTENDED_MASTER_SECRET  =    23
+    SESSION_TICKET          =    35
+    SUPPORTED_VERSIONS      =    43
+    PSK_KEY_EXCHANGE_MODES  =    45
+    KEY_SHARE               =    51
+    RENEGOTIATION_INFO      = 65281
   end
   module ExtenData
     module ServerName
-      HostName = 0
+      HOST_NAME = 0
     end
     module StatusRequest
       OCSP = 1
@@ -67,25 +67,25 @@ class TLSClientHello
       else
         "Unknown"
     end
-    to_ret[:renegotion] = @ciphersuites.include?([0x00,0xFF]) || !!@byexten[TLSTypes::Extensions::RenegotiationInfo]
-    to_ret[:servername] = parse_servername(@byexten[TLSTypes::Extensions::ServerName]) if @byexten[TLSTypes::Extensions::ServerName]
-    to_ret[:extendedmastersecret] = !!@byexten[TLSTypes::Extensions::ExtendedMasterSecret]
-    if @byexten[TLSTypes::Extensions::SupportedVersions] then
-      ver = parse_supported_versions(@byexten[TLSTypes::Extensions::SupportedVersions])
+    to_ret[:renegotion] = @ciphersuites.include?([0x00,0xFF]) || !!@byexten[TLSTypes::Extensions::RENEGOTIATION_INFO]
+    to_ret[:servername] = parse_servername(@byexten[TLSTypes::Extensions::SERVER_NAME]) if @byexten[TLSTypes::Extensions::SERVER_NAME]
+    to_ret[:extendedmastersecret] = !!@byexten[TLSTypes::Extensions::EXTENDED_MASTER_SECRET]
+    if @byexten[TLSTypes::Extensions::SUPPORTED_VERSIONS]
+      ver = parse_supported_versions(@byexten[TLSTypes::Extensions::SUPPORTED_VERSIONS])
       to_ret[:version] = "TLSv1.3" if ver.include? [0x03, 0x04]
     end
-    if @byexten[TLSTypes::Extensions::SupportedGroups] then
-      to_ret[:supportedgroups] = parse_supported_groups(@byexten[TLSTypes::Extensions::SupportedGroups])
+    if @byexten[TLSTypes::Extensions::SUPPORTED_GROUPS]
+      to_ret[:supportedgroups] = parse_supported_groups(@byexten[TLSTypes::Extensions::SUPPORTED_GROUPS])
     else
       to_ret[:supportedgroups] = []
     end
-    if @byexten[TLSTypes::Extensions::StatusRequest] then
-      to_ret[:statusrequest] = parse_status_request(@byexten[TLSTypes::Extensions::StatusRequest])
+    if @byexten[TLSTypes::Extensions::STATUS_REQUEST]
+      to_ret[:statusrequest] = parse_status_request(@byexten[TLSTypes::Extensions::STATUS_REQUEST])
     else
       to_ret[:statusrequest] = []
     end
-    if @byexten[TLSTypes::Extensions::SignatureAlgorithms] then
-      to_ret[:signaturealgorithms] = parse_signature_algorithms(@byexten[TLSTypes::Extensions::SignatureAlgorithms])
+    if @byexten[TLSTypes::Extensions::SIGNATURE_ALGORITHMS]
+      to_ret[:signaturealgorithms] = parse_signature_algorithms(@byexten[TLSTypes::Extensions::SIGNATURE_ALGORITHMS])
     else
       to_ret[:signaturealgorithms] = []
     end
@@ -131,7 +131,7 @@ class TLSClientHello
     to_ret = []
     while cur_ptr < data.length do
       algo = TLSSignatureScheme.by_arr(data[cur_ptr, 2])
-      if algo.nil? then
+      if algo.nil?
         to_ret << "Unknown (#{data[cur_ptr, 2]})"
       else
         to_ret << algo[:name]
@@ -189,7 +189,7 @@ class TLSClientHello
       type = data[cur_ptr]
       length = data[cur_ptr+1]*256 + data[cur_ptr+2]
       cur_ptr += 3
-      if type == TLSTypes::ExtenData::ServerName::HostName then
+      if type == TLSTypes::ExtenData::ServerName::HOST_NAME
         to_ret << data[cur_ptr, length].pack('C*')
       end
       cur_ptr += length
@@ -206,45 +206,44 @@ class TLSClientHello
     end
     @extensions.each do |e|
       case e[:type]
-        when TLSTypes::Extensions::ServerName
+        when TLSTypes::Extensions::SERVER_NAME
           str += " ServerName"
-        when TLSTypes::Extensions::StatusRequest
+        when TLSTypes::Extensions::STATUS_REQUEST
           str += " StatusRequest"
-        when TLSTypes::Extensions::SupportedGroups
+        when TLSTypes::Extensions::SUPPORTED_GROUPS
           str += " SupportedGroups"
-        when TLSTypes::Extensions::ECPointFormats
+        when TLSTypes::Extensions::EC_POINT_FORMATS
           str += " ECPointFormats"
-        when TLSTypes::Extensions::SignatureAlgorithms
+        when TLSTypes::Extensions::SIGNATURE_ALGORITHMS
           str += " SignatureAlgorithms"
-        when TLSTypes::Extensions::Heartbeat
+        when TLSTypes::Extensions::HEARTBEAT
           str += " Heartbeat"
-        when TLSTypes::Extensions::SignedCertTimestamp
+        when TLSTypes::Extensions::SIGNED_CERT_TIMESTAMP
           str += " SignedCertTimestamp"
-        when TLSTypes::Extensions::EncryptThenHMAC
+        when TLSTypes::Extensions::ENCRYPT_THEN_HMAC
           str += " EncryptThenHMAC"
-        when TLSTypes::Extensions::ExtendedMasterSecret
+        when TLSTypes::Extensions::EXTENDED_MASTER_SECRET
           str += " ExtendedMasterSecret"
-        when TLSTypes::Extensions::SessionTicket
+        when TLSTypes::Extensions::SESSION_TICKET
           str += " SessionTicket"
-        when TLSTypes::Extensions::SupportedVersions
+        when TLSTypes::Extensions::SUPPORTED_VERSIONS
           str += " SupportedVersions"
-        when TLSTypes::Extensions::PSKKeyExchangeModes
+        when TLSTypes::Extensions::PSK_KEY_EXCHANGE_MODES
           str += " PSKKeyExchangeModes"
-        when TLSTypes::Extensions::KeyShare
+        when TLSTypes::Extensions::KEY_SHARE
           str += " KeyShare"
-        when TLSTypes::Extensions::RenegotiationInfo
+        when TLSTypes::Extensions::RENEGOTIATION_INFO
           str += " RenegotiationInfo"
         else
           $stderr.puts "Unsupported TLS Extension #{e[:type]}"
       end
     end
 
-    if @extensions.select { |x| x[:type] == TLSTypes::Extensions::RenegotiationInfo }.empty? && !@cipersuites.include?([0x00, 0xFF]) then
+    if @extensions.select { |x| x[:type] == TLSTypes::Extensions::RENEGOTIATION_INFO }.empty? && !@ciphersuites.include?([0x00, 0xFF])
       str += " ###### NO RENEGOTIATION INFO ####### "
     end
 
-    str += ">"
-    return str
+    str + ">"
   end
 
   def initialize(data)
@@ -281,7 +280,7 @@ class TLSClientHello
     @byexten = {}
     exten_len = 0
 
-    if data.length <= cur_ptr then
+    if data.length <= cur_ptr
       # No extensions present
       return
     end

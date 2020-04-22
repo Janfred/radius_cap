@@ -325,7 +325,7 @@ class TLSServerKeyExchange
             cur_ptr = 4
             curve_pubkey = data[cur_ptr, curve_length]
             cur_ptr += curve_length
-            if version == [0x03, 0x03] || version == [0x03, 0x04] then
+            if version == [0x03, 0x03] || version == [0x03, 0x04]
               @curve_sig_algo = TLSSignatureScheme.by_arr(data[cur_ptr, 2])
               cur_ptr += 2
             else
@@ -344,7 +344,7 @@ class TLSServerKeyExchange
       end
     end
     def to_h
-      if @curve_sig_algo && @curve_name then
+      if @curve_sig_algo && @curve_name
         {sig_scheme: @curve_sig_algo[:name], curve_name: @curve_name[:name]}
       else
         {}
@@ -360,7 +360,7 @@ class TLSServerKeyExchange
   end
 
   def self.parse(data, cipher, version)
-    if TLSCipherSuite.by_arr(cipher)[:keyxchange] == "ECDHE" then
+    if TLSCipherSuite.by_arr(cipher)[:keyxchange] == "ECDHE"
       return TLSServerKeyExchange::ECDHE.new(data, version)
     else
       return nil

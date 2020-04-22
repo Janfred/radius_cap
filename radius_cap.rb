@@ -39,7 +39,7 @@ include PacketFu
 @packetflow = []
 
 def insert_in_packetflow(pkt)
-  if(pkt.udp[:dst][:port] == 1812)
+  if pkt.udp[:dst][:port] == 1812
     # This is an incoming packet
     if pkt.state.nil?
       # Probably a completely new request
@@ -57,7 +57,7 @@ def insert_in_packetflow(pkt)
       }
       @packetflow << state
     else
-      # Proxystate exists, so this is ongoing communication
+      # ProxyState exists, so this is ongoing communication
       p = @packetflow.select{ |x| x[:state] == pkt.state }
       if p.empty?
         $stderr.puts "Could not find EAP state 0x#{pkt.state.pack('C*').unpack('H*').first}"
@@ -111,7 +111,7 @@ def insert_in_packetflow(pkt)
       end
     else
       # This is ongoing communication
-      if pkt.state.nil? then
+      if pkt.state.nil?
         $stderr.puts "Outgoing communication without state set."
         # TODO Insert the parsed packet flow in the debug output
         return
@@ -136,10 +136,12 @@ end
 def normalize_mac(mac)
   mac.downcase!
   m_d = mac.match /^([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2})$/
-  if m_d && m_d.length == 7 then
+  if m_d && m_d.length == 7
     return m_d[1,6].join ":"
   end
-  return "ff:ff:ff:ff:ff:ff"
+
+  # Default Return
+  "ff:ff:ff:ff:ff:ff"
 end
 
 def parse_eap(data)
@@ -182,7 +184,7 @@ def parse_eap(data)
     return
   end
   # Initial EAP communication
-  if (eap.first.code != EAPPacket::Code::RESPONSE || eap.first.type != EAPPacket::Type::IDENTITY) then
+  if eap.first.code != EAPPacket::Code::RESPONSE || eap.first.type != EAPPacket::Type::IDENTITY
     $stderr.puts "First code was no EAP Response or Identity"
     return
   end
@@ -194,7 +196,7 @@ def parse_eap(data)
   eap_reply = nil
   while eap_reply.nil? || eap_reply.type == EAPPacket::Type::NAK do
     eap.shift
-    if eap.length < 2 then
+    if eap.length < 2
       # Length to short for EAP Method agreement, probably because of immediate reject
       return
     end
@@ -207,7 +209,7 @@ def parse_eap(data)
            EAPPacket::Type::PEAP,
            EAPPacket::Type::TLS
         # Check if start flag is set
-        if eap_start.length != 6 then
+        if eap_start.length != 6
           $stderr.puts "Invalid length for EAP-TLS Start"
           return
         end
@@ -282,21 +284,21 @@ def read_eaptls_fragment(eap, eap_type)
   begin
     more_fragments = false
     frag = eap.shift
-    if frag.nil? then
+    if frag.nil?
       $stderr.puts 'Reached end while scanning EAP Fragment'
       raise EAPFragParseError
     end
-    if frag.type != eap_type then
+    if frag.type != eap_type
       $stderr.puts 'Found fragment without matching eap type'
       raise EAPFragParseError
     end
-    unless frag.type_data.length > 0 then
+    unless frag.type_data.length > 0
       $stderr.puts 'Empty fragment. Interesting.'
       raise EAPFragParseError
     end
     flags = frag.type_data[0]
     cur_ptr = 1
-    if (flags & EAPPacket::TLSFlags::LENGTHINCLUDED) != 0 then
+    if (flags & EAPPacket::TLSFlags::LENGTHINCLUDED) != 0
       ind_length = frag.type_data[1]*256*256*256 + frag.type_data[2]*256*256 + frag.type_data[3]*256 + frag.type_data[4]
       length ||= ind_length
       # If a length is included, it should be the same among all eap packets
@@ -306,13 +308,13 @@ def read_eaptls_fragment(eap, eap_type)
       end
       cur_ptr += 4
     end
-    if (flags & EAPPacket::TLSFlags::MOREFRAGMENTS) != 0 then
+    if (flags & EAPPacket::TLSFlags::MOREFRAGMENTS) != 0
       more_fragments = true
     end
     data += frag.type_data[cur_ptr..-1]
-    if more_fragments then
+    if more_fragments
       reply = eap.shift
-      if reply.type != eap_type then
+      if reply.type != eap_type
         $stderr.puts 'Reply packet had different type'
         raise EAPFragParseError
       end

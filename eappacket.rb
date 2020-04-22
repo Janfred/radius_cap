@@ -33,7 +33,7 @@ class EAPPacket
     @identifier = data[1]
     @length = data[2]*256 + data[3]
 
-    if @length != data.length then
+    if @length != data.length
       raise PacketLengthNotValidError, 'EAP Length does not match data length'
     end
 

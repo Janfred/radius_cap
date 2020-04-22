@@ -8,13 +8,13 @@ class Fingerprint
   def self.to_h(fb)
     self.check_new_file
     to_ret = @@fingerprintdb[fb]
-    to_ret ||= { os: "Not in FP-DB", os_version: "Not in FP-DB", detail: "Not in FP-DB" }
+    to_ret || { os: "Not in FP-DB", os_version: "Not in FP-DB", detail: "Not in FP-DB" }
   end
 
   def self.check_new_file
     thisupdate = File.mtime("./fingerprint.#{VERSION}.txt")
 
-    if @@fingerprintdb_lastupdate.nil? || thisupdate > @@fingerprintdb_lastupdate then
+    if @@fingerprintdb_lastupdate.nil? || thisupdate > @@fingerprintdb_lastupdate
       temp_db = {}
       begin
         File.read("./fingerprint.#{VERSION}.txt").each_line do |l|

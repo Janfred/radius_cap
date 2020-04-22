@@ -23,10 +23,10 @@ class TLSServerHello
       else
         "Unknown"
     end
-    to_ret[:renegotiation] = !!@byexten[TLSTypes::Extensions::RenegotiationInfo]
-    to_ret[:extendedmastersecret] = !!@byexten[TLSTypes::Extensions::ExtendedMasterSecret]
-    if @byexten[TLSTypes::Extensions::SupportedVersions] then
-      to_ret[:version] = "TLSv1.3" if @byexten[TLSTypes::Extensions::SupportedVersions] == [0x03, 0x04]
+    to_ret[:renegotiation] = !!@byexten[TLSTypes::Extensions::RENEGOTIATION_INFO]
+    to_ret[:extendedmastersecret] = !!@byexten[TLSTypes::Extensions::EXTENDED_MASTER_SECRET]
+    if @byexten[TLSTypes::Extensions::SUPPORTED_VERSIONS] then
+      to_ret[:version] = "TLSv1.3" if @byexten[TLSTypes::Extensions::SUPPORTED_VERSIONS] == [0x03, 0x04]
     end
     to_ret[:cipher] = "0x%02X%02X" % @cipher
     to_ret[:cipherdata] = {}
@@ -51,33 +51,33 @@ class TLSServerHello
     #str += " 0x%02X%02X" % @cipher
     @extensions.each do |e|
       case e[:type]
-        when TLSTypes::Extensions::ServerName
+        when TLSTypes::Extensions::SERVER_NAME
           str += " ServerName"
-        when TLSTypes::Extensions::StatusRequest
+        when TLSTypes::Extensions::STATUS_REQUEST
           str += " StatusRequest"
-        when TLSTypes::Extensions::SupportedGroups
+        when TLSTypes::Extensions::SUPPORTED_GROUPS
           str += " SupportedGroups"
-        when TLSTypes::Extensions::ECPointFormats
+        when TLSTypes::Extensions::EC_POINT_FORMATS
           str += " ECPointFormats"
-        when TLSTypes::Extensions::SignatureAlgorithms
+        when TLSTypes::Extensions::SIGNATURE_ALGORITHMS
           str += " SignatureAlgorithms"
-        when TLSTypes::Extensions::Heartbeat
+        when TLSTypes::Extensions::HEARTBEAT
           str += " Heartbeat"
-        when TLSTypes::Extensions::SignedCertTimestamp
+        when TLSTypes::Extensions::SIGNED_CERT_TIMESTAMP
           str += " SignedCertTimestamp"
-        when TLSTypes::Extensions::EncryptThenHMAC
+        when TLSTypes::Extensions::ENCRYPT_THEN_HMAC
           str += " EncryptThenHMAC"
-        when TLSTypes::Extensions::ExtendedMasterSecret
+        when TLSTypes::Extensions::EXTENDED_MASTER_SECRET
           str += " ExtendedMasterSecret"
-        when TLSTypes::Extensions::SessionTicket
+        when TLSTypes::Extensions::SESSION_TICKET
           str += " SessionTicket"
-        when TLSTypes::Extensions::SupportedVersions
+        when TLSTypes::Extensions::SUPPORTED_VERSIONS
           str += " SupportedVersions"
-        when TLSTypes::Extensions::PSKKeyExchangeModes
+        when TLSTypes::Extensions::PSK_KEY_EXCHANGE_MODES
           str += " PSKKeyExchangeModes"
-        when TLSTypes::Extensions::KeyShare
+        when TLSTypes::Extensions::KEY_SHARE
           str += " KeyShare"
-        when TLSTypes::Extensions::RenegotiationInfo
+        when TLSTypes::Extensions::RENEGOTIATION_INFO
           str += " RenegotiationInfo"
         else
           $stderr.puts "Unsupported TLS Extension #{e[:type]}"

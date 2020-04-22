@@ -74,7 +74,7 @@ class RadiusPacket
   attr_reader :state
 
   def initialize(pkt)
-    if pkt.udp_len < 20 then
+    if pkt.udp_len < 20
       raise 'Length of packet violates RFC2865'
     end
 
@@ -89,7 +89,7 @@ class RadiusPacket
     @length = @raw_data[2]*256 + @raw_data[3]
 
     # This case should actually not happen, but it happened. (I hate IP fragmentation)
-    if @length != @raw_data.length then
+    if @length != @raw_data.length
       raise PacketLengthNotValidError, "Raw data length #{@raw_data.length} does not match identified length #{@length}"
     end
 
@@ -106,7 +106,7 @@ class RadiusPacket
       attribute[:data] = @raw_data[cur_ptr+2..cur_ptr+attribute[:length]-1]
       attributes << attribute
       cur_ptr += attribute[:length]
-      if attribute[:type] == RadiusPacket::Attribute::STATE then
+      if attribute[:type] == RadiusPacket::Attribute::STATE
         # There should be only one state
         raise PacketMultipleState, 'multiple state attributes present' unless @state.nil?
         @state = attribute[:data]
@@ -198,7 +198,7 @@ class RadiusPacket
           str += " Unknown Type #{a[:type]}"
       end
     end
-    str += ">"
-    return str
+    # Add end and return
+    str + ">"
   end
 end
