@@ -2,13 +2,18 @@ require 'digest'
 require './tlsciphersuites.rb'
 require './fingerprint.rb'
 
+# Error thrown when the TLS Client Hello parsing fails.
 class TLSClientHelloError < StandardError
 end
 
+# Container for all TLS related constants
 module TLSTypes
+  # Supported TLS Record Types.
+  # @todo Currently this is only the Handshake record. In future it might be a good Idea to also support other types.
   module RecordType
     HANDSHAKE = 0x16
   end
+  # Supported Handshake Types
   module HandshakeType
     CLIENTHELLO       =  1
     SERVERHELLO       =  2
@@ -17,6 +22,8 @@ module TLSTypes
     SERVERHELLODONE   = 14
     CERTIFICATESTATUS = 22
   end
+
+  # Supported TLS Extensions
   module Extensions
     SERVER_NAME             =     0
     STATUS_REQUEST          =     5
@@ -33,16 +40,20 @@ module TLSTypes
     KEY_SHARE               =    51
     RENEGOTIATION_INFO      = 65281
   end
+  # Container for all Extensions constants
   module ExtenData
+    # Constants for Server Name Indication. Currently only HOST_NAME.
     module ServerName
       HOST_NAME = 0
     end
+    # Constants for Status Request. Currently only OCSP is specified
     module StatusRequest
       OCSP = 1
     end
   end
 end
 
+# Class for parsing the TLS Client Hello
 class TLSClientHello
 
   # [Array] Outer TLS Version (TLS Record Version) as Array of two bytes (e.g. [0x03,0x03])

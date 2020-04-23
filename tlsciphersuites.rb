@@ -1,3 +1,4 @@
+# This Class handles the CipherSuites
 class TLSCipherSuite
   def initialize(ciphersuite)
     @external_cs = ciphersuite
@@ -5,52 +6,83 @@ class TLSCipherSuite
     @internal_cs.delete nil
   end
 
+  # Converts the Cipher Suite to an array of human readable names
+  # @return [Array] Human readable Names of the CipherSuites
   def humanreadable
     @internal_cs.map {|x| x[:name]}
   end
 
+  # Converts the Cipher Suite to a concatenated string for fingerprinting
+  # @return [String] String containing all offered CipherSuites as Hex separated by space
   def cipherset
     @internal_cs.map {|x| "0x%02X%02X" % x[:code]}.join " "
   end
 
+  # Is a PFS Cipher Suite available in the CipherSuites?
+  # @return [Boolean]
   def pfs_avail?
     @internal_cs.select {|x| x[:pfs] }.length > 0
   end
+  # Are all offered CipherSuites PFS?
+  # This ignores TLSv1.3 Cipher Suites and SCSV
+  # @return [Boolean]
   def only_pfs?
     @internal_cs.select {|x| !x[:pfs] && !x[:scsv] && !x[:tlsv13]}.empty?
   end
+  # Is an aNULL (no authentication) Cipher Suite available?
+  # This ignores TLSv1.3 Cipher Suites and SCSV
+  # @return [Boolean]
   def anull_present?
     !@internal_cs.select {|x| x[:auth].nil? && !x[:scsv] && !x[:tlsv13]}.empty?
   end
+  # Is an eNULL (no encryption) Cipher Suite available?
+  # This ignores TLSv1.3 Cipher Suites and SCSV
+  # @return [Boolean]
   def enull_present?
     !@internal_cs.select {|x| x[:encryption].nil? && !x[:scsv] && !x[:tlsv13]}.empty?
   end
+  # Is an RC4 Cipher Suite available?
+  # @return [Boolean]
   def rc4_present?
     !@internal_cs.select {|x| !x[:encryption].nil? && x[:encryption].match(/^RC4/)}.empty?
   end
+  # Is a 3DES Cipher Suite available?
+  # @return [Boolean]
   def tripledes_present?
     !@internal_cs.select {|x| x[:encryption] == "3DES"}.empty?
   end
+  # Is a DES Cipher Suite available?
+  # @return [Boolean]
   def des_present?
     !@internal_cs.select {|x| !x[:encryption].nil? && x[:encryption].match(/^DES/)}.empty?
   end
 
+  # Get a Cipher Suite by a hex string
+  # @param val [String] Hex-String of the CipherSuite in format "0xXXXX"
+  # @return [Hash] CipherSuite Hash value
   def self.by_hexstr (val)
     ar = [val[2, 4]].pack("H*").unpack("C*")
     by_arr(ar)
   end
 
+  # Get a Cipher Suite by a array of two bytes
+  # @param val [Array] CipherSuite Value as Array of two bytes (e.g. [0xFF,0x00])
+  # @return [Hash] CipherSuite Hash value
   def self.by_arr (val)
     p = @@ciphersuites.select { |x| x[0] == val}
     $stderr.puts "Unknown Ciphersuite #{val}" if p.empty?
-    return {code: val, keyxchange: nil, auth: nil, encryption: nil, mode: nil, mac: nil, pfs: false, scsv: false, tlsv13: false, name: "UNKNOWN_0x#{val.pack("C*").unpack("H*")}"} if p.empty? || p.length != 1
+    return {code: val, keyxchange: "UNKNOWN", auth: "UNKNOWN", encryption: "UNKNOWN", mode: "UNKNOWN", mac: "UNKNOWN", pfs: false, scsv: false, tlsv13: false, name: "UNKNOWN_0x#{val.pack("C*").unpack("H*")}"} if p.empty? || p.length != 1
     cipher_to_h(p.first)
   end
 
+  # Converts a given entry from the CipherSuite array to a hash
+  # @param val [Array] Row from @@ciphersuites array
+  # @return [Hash] corresponding CipherSuite Hash value
   def self.cipher_to_h(val)
     {code: val[0], keyxchange: val[1], auth: val[2], encryption: val[3], mode: val[4], mac: val[5], pfs: val[6], scsv: val[7], tlsv13: val[8], name: val[9]}
   end
 
+  # List of all supported Cipher Suites
   @@ciphersuites = [
 #     Ciphersuite   KeyX     Auth       Encry          Mode   MAC         PFS    SCSV   TLS1.3 Humanreadable Name
     [ [0x00, 0x00], nil,     nil,       nil,           nil,   nil,        false, false, false, "TLS_NULL_WITH_NULL_NULL"],

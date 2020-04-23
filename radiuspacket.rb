@@ -1,11 +1,16 @@
+# Error to be raised if the actual length of the packet does not match the specified length.
+# This could happen if the IP packet was fragmented or the Radius Packet is faulty
 class PacketLengthNotValidError < StandardError
 end
+
 # Error to be raised if a Radius Packet includes multiple State Attributes.
 # This is forbidden by RFC 2865 Section 5.24
 class PacketMultipleState < StandardError
 end
 
+# A Radius Packet with all attributes and a reassembled EAP Message
 class RadiusPacket
+  # All supported RADIUS Types
   module Type
     REQUEST = 1
     ACCEPT = 2
@@ -13,6 +18,7 @@ class RadiusPacket
     CHALLENGE = 11
   end
 
+  # All supported RADIUS attributes
   module Attribute
     USERNAME             =   1
     USERPASSWORD         =   2
@@ -118,6 +124,7 @@ class RadiusPacket
     parse_eap
   end
 
+  # Reassembles the EAP messages by concatenating the contents of all EAP-Message attributes.
   def parse_eap
     @attributes.each do |a|
       next unless a[:type] == RadiusPacket::Attribute::EAPMESSAGE
