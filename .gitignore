@@ -3,3 +3,5 @@
 /vendor/bundle
 /.idea
 /update_elastic.*.rb
+/doc
+/.yardoc

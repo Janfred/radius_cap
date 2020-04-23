@@ -45,16 +45,28 @@ end
 
 class TLSClientHello
 
+  # Outer TLS Version (TLS Record Version)
   attr_reader :outervers
+  # Length of the TLS Record
   attr_reader :outerlen
+  # Length of inner TLS Data (in this case TLS Client Hello)
   attr_reader :innerlen
+  # Version of the TLS Client Hello.
+  # Might differ from Outer TLS Version, especially for TLSv1.3
   attr_reader :innervers
+  # Client Random
   attr_reader :random
+  # Session ID
   attr_reader :sessionid
+  # [Array] Included Cipher Suites as Array of Array of Bytes (e.g. [[0x00,0x01],[0x00,0xFF]])
   attr_reader :ciphersuites
+  # Supported Compression methods.
   attr_reader :compression
+  # [Array] Included TLS Extensions
   attr_reader :extensions
 
+  # Convert parsed TLS Client Hello to Hash
+  # @return Hash to insert in Elasticsearch
   def to_h
     to_ret = {}
     to_ret[:version] = case @innervers
@@ -124,6 +136,9 @@ class TLSClientHello
     to_ret
   end
 
+  # Parses SignatureAlgorithms Extension
+  # @param data Extension Data as Byte Array
+  # @return Parsed Extension content
   def parse_signature_algorithms(data)
     length = data[0]*256 + data[1]
     return if data.length != length + 2
@@ -141,6 +156,9 @@ class TLSClientHello
     to_ret
   end
 
+  # Parses StatusRequest (OCSP) Extension
+  # @param data Extension Data as Byte Array
+  # @return Parsed Extension content
   def parse_status_request(data)
     type = data[0]
     case type
@@ -151,6 +169,9 @@ class TLSClientHello
     end
   end
 
+  # Parses SupportedGroups Extension
+  # @param data Extension Data as Byte Array
+  # @return Parsed Extension content
   def parse_supported_groups(data)
     length = data[0]*256 + data[1]
     return if data.length != length+2
@@ -168,6 +189,9 @@ class TLSClientHello
     to_ret
   end
 
+  # Parses SupportedVersion Extension
+  # @param data Extension Data as Byte array
+  # @return Parsed Extension content
   def parse_supported_versions(data)
     length = data[0]
     return [] if length+1!=data.length
@@ -180,6 +204,9 @@ class TLSClientHello
     to_ret
   end
 
+  # Parses ServerName Extension (SNI)
+  # @param data Extension Data as Byte Array
+  # @return Parsed Extension content
   def parse_servername(data)
     total_length = data[0]*256 + data[1]
     cur_ptr = 2
