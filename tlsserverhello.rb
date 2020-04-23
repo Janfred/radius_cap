@@ -4,14 +4,25 @@ class TLSServerHelloError < StandardError
 end
 
 class TLSServerHello
+  # [Array] Outer TLS Version (TLS Record Version) as Array of two bytes (e.g. [0x03,0x01])
   attr_reader :outervers
+  # [Array] Version of the TLS Server Hello as Array of two bytes (e.g. [0x03,0x03])
+  # Might differ from Outer TLS Version, especially for TLSv1.3
   attr_reader :innervers
+  # [Array] Server Random as Array of 32 Bytes.
+  # This might also include Information about Downgrade (e.g. the ASCII DOWNGRD followed by 0x00 or 0x01 if the server supports a higher version then the client requested)
   attr_reader :random
+  # [Array] Session ID as Array of Bytes. Might be an empty array if no Session ID is present.
   attr_reader :sessionid
+  # [Array] Chosen Cipher as Array of two bytes (e.g. [0xC0,0x09])
   attr_reader :cipher
+  # [Byte] Chosen Compression
   attr_reader :compression
+  # [Array] Included Extensions as Array of Arrays of Bytes
   attr_reader :extensions
+  # [Array] Sent Certificates as Array of Arrays of Bytes
   attr_reader :certificates
+  # Not yet used
   attr_reader :additional
 
   def to_h
@@ -25,7 +36,7 @@ class TLSServerHello
     end
     to_ret[:renegotiation] = !!@byexten[TLSTypes::Extensions::RENEGOTIATION_INFO]
     to_ret[:extendedmastersecret] = !!@byexten[TLSTypes::Extensions::EXTENDED_MASTER_SECRET]
-    if @byexten[TLSTypes::Extensions::SUPPORTED_VERSIONS] then
+    if @byexten[TLSTypes::Extensions::SUPPORTED_VERSIONS]
       to_ret[:version] = "TLSv1.3" if @byexten[TLSTypes::Extensions::SUPPORTED_VERSIONS] == [0x03, 0x04]
     end
     to_ret[:cipher] = "0x%02X%02X" % @cipher
@@ -83,9 +94,12 @@ class TLSServerHello
           $stderr.puts "Unsupported TLS Extension #{e[:type]}"
       end
     end
-    str += ">"
-    return str
+    str + ">"
   end
+
+  # Parses complete ServerHello and returns a new Instance
+  # @param data [Array] Bytes from Server Hello until ServerHelloDone
+  # @return New Instance of TLSServerHello
   def initialize(data)
     @ocsp_included = false
     cur_ptr = 0
@@ -96,7 +110,7 @@ class TLSServerHello
       cur_ptr += 5
       type = data[cur_ptr]
       length = data[cur_ptr+1]*256*256 + data[cur_ptr+2]*256 + data[cur_ptr+3]
-      if outerlength-length != 4 then
+      if outerlength-length != 4
         raise TLSServerHelloError, 'Outer Length and Inner Length did not match'
       end
       case type
@@ -117,6 +131,9 @@ class TLSServerHello
     end
   end
 
+  # Parses Server Hello
+  # @param data [Array] Content of TLS Handshake Record SERVERHELLO
+  # @return nil
   def parse_serverhello(data)
     @innervers = data[0, 2]
     cur_ptr = 2
@@ -143,7 +160,7 @@ class TLSServerHello
     @extensions = []
     @byexten = {}
     # Extensions
-    if data.length <= cur_ptr then
+    if data.length <= cur_ptr
       # No extensions present
       return
     end
@@ -160,7 +177,12 @@ class TLSServerHello
       @extensions << exten
       @byexten[exten[:type]] = exten[:data]
     end
+    nil
   end
+
+  # Parses Certificates to @certificates
+  # @param data [Array] Content of TLS Handshake Record CERTIFICATE
+  # @return nil
   def parse_certificate(data)
     cur_ptr = 0
     cert_length = data[0]*256*256 + data[1]*256 + data[2]
@@ -173,18 +195,30 @@ class TLSServerHello
       @certificates << data[cur_ptr, this_length]
       cur_ptr += this_length
     end
+    nil
   end
+
+  # Parses Server Key Exchange
+  # @param data [Array] Content of TLS Handshake Record SERVERKEYEXCHANGE
   def parse_serverkeyexchange(data)
     # Not yet implemented
     @keyexchange = TLSServerKeyExchange.parse(data, @cipher, @innervers)
-    return
+    nil
   end
+
+  # Parses OCSP Response
+  # @todo This is still a stub, here the type of OCSP Response should be parsed
+  # @param data [Array] Content of TLS Handshake Record CERTIFICATESTATUS
+  # @return nil
   def parse_certificatestatus(data)
     @ocsp_included = true
-    return
+    nil
   end
+  # Parses ServerHelloDone. This does nothing for now.
+  # @todo Once the parsing is advancing, this might do some housekeeping or signalling
+  # @return nil
   def parse_serverhellodone(data)
     # Nothing to do.
-    return
+    nil
   end
 end
