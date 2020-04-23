@@ -45,24 +45,24 @@ end
 
 class TLSClientHello
 
-  # Outer TLS Version (TLS Record Version)
+  # [Array] Outer TLS Version (TLS Record Version) as Array of two bytes (e.g. [0x03,0x03])
   attr_reader :outervers
-  # Length of the TLS Record
+  # [Integer] Length of the TLS Record
   attr_reader :outerlen
-  # Length of inner TLS Data (in this case TLS Client Hello)
+  # [Integer] Length of inner TLS Data (in this case TLS Client Hello)
   attr_reader :innerlen
-  # Version of the TLS Client Hello.
+  # [Array] Version of the TLS Client Hello as Array of two bytes (e.g. [0x03,0x04])
   # Might differ from Outer TLS Version, especially for TLSv1.3
   attr_reader :innervers
-  # Client Random
+  # [Array] Client Random as Array of 32 Bytes.
   attr_reader :random
-  # Session ID
+  # [Array] Session ID as Array of Bytes. May be an empty array
   attr_reader :sessionid
   # [Array] Included Cipher Suites as Array of Array of Bytes (e.g. [[0x00,0x01],[0x00,0xFF]])
   attr_reader :ciphersuites
-  # Supported Compression methods.
+  # [Array] Supported Compression methods as Array of Bytes.
   attr_reader :compression
-  # [Array] Included TLS Extensions
+  # [Array] Included TLS Extensions as Array of Arrays of Bytes
   attr_reader :extensions
 
   # Convert parsed TLS Client Hello to Hash
@@ -273,6 +273,10 @@ class TLSClientHello
     str + ">"
   end
 
+  # Parses TLS Client Hello and returns a new Instance of TLSClientHello
+  # @param data Array of Bytes containing the Complete TLS Record
+  # @raise TLSClientHelloError if any parsing error occurs
+  # @return New Instance of TLSClientHello
   def initialize(data)
     raise TLSClientHelloError unless data[0] == TLSTypes::RecordType::HANDSHAKE
     @outervers = data[1, 2]
