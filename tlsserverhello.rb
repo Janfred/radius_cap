@@ -25,6 +25,9 @@ class TLSServerHello
   # Not yet used
   attr_reader :additional
 
+  # Converts parsed TLS Server Hello to Hash
+  # @todo Lacks support for TLSv1.3
+  # @returns Hash to insert in Elasticsearch
   def to_h
     to_ret = {}
     to_ret[:version] = case @innervers
@@ -133,6 +136,7 @@ class TLSServerHello
 
   # Parses Server Hello
   # @param data [Array] Content of TLS Handshake Record SERVERHELLO
+  # @todo Lacks support for TLSv1.3
   # @return nil
   def parse_serverhello(data)
     @innervers = data[0, 2]
