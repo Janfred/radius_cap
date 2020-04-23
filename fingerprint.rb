@@ -1,16 +1,26 @@
 #!/usr/bin/env ruby
 
+# Helper Class for finding out the assumed Operating system by a given Handshake Fingerprint
 class Fingerprint
+  # Fingerprintversion to use.
+  # Used for switching to a new fingerprint version which includes different information in the Hash
   VERSION="v2"
+
   @@fingerprintdb = {}
   @@fingerprintdb_lastupdate = nil
 
-  def self.to_h(fb)
+  # Fetch assumed Operating system by given fingerprint
+  # @param fp [String] Handshake Fingerprint (SHA2-Hash as downcase hex string)
+  # @return [Hash] Assumed Operating System from given Fingerprint, or a Hash with os, os_version and detail set to "Not in FP-DB" if no match is found
+  def self.to_h(fp)
     self.check_new_file
-    to_ret = @@fingerprintdb[fb]
+    to_ret = @@fingerprintdb[fp]
     to_ret || { os: "Not in FP-DB", os_version: "Not in FP-DB", detail: "Not in FP-DB" }
   end
 
+  # Loads a new fingerprint database if a new file version is available or the database is not yet initialized
+  # This allows hotswaping the fingerprint database without the need to restart the capture process
+  # @return nil
   def self.check_new_file
     thisupdate = File.mtime("./fingerprint.#{VERSION}.txt")
 
@@ -28,6 +38,7 @@ class Fingerprint
       end
       @@fingerprintdb = temp_db
       @@fingerprintdb_lastupdate = thisupdate
+      nil
     end
   end
 end

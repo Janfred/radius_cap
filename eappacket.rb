@@ -1,33 +1,63 @@
+# EAP Packet. This class does not handle EAP fragmentation itself.
+# EAP is fragmented in two ways
+# * Inside one Radius-Packet there can be multiple EAP-Messages. This usually sums up to approx 1000 Bytes EAP.
+# If this is the case, the Payload of the EAP-Message Attributes is concatenated. The MoreFragments Flag will not be set, the Length might or might not be included.
+# * If the EAP Message is longer then the maximum length per RADIUS-Packet (approx. 1000 Bytes) which happens espacially in the TLS Server Hello) the EAP message has
+# to be sent in multiple Radius-Packets.
+# In this case the MoreFragments Flag is set. The Length will then be included in all EAP fragments.
 class EAPPacket
+  # Constants for EAP Codes
   module Code
     REQUEST  = 1
     RESPONSE = 2
     SUCCESS  = 3
     FAILURE  = 4
   end
+  # Constants for EAP Types
   module Type
+    # Sent by the Client in the first EAP Message.
     IDENTITY     =  1
+    # Rejection of the proposed EAP-Type. Sent by the Client together with a desired EAP Type
     NAK          =  3
+    # MD5 Challenge Type
+    # @todo This is weird. This should actually never occur in the Eduroam environment because it is insecure. Maybe we should emit a warning once we see it
     MD5CHALLENGE =  4
+    # TLS Type (not TTLS or PEAP)
     TLS          = 13
+    # TTLS Type
     TTLS         = 21
+    # PEAP Type
     PEAP         = 25
+    # MSEAP Type
+    # @todo I don't know what this is. Subject to research
     MSEAP        = 26
+    # EAP-PWD Type
     EAPPWD       = 52
   end
 
+  # Constants for EAP-TLS Flags
   module TLSFlags
+    # Indicates, that the EAP Payload contains the Length of the EAP Payload
     LENGTHINCLUDED = 0x80
+    # Indicates, that this EAP Packet is fragmented and that more fragments follow
     MOREFRAGMENTS  = 0x40
+    # Indicates the Start of the EAP-TLS communication
     START          = 0x20
   end
 
+  # EAP Code (Request/Response/Success/Failure)
   attr_accessor :code
   attr_accessor :identifier
+  # [Integer] Length of the EAP Payload
   attr_accessor :length
+  # [Byte] EAP Type (Identity/Nak/MD5Challenge/TLS/TTLS/PEAP/MSEAP/EAPPWD)
   attr_accessor :type
+  # [Array] Payload for the EAP Type
   attr_accessor :type_data
 
+  # Parses an EAP packet
+  # @param data Array of Bytes with payload
+  # @return new Instance of EAPPacket
   def initialize(data)
     @code = data[0]
     @identifier = data[1]

@@ -1,4 +1,7 @@
+# Helper Class for finding out the Vendor
 class MacVendor
+  # Initializes the OUI Database.
+  # Reads the oui.txt File
   def self.init_data
     @@vendorhash = {}
     File.open("./oui.txt") do |f|
@@ -10,6 +13,10 @@ class MacVendor
       end
     end
   end
+
+  # Find out the Vendor by the OID
+  # @param oid [String] OID in Format "xx:xx:xx"
+  # @return [String] Vendor registered with the given OID
   def self.by_oid(oid)
     @@vendorhash[oid] || "UNKNOWN"
   end

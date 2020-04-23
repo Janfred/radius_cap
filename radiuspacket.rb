@@ -1,5 +1,7 @@
 class PacketLengthNotValidError < StandardError
 end
+# Error to be raised if a Radius Packet includes multiple State Attributes.
+# This is forbidden by RFC 2865 Section 5.24
 class PacketMultipleState < StandardError
 end
 
