@@ -1,45 +1,60 @@
 require 'elasticsearch'
+require 'singleton'
 require 'digest'
 require './macvendor.rb'
 
 # Helper class for dealing with ElasticSearch
 class ElasticHelper
+  include Singleton
+
+  attr_reader :priv_elasticdata
+  attr_reader :priv_waitcond
+  attr_reader :priv_client
   # Data to be inserted in ElasticSearch. Access to this variable must be synchronized.
-  @@elasticdata = []
+  # @private
+  @priv_elasticdata = []
   # Wait condition helper for synchronizing access to @@elasticdata
-  @@waitcond = nil
+  # @private
+  @priv_waitcond = nil
   # Client connection
-  @@client
+  # @private
+  @priv_client = nil
 
   # Initializes the Connection to Elasticsearch and loads MacVendor Database
   # @param debug [Boolean] If set to true the Client connection will not be established. Defaults to false.
+  # @return nil
   def self.initialize_elasticdata(debug=false)
-    @@elasticdata = []
-    @@elasticdata.extend(MonitorMixin)
-    @@waitcond = @@elasticdata.new_cond
-    @@client = Elasticsearch::Client.new log: false unless debug
+    self.instance.priv_initialize_elasticdata(debug)
+  end
+
+  # Private Helper Method for Elasticsearch initializer
+  # @private
+  # @param debug [Boolean] If set to true the Client connection will not be established. Defaults to false.
+  # @return nil
+  def priv_initialize_elasticdata(debug)
+    @priv_elasticdata = []
+    @priv_elasticdata.extend(MonitorMixin)
+    @priv_waitcond = @priv_elasticdata.new_cond
+    @priv_client = Elasticsearch::Client.new log: false unless debug
     MacVendor.init_data
+    nil
   end
 
   # Get current elasticdata
   def self.elasticdata
-    @@elasticdata
+    self.instance.priv_elasticdata
   end
 
   # Get Wait condition helper
   def self.waitcond
-    @@waitcond
+    self.instance.priv_waitcond
   end
 
   # Get the client connection
   def self.client
-    @@client
+    self.instance.priv_client
   end
 
-  # Set the client connection
-  def self.client=(val)
-    @@client = val
-  end
 end
 
 
