@@ -157,7 +157,7 @@ class TLSClientHello
       to_ret[:cipherdata][:cipherset] + '|' +
       to_ret[:cipherdata][:supported_group_set] + '|' +
       to_ret[:cipherdata][:signature_algorithm_set] + '|' +
-      ((to_ret[:statusrequest].nil? || to_ret[:statusrequest] == []) ? 'False' : to_ret[:statusrequest]) + ''|'' +
+      ((to_ret[:statusrequest].nil? || to_ret[:statusrequest] == []) ? 'False' : to_ret[:statusrequest]) + '|' +
       (to_ret[:renegotiation] ? 'True' : 'False') + '|' +
       (to_ret[:extendedmastersecret] ? 'True' : 'False') )
 
