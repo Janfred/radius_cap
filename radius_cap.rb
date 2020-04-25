@@ -166,8 +166,8 @@ def parse_eap(data)
   elastic_data = {
     username: username,
     mac: macaddr,
-    scheme_ver: 3,
-    capture_ver: 2,
+    scheme_ver: 4,
+    capture_ver: 3,
     eapmethod: nil,
     tlsclienthello: nil,
     tlsserverhello: nil

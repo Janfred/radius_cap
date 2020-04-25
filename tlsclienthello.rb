@@ -39,6 +39,17 @@ module TLSTypes
     PSK_KEY_EXCHANGE_MODES  =    45
     KEY_SHARE               =    51
     RENEGOTIATION_INFO      = 65281
+
+    # Get the extension name by the given code
+    # @param code [Integer] Code of the Extension
+    # @return [String] Name of the Extension, or "UNKNOWN_EXTENSION_<num>" if Extension is unknown
+    def Extensions::get_extension_name_by_code(code)
+      Extensions.constants.each do |const|
+        next if Extensions.const_get(const) != code
+        const.to_s
+      end
+      "UNKNOWN_EXTENSION_#{code}"
+    end
   end
   # Container for all Extensions constants
   module ExtenData
@@ -82,20 +93,28 @@ class TLSClientHello
     to_ret = {}
     to_ret[:version] = case @innervers
       when [0x03, 0x03]
-        "TLSv1.2"
+        'TLSv1.2'
       when [0x03, 0x02]
-        "TLSv1.1"
+        'TLSv1.1'
       when [0x03, 0x01]
-        "TLSv1.0"
+        'TLSv1.0'
       else
-        "Unknown"
+        'Unknown'
+                       end
+    to_ret[:all_extensions] = []
+    to_ret[:extensionorder] = ''
+    @extensions.each do |exten|
+      exten_s = TLSTypes::Extensions::get_extension_name_by_code(exten[:type])
+      to_ret[:all_extensions] << exten_s
+      to_ret[:extensionorder] += exten_s + ' '
     end
+
     to_ret[:renegotion] = @ciphersuites.include?([0x00,0xFF]) || !!@byexten[TLSTypes::Extensions::RENEGOTIATION_INFO]
     to_ret[:servername] = parse_servername(@byexten[TLSTypes::Extensions::SERVER_NAME]) if @byexten[TLSTypes::Extensions::SERVER_NAME]
     to_ret[:extendedmastersecret] = !!@byexten[TLSTypes::Extensions::EXTENDED_MASTER_SECRET]
     if @byexten[TLSTypes::Extensions::SUPPORTED_VERSIONS]
       ver = parse_supported_versions(@byexten[TLSTypes::Extensions::SUPPORTED_VERSIONS])
-      to_ret[:version] = "TLSv1.3" if ver.include? [0x03, 0x04]
+      to_ret[:version] = 'TLSv1.3' if ver.include? [0x03, 0x04]
     end
     if @byexten[TLSTypes::Extensions::SUPPORTED_GROUPS]
       to_ret[:supportedgroups] = parse_supported_groups(@byexten[TLSTypes::Extensions::SUPPORTED_GROUPS])
@@ -125,22 +144,22 @@ class TLSClientHello
     to_ret[:cipherdata][:humanreadable] = cdata.humanreadable
     to_ret[:cipherdata][:cipherset] = cdata.cipherset
 
-    to_ret[:cipherdata][:supported_group_set] = to_ret[:supportedgroups].join('+') || ""
-    to_ret[:cipherdata][:signature_algorithm_set] = to_ret[:signaturealgorithms].join('+') || ""
+    to_ret[:cipherdata][:supported_group_set] = to_ret[:supportedgroups].join('+') || ''
+    to_ret[:cipherdata][:signature_algorithm_set] = to_ret[:signaturealgorithms].join('+') || ''
 
-    to_ret[:cipherdata][:supported_group_set] ||= ""
-    to_ret[:cipherdata][:signature_algorithm_set] ||= ""
+    to_ret[:cipherdata][:supported_group_set] ||= ''
+    to_ret[:cipherdata][:signature_algorithm_set] ||= ''
 
     to_ret[:fingerprinting] = {}
 
     to_ret[:fingerprinting][:v2] = Digest::SHA2.hexdigest(
-      to_ret[:version] + "|" +
-      to_ret[:cipherdata][:cipherset] + "|" +
-      to_ret[:cipherdata][:supported_group_set] + "|" +
-      to_ret[:cipherdata][:signature_algorithm_set] + "|" +
-      ((to_ret[:statusrequest].nil? || to_ret[:statusrequest] == []) ? "False" : to_ret[:statusrequest]) + "|" +
-      (to_ret[:renegotiation] ? "True" : "False") + "|" +
-      (to_ret[:extendedmastersecret] ? "True" : "False") )
+      to_ret[:version] + '|' +
+      to_ret[:cipherdata][:cipherset] + '|' +
+      to_ret[:cipherdata][:supported_group_set] + '|' +
+      to_ret[:cipherdata][:signature_algorithm_set] + '|' +
+      ((to_ret[:statusrequest].nil? || to_ret[:statusrequest] == []) ? 'False' : to_ret[:statusrequest]) + ''|'' +
+      (to_ret[:renegotiation] ? 'True' : 'False') + '|' +
+      (to_ret[:extendedmastersecret] ? 'True' : 'False') )
 
     to_ret[:fingerprinting][:osdetails] = Fingerprint.to_h(to_ret[:fingerprinting][:v2])
 
