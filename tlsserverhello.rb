@@ -38,6 +38,14 @@ class TLSServerHello
       when [0x03, 0x01]; "TLSv1.0";
       else
         "Unknown"
+                       end
+
+    to_ret[:all_extensions] = []
+    to_ret[:extensionsorder] = ''
+    @extensions.each do |exten|
+      exten_s = TLSTypes::Extensions::get_extension_name_by_code(exten[:type])
+      to_ret[:all_extensions] << exten_s
+      to_ret[:extensionsorder] += exten_s + ' '
     end
     to_ret[:renegotiation] = !!@byexten[TLSTypes::Extensions::RENEGOTIATION_INFO]
     to_ret[:extendedmastersecret] = !!@byexten[TLSTypes::Extensions::EXTENDED_MASTER_SECRET]
