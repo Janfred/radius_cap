@@ -1,8 +1,10 @@
 require './tlsciphersuites.rb'
 
+# Error to be thrown whenever the parsing of the TLS Server Hello fails.
 class TLSServerHelloError < StandardError
 end
 
+# Class for parsing the TLS Server Hello
 class TLSServerHello
   # [Array] Outer TLS Version (TLS Record Version) as Array of two bytes (e.g. [0x03,0x01])
   attr_reader :outervers
@@ -27,7 +29,7 @@ class TLSServerHello
 
   # Converts parsed TLS Server Hello to Hash
   # @todo Lacks support for TLSv1.3
-  # @returns Hash to insert in Elasticsearch
+  # @return Hash to insert in Elasticsearch
   def to_h
     to_ret = {}
     to_ret[:version] = case @innervers
@@ -218,6 +220,7 @@ class TLSServerHello
     @ocsp_included = true
     nil
   end
+
   # Parses ServerHelloDone. This does nothing for now.
   # @todo Once the parsing is advancing, this might do some housekeeping or signalling
   # @return nil
