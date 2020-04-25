@@ -18,6 +18,7 @@ pages:
     - *beforescript
   script:
     - bundle exec yardoc "*.rb"
+    - bundle exec yard stats --list-undoc "*.rb"
     - mv doc/ public/
   artifacts:
     paths:
