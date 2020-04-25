@@ -46,7 +46,7 @@ module TLSTypes
     def Extensions::get_extension_name_by_code(code)
       Extensions.constants.each do |const|
         next if Extensions.const_get(const) != code
-        const.to_s
+        return const.to_s
       end
       "UNKNOWN_EXTENSION_#{code}"
     end
