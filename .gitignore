@@ -5,3 +5,5 @@
 /update_elastic.*.rb
 /doc
 /.yardoc
+/data/*
+!/data/.gitkeep

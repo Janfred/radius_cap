@@ -78,11 +78,14 @@ end
 
 # Inserts data into Elasticsearch
 # @param raw_data [Hash] Hash with data to insert.
-# @param debug [Boolean] If set to true the data will be printed instead of inserting it into Elasticsearch. Defaults to false.
+# @param debug [Boolean] If set to true the data will be printed on stdout. Defaults to false.
+# @param no_direct_elastic [Boolean] If set to true, the data will not be written in elastic. Defaults to false.
+# @param output_to_file [Boolean] If set to true, the data will be written in a File named <id>.json. Defaults to false.
 # @return nil
-def insert_into_elastic(raw_data, debug=false)
+def insert_into_elastic(raw_data, debug=false, no_direct_elastic=false, output_to_file=false)
   to_ins = convert_data_to_elasticsearch(raw_data)
-  ElasticHelper.client.index index: 'tlshandshakes', type: 'tlshandshake', id: to_ins[:id], body: to_ins[:data] unless debug
+  ElasticHelper.client.index index: 'tlshandshakes', type: 'tlshandshake', id: to_ins[:id], body: to_ins[:data] unless no_direct_elastic
   puts to_ins if debug
+  File.write(File.join('data', to_ins[:id]),to_ins[:data].to_s) if output_to_file
   nil
 end

@@ -16,6 +16,8 @@ require './macvendor.rb'
 
 @config[:debug] = false if @config[:debug].nil?
 @config[:eap_timeout] ||= 60
+@config[:noelastic] = false if @config[:noelastic].nil?
+@config[:filewrite] = false if @config[:filewrite].nil?
 
 class EAPFragParseError < StandardError
 end
@@ -338,7 +340,7 @@ Thread.start do
     ElasticHelper.elasticdata.synchronize do
       ElasticHelper.waitcond.wait_while { ElasticHelper.elasticdata.empty? }
       toins = ElasticHelper.elasticdata.shift
-      insert_into_elastic(toins, @config[:debug])
+      insert_into_elastic(toins, @config[:debug], @config[:noelastic], @config[:filewrite])
     end
   end
 end
