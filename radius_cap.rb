@@ -110,6 +110,9 @@ def insert_in_packetflow(pkt)
         parse_eap(flow)
       rescue => e
         # TODO Insert the parsed packet flow in the debug output
+        puts "EAP Parsing Error"
+        puts e.message
+        puts e.backtrace.join "\n"
       end
     else
       # This is ongoing communication
@@ -248,12 +251,18 @@ def parse_eap(data)
   begin
     eap_tls_clienthello = read_eaptls_fragment(eap, eap_reply.type)
   rescue EAPFragParseError => e
+    puts "EAPFragParseError"
+    puts e.message
+    puts e.backtrace.join "\n"
     return
   end
 
   begin
     clienthello = TLSClientHello.new(eap_tls_clienthello)
   rescue TLSClientHelloError => e
+    puts "TLSClientHelloError"
+    puts e.message
+    puts e.backtrace.join "\n"
     return
   end
   elastic_data[:tlsclienthello] = clienthello.to_h
@@ -262,6 +271,9 @@ def parse_eap(data)
   begin
     eap_tls_serverhello = read_eaptls_fragment(eap, eap_reply.type)
   rescue EAPFragParseError => e
+    puts "EAPFragParseError"
+    puts e.message
+    puts e.backtrace.join "\n"
     return
   end
 
@@ -269,6 +281,9 @@ def parse_eap(data)
     serverhello = TLSServerHello.new(eap_tls_serverhello)
   rescue TLSServerHelloError => e
     return
+    puts "TLSServerHelloError"
+    puts e.message
+    puts e.backtrace.join "\n"
   end
   elastic_data[:tlsserverhello] = serverhello.to_h
 
