@@ -1,6 +1,7 @@
 GEM
   remote: https://rubygems.org/
   specs:
+    concurrent-ruby (1.1.6)
     elasticsearch (7.6.0)
       elasticsearch-api (= 7.6.0)
       elasticsearch-transport (= 7.6.0)
@@ -16,6 +17,8 @@ GEM
     packetfu (1.1.13)
       pcaprub
     pcaprub (0.13.0)
+    semantic_logger (4.6.1)
+      concurrent-ruby (~> 1.0)
     yard (0.9.24)
 
 PLATFORMS
@@ -24,6 +27,7 @@ PLATFORMS
 DEPENDENCIES
   elasticsearch
   packetfu
+  semantic_logger
   yard
 
 BUNDLED WITH

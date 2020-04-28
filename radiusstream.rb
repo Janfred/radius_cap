@@ -239,6 +239,7 @@ class RadiusStreamHelper
   def self.notify_flow_done(pktflow)
     @known_streams.delete(pktflow)
     # TODO Here there should be the Parsing for EAP
+    eap_stream = EAPStream.new(pktflow)
   end
 
 end

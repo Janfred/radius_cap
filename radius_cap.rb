@@ -3,9 +3,13 @@
 require 'rubygems'
 require 'bundler/setup'
 
+# Require needed gems
 require 'packetfu'
 require 'irb'
 require 'monitor'
+require 'semantic_logger'
+
+# Require local files
 require './radiuspacket.rb'
 require './eappacket.rb'
 require './tlsclienthello.rb'
@@ -20,7 +24,15 @@ require './eapstream.rb'
 @config[:eap_timeout] ||= 60
 @config[:noelastic] = false if @config[:noelastic].nil?
 @config[:filewrite] = false if @config[:filewrite].nil?
+@config[:debug_level] ||= :warn
 
+SemanticLogger.default_level = @config[:debug_level]
+SemanticLogger.add_appender(file_name: 'development.log')
+SemanticLogger.add_appender(STDOUT) if debug
+
+logger = SemanticLogger['radius_cap']
+
+logger.info("Requirements done. Loading radius_cap.rb functions")
 class EAPFragParseError < StandardError
 end
 
@@ -362,6 +374,7 @@ Thread.start do
   end
 end
 
+logger.info("Start Packet parsing thread")
 Thread.start do
   loop do
     pktbuf.synchronize do
@@ -430,16 +443,22 @@ end
 #pcap_id = 0
 #pcap_array.each do |p|
 
+logger.info("Start Packet capture")
 iface = PacketFu::Utils.default_int
 cap = Capture.new(:iface => iface, :start => true, :filter => 'port 1812')
 cap.stream.each do |p|
 #  pcap_id += 1
 #  puts "Packet #{pcap_id}"
+  logger.trace("Packet captured.")
    pktbuf.synchronize do
      pktbuf.push p
      empty_cond.signal
    end
 end
+
+logger.info("Terminating Capture")
+
+logger.info("Waiting for empty packet buffer")
 
 pktbufempty = false
 until pktbufempty do
@@ -449,6 +468,9 @@ until pktbufempty do
   sleep 1
 end
 
+logger.info("Packet buffer is empty.")
+logger.info("Waiting for empty elastic buffer")
+
 elasticempty = false
 until elasticempty do
   ElasticHelper.elasticdata.synchronize do
@@ -456,3 +478,6 @@ until elasticempty do
   end
   sleep 1
 end
+
+logger.info("Elastic buffer is empty.")
+logger.info("Terminating.")
