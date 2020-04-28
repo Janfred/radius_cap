@@ -280,10 +280,10 @@ def parse_eap(data)
   begin
     serverhello = TLSServerHello.new(eap_tls_serverhello)
   rescue TLSServerHelloError => e
-    return
     puts "TLSServerHelloError"
     puts e.message
     puts e.backtrace.join "\n"
+    return
   end
   elastic_data[:tlsserverhello] = serverhello.to_h
 
@@ -412,7 +412,8 @@ Thread.start do
         #binding.irb
       end
       begin
-        insert_in_packetflow(rp)
+        #insert_in_packetflow(rp)
+        RadiusStreamHelper.add_packet(rp)
       rescue => e
         puts "Error in Packetflow!"
         puts e.message

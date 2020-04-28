@@ -17,7 +17,7 @@ class EAPPacket
   module Type
     # Sent by the Client in the first EAP Message.
     IDENTITY     =  1
-    # Rejection of the proposed EAP-Type. Sent by the Client together with a desired EAP Type
+    # (Also known as `Legacy Nak`) Rejection of the proposed EAP-Type. Sent by the Client together with a desired EAP Type
     NAK          =  3
     # MD5 Challenge Type
     # @todo This is weird. This should actually never occur in the Eduroam environment because it is insecure. Maybe we should emit a warning once we see it

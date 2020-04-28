@@ -6,7 +6,7 @@ end
 
 class RadiusStream
 
-  attr_reader :last_updated, :current_state, :udp_src_ip, :udp_dst_ip, :udp_src_port, :udp_dest_port, :packets
+  attr_reader :last_updated, :current_pktid, :current_state, :udp_src_ip, :udp_dst_ip, :udp_src_port, :udp_dst_port, :packets
   # Timestamp of the last update of this specific stream. Used for timeouts.
   @last_updated = nil
   # Current value of the State Attribute
@@ -24,7 +24,7 @@ class RadiusStream
   @udp_dst_port = nil
   # Indicates if the last package was sent by the server (true) or the client (false)
   @last_from_server = false
-  # Array of packets (RadiusPacket) in received order
+  # [Array<RadiusPacket>] Array of packets (RadiusPacket) in received order
   @packets = []
 
   # Create a new Instance of a RadiusStream
@@ -115,13 +115,16 @@ end
 class RadiusStreamHelper
   include Singleton
 
-  # Currently known streams
+  # [Array<RadiusStream>] Currently known streams
   attr_reader :known_streams
   @known_streams
 
-  # Number of seconds after a Radius Stream is considered timed out.
+  # [Integer] Number of seconds after a Radius Stream is considered timed out.
   attr_reader :timeout
   @timeout
+
+  # Counter for housekeeping calls. The Housekeeping is only executed every 10 packets.
+  @housekeeping_counter = 0
 
   # Initialize the known stream and set timeout
   # @param timeout [Integer] number of seconds after a Radius Stream is considered timed out. Defaults to 60
@@ -139,6 +142,8 @@ class RadiusStreamHelper
     else
       insert_packet_from_radius(pkt)
     end
+    # After we inserted the packet we can do housecleaning.
+    housekeeping
   end
 
   # Private helper to insert a packet sent to the radius
@@ -146,7 +151,8 @@ class RadiusStreamHelper
     if pkt.state.nil?
       # This is probably a completely new request
       # TODO There are some realms (looking at you, ads.fraunhofer.de) which don't send a State attribute.
-      #  So this could actually be a packet for an ongoing communication.
+      #  So this could actually be a packet for an ongoing communication. It can be determined by matching
+      #  the ip address, udp port and packet identifier (increased by one)
       @known_streams << RadiusStream.new(pkt)
     else
       # If a State exists this is an ongoing communication
@@ -175,12 +181,41 @@ class RadiusStreamHelper
   end
 
   # Private helper to insert a packet sent from the radius
+  # @param pkt [RadiusPacket] Packet to insert
   def insert_packet_from_radius(pkt)
+    # This must be an ongoing packet. Packets sent are matched by UDP Port/IP Address and Packet ID
+    p = @known_streams.select { |x|
+      x.udp_src_ip == pkt.udp[:dst][:ip] &&
+      x.udp_dst_ip == pkt.udp[:src][:ip] &&
+      x.udp_src_port == pkt.udp[:dst][:port] &&
+      x.udp_dst_port == pkt.udp[:src][:port] &&
+      x.current_pktid == pkt.identifier
+    }
 
+    if p.empty?
+      # This case should not occur. This is probably the case if the packet, which the
+      # RADIUS-Server is answering to, was not captured.
+      # TODO This should become a message for the Logging
+      # TODO This packet should be included in the debug capture
+      $stderr.puts "Could not find a matching request from #{pkt.udp[:dst][:ip]}:#{pkt.udp[:dst][:port]} and ID #{pkt.identifier}"
+      return
+    elsif p.length > 1
+      # Tis case should also not occur. This means that an essential part of the RADIUS-Protocol
+      # has been violated. The packet identifier should be unique given the IP Address and UDP Port
+      # This is worth a warning. We can still insert it into the packet stream, but should insert it
+      # into the stream which was last updated, so we should make sure the list is sorted.
+      # TODO This should become a message for the Logging
+      $stderr.puts "Found multiple requests from #{pkt.udp[:dst][:ip]}:#{pkt.udp[:dst][:port]} and ID #{pkt.identifier}"
+      p.sort_by!(&:last_updated)
+    end
+    flow = p.last
+    flow.add_packet(pkt)
   end
 
   # Tidy up all timed out states
   def housekeeping
+    @housekeeping_counter += 1
+    return if @housekeeping_counter < 10
     t = Time.now
     old = @known_streams.select{ |x| (t-x.last_updated) > @timeout }
     old.each do |o|
@@ -189,6 +224,7 @@ class RadiusStreamHelper
       $stderr.puts 'Timing out state without state variable' unless o.current_state
       @known_streams.delete o
     end
+    @housekeeping_counter = 0
   end
   private :housekeeping
 
@@ -199,8 +235,10 @@ class RadiusStreamHelper
   end
 
   # Start Parsing of a certain Packetflow once it is done.
-  def self.notify_flow_done(packetflow)
-    # TODO
+  # @param pktflow [RadiusStream] Stream to parse
+  def self.notify_flow_done(pktflow)
+    @known_streams.delete(pktflow)
+    # TODO Here there should be the Parsing for EAP
   end
 
 end
