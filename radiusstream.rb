@@ -177,7 +177,7 @@ class RadiusStreamHelper
         $stderr.puts "Found multiple EAP States for 0x#{pkt.state.pack('C*').unpack('H*').first}"
       end
       flow = p.first
-      flow.add_packet(pkt)
+      flow.add_packet_to_radius(pkt)
     end
   end
 
@@ -210,7 +210,7 @@ class RadiusStreamHelper
       p.sort_by!(&:last_updated)
     end
     flow = p.last
-    flow.add_packet(pkt)
+    flow.add_packet_from_radius(pkt)
   end
 
   # Tidy up all timed out states
