@@ -231,7 +231,7 @@ class RadiusStreamHelper
   # Add Packet to Packetflow
   # @param pkt [RadiusPacket] Packet to insert in the PacketFlow
   def self.add_packet(pkt)
-    RadiusStreamHelper.singleton.priv_add_packet(pkt)
+    RadiusStreamHelper.instance.priv_add_packet(pkt)
   end
 
   # Start Parsing of a certain Packetflow once it is done.
