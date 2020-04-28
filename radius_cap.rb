@@ -13,6 +13,8 @@ require './tlsserverhello.rb'
 require './localconfig.rb'
 require './write_to_elastic.rb'
 require './macvendor.rb'
+require './radiusstream.rb'
+require './eapstream.rb'
 
 @config[:debug] = false if @config[:debug].nil?
 @config[:eap_timeout] ||= 60
