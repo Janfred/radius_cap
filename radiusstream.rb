@@ -38,7 +38,7 @@ class RadiusStream
     @udp_src_port = pkt.udp[:src][:port]
     @udp_dst_port = pkt.udp[:dst][:port]
     @last_from_server = false
-    @packets = []
+    @packets = [pkt]
   end
 
   # Add an answering packet from the radius
