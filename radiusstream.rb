@@ -124,13 +124,14 @@ class RadiusStreamHelper
   @timeout
 
   # Counter for housekeeping calls. The Housekeeping is only executed every 10 packets.
-  @housekeeping_counter = 0
+  @housekeeping_counter
 
   # Initialize the known stream and set timeout
   # @param timeout [Integer] number of seconds after a Radius Stream is considered timed out. Defaults to 60
   def initialize(timeout = 60)
     @known_streams = []
     @timeout = timeout
+    @housekeeping_counter = 0
   end
 
   # Private helper to add packet in Packetflow.
