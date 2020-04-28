@@ -446,14 +446,18 @@ end
 logger.info("Start Packet capture")
 iface = PacketFu::Utils.default_int
 cap = Capture.new(:iface => iface, :start => true, :filter => 'port 1812')
-cap.stream.each do |p|
-#  pcap_id += 1
-#  puts "Packet #{pcap_id}"
-  logger.trace("Packet captured.")
-   pktbuf.synchronize do
-     pktbuf.push p
-     empty_cond.signal
-   end
+begin
+  cap.stream.each do |p|
+#    pcap_id += 1
+#    puts "Packet #{pcap_id}"
+    logger.trace("Packet captured.")
+    pktbuf.synchronize do
+       pktbuf.push p
+       empty_cond.signal
+    end
+  end
+rescue Interrupt
+  logger.info("Captured Interrupt")
 end
 
 logger.info("Terminating Capture")

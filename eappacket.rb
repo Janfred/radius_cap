@@ -6,6 +6,8 @@
 # to be sent in multiple Radius-Packets.
 # In this case the MoreFragments Flag is set. The Length will then be included in all EAP fragments.
 class EAPPacket
+  include SemanticLogger::Loggable
+
   # Constants for EAP Codes
   module Code
     REQUEST  = 1

@@ -5,6 +5,7 @@ class PacketFlowInsertionError < StandardError
 end
 
 class RadiusStream
+  include SemanticLogger::Loggable
 
   attr_reader :last_updated, :current_pktid, :current_state, :udp_src_ip, :udp_dst_ip, :udp_src_port, :udp_dst_port, :packets
   # Timestamp of the last update of this specific stream. Used for timeouts.
@@ -30,6 +31,7 @@ class RadiusStream
   # Create a new Instance of a RadiusStream
   # @param pkt [RadiusPacket] Initial packet of the stream
   def initialize(pkt)
+    logger.trace("Initialize new Packet stream with udp data #{pkt.udp}")
     @last_updated = Time.now
     @current_pktid = pkt.identifier
     @current_state = pkt.state
@@ -46,6 +48,7 @@ class RadiusStream
   # @raise PacketFlowInsertionError if the given packet does not match the already captured flow
   # @todo The raised errors should have a message.
   def add_packet_from_radius(pkt)
+    logger.trace("Add Packet from RADIUS-Server")
     # If the last message inserted was a message from the server, we can't insert an other message from the server,
     # because the client has to reply first. If this happens, it is very likely a resent
     # Packet because the original packet got lost.
@@ -69,6 +72,7 @@ class RadiusStream
     # flow is now complete and can be parsed.
     if pkt.packettype == RadiusPacket::Type::ACCEPT ||
         pkt.packettype == RadiusPacket::Type::REJECT
+      logger.debug("Final Answer added, notify RadiusStreamHelper")
       RadiusStreamHelper.notify_flow_done(self)
     end
   end
@@ -77,6 +81,7 @@ class RadiusStream
   # @param pkt [RadiusPacket] Packet to insert
   # @raise PacketFlowInsertionError if the given packet does not match the already captured flow
   def add_packet_to_radius(pkt)
+    logger.trace("Add Packet to RADIUS-Server")
     # If the last message was from the client, we can't add another packet from the client.
     # This is most likely the case if the RADIUS-Server failed to respond and the client
     # resent his message. In any case, it should not be added here.
@@ -115,13 +120,14 @@ end
 # Helper Class for inserting Data into the RadiusSteams
 class RadiusStreamHelper
   include Singleton
+  include SemanticLogger::Loggable
 
   # [Array<RadiusStream>] Currently known streams
   attr_reader :known_streams
   @known_streams
 
   # [Integer] Number of seconds after a Radius Stream is considered timed out.
-  attr_reader :timeout
+  attr_writer :timeout
   @timeout
 
   # Counter for housekeeping calls. The Housekeeping is only executed every 10 packets.
@@ -130,6 +136,7 @@ class RadiusStreamHelper
   # Initialize the known stream and set timeout
   # @param timeout [Integer] number of seconds after a Radius Stream is considered timed out. Defaults to 60
   def initialize(timeout = 60)
+    logger.trace("Initialize RadiusStreamHelper with timeout of #{timeout} seconds")
     @known_streams = []
     @timeout = timeout
     @housekeeping_counter = 0
@@ -150,11 +157,14 @@ class RadiusStreamHelper
 
   # Private helper to insert a packet sent to the radius
   def insert_packet_to_radius(pkt)
+    logger.trace("Try to insert Packet to RADIUS")
     if pkt.state.nil?
       # This is probably a completely new request
       # TODO There are some realms (looking at you, ads.fraunhofer.de) which don't send a State attribute.
       #  So this could actually be a packet for an ongoing communication. It can be determined by matching
       #  the ip address, udp port and packet identifier (increased by one)
+      #  For now we just assume it is a new stream.
+      logger.trace("Creating a new RadiusStream")
       @known_streams << RadiusStream.new(pkt)
     else
       # If a State exists this is an ongoing communication
@@ -164,27 +174,28 @@ class RadiusStreamHelper
         # It is very likely in the first few seconds after starting the script.
         # When it occurs afterwards it means that either a previous packet wasn't captured
 
-        # TODO This should become a message for the Logging
         # TODO This packet should be included in the debug capture
-        $stderr.puts "Could not find EAP State 0x#{pkt.state.pack('C*').unpack('H*').first}"
+        logger.warn "Could not find EAP State 0x#{pkt.state.pack('C*').unpack('H*').first}"
         return
       elsif p.length > 1
         # If this case occurs, we maybe captured a repeated packet. It should not happen at all.
         # Anyway, we can insert the packet in the flow.
         # The RadiusPacket class will handle the case that this actually is a resent packet.
 
-        # TODO This should become a message for the Logging
         # TODO This packet should be included in the debug capture
-        $stderr.puts "Found multiple EAP States for 0x#{pkt.state.pack('C*').unpack('H*').first}"
+        logger.warn "Found multiple EAP States for 0x#{pkt.state.pack('C*').unpack('H*').first}"
       end
       flow = p.first
+      logger.trace("Insert Packet in RadiusStream")
       flow.add_packet_to_radius(pkt)
     end
   end
 
   # Private helper to insert a packet sent from the radius
   # @param pkt [RadiusPacket] Packet to insert
+  # @todo There might be some packets without a state set. This should be worth a log message.
   def insert_packet_from_radius(pkt)
+    logger.trace("Try to insert packet from RADIUS")
     # This must be an ongoing packet. Packets sent are matched by UDP Port/IP Address and Packet ID
     p = @known_streams.select { |x|
       x.udp_src_ip == pkt.udp[:dst][:ip] &&
@@ -197,20 +208,19 @@ class RadiusStreamHelper
     if p.empty?
       # This case should not occur. This is probably the case if the packet, which the
       # RADIUS-Server is answering to, was not captured.
-      # TODO This should become a message for the Logging
       # TODO This packet should be included in the debug capture
-      $stderr.puts "Could not find a matching request from #{pkt.udp[:dst][:ip]}:#{pkt.udp[:dst][:port]} and ID #{pkt.identifier}"
+      logger.warn "Could not find a matching request from #{pkt.udp[:dst][:ip]}:#{pkt.udp[:dst][:port]} and ID #{pkt.identifier}"
       return
     elsif p.length > 1
       # Tis case should also not occur. This means that an essential part of the RADIUS-Protocol
       # has been violated. The packet identifier should be unique given the IP Address and UDP Port
       # This is worth a warning. We can still insert it into the packet stream, but should insert it
       # into the stream which was last updated, so we should make sure the list is sorted.
-      # TODO This should become a message for the Logging
-      $stderr.puts "Found multiple requests from #{pkt.udp[:dst][:ip]}:#{pkt.udp[:dst][:port]} and ID #{pkt.identifier}"
+      logger.warn "Found multiple requests from #{pkt.udp[:dst][:ip]}:#{pkt.udp[:dst][:port]} and ID #{pkt.identifier}"
       p.sort_by!(&:last_updated)
     end
     flow = p.last
+    logger.trace("Insert Packet in RadiusStream")
     flow.add_packet_from_radius(pkt)
   end
 
@@ -218,12 +228,13 @@ class RadiusStreamHelper
   def housekeeping
     @housekeeping_counter += 1
     return if @housekeeping_counter < 10
+    logger.trace("Starting Housekeeping")
     t = Time.now
     old = @known_streams.select{ |x| (t-x.last_updated) > @timeout }
     old.each do |o|
       # TODO This should become a message for the Logging
-      $stderr.puts "Timing out 0x#{o.current_state.pack('C*').unpack('H*').first}" if o.current_state
-      $stderr.puts 'Timing out state without state variable' unless o.current_state
+      logger.info "Timing out 0x#{o.current_state.pack('C*').unpack('H*').first}" if o.current_state
+      logger.info 'Timing out state without state variable' unless o.current_state
       @known_streams.delete o
     end
     @housekeeping_counter = 0
@@ -233,12 +244,14 @@ class RadiusStreamHelper
   # Add Packet to Packetflow
   # @param pkt [RadiusPacket] Packet to insert in the PacketFlow
   def self.add_packet(pkt)
+    logger.trace("Add packet to a Stream")
     RadiusStreamHelper.instance.priv_add_packet(pkt)
   end
 
   # Start Parsing of a certain Packetflow once it is done.
   # @param pktflow [RadiusStream] Stream to parse
   def self.notify_flow_done(pktflow)
+    logger.trace("One Packetflow is done")
     RadiusStreamHelper.instance.priv_notify_flow_done(pktflow)
   end
 
@@ -250,6 +263,26 @@ class RadiusStreamHelper
     # TODO Here there should be the Parsing for EAP. Maybe as a Thread?
     #  Don't know yet.
     eap_stream = EAPStream.new(pktflow)
+    case eap_stream.eap_type
+    when nil
+      # This EAP Stream has no EAP Type. So most likely the Client and Server could not agree on an EAP-Type
+    when EAPPacket::Type::TTLS,
+        EAPPacket::Type::PEAP,
+        EAPPacket::Type::TLS
+      # This is exactly what we want. This is all EAP-TLS based, so they are all parseable by EAPTLSStream
+      logger.trace("Found an EAP-TLS based EAP Type")
+    when EAPPacket::Type::EAPPWD
+      # This should also be interesting. Especially to see if some Servers try to use EAP-PWD with salt
+      logger.info("Found EAP PWD")
+    when EAPPacket::Type::MD5CHALLENGE
+      # This might be worth a warning, because this should not happen.
+      logger.info("Found MD5CHALLENGE")
+    when EAPPacket::Type::MSEAP
+      # I have no Idea what this is.
+      logger.info("Found MSEAP")
+    else
+      logger.warn("Unknown EAP Type #{eap_stream.eap_type}")
+    end
   end
 
 end

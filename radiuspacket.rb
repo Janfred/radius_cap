@@ -10,6 +10,8 @@ end
 
 # A Radius Packet with all attributes and a reassembled EAP Message
 class RadiusPacket
+  include SemanticLogger::Loggable
+
   # All supported RADIUS Types
   module Type
     REQUEST = 1
