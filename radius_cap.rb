@@ -28,7 +28,7 @@ require './eapstream.rb'
 
 SemanticLogger.default_level = @config[:debug_level]
 SemanticLogger.add_appender(file_name: 'development.log')
-SemanticLogger.add_appender(STDOUT) if @config[:debug]
+SemanticLogger.add_appender(io: STDOUT) if @config[:debug]
 
 logger = SemanticLogger['radius_cap']
 
