@@ -1,30 +1,36 @@
 # Class for EAP Stream. This then does the destiction between EAP-TLS communication
 # (EAP-TLS, EAP-TTLS, EAP-PEAP) and all other EAP Communication
 class EAPStream
+  attr_reader :eap_packets, :eap_type, :initial_eap_type, :wanted_eap_type
+
   # [Array<EAPPacket>]
-  @eap_packets = []
+  @eap_packets
 
   # [Integer] EAP Type of the communication in this stream. Might be nil, if the client and server don't agree on
   # an EAP Type
-  @eap_type = nil
+  @eap_type
 
   # [Integer] Requested EAP Type of the client. Only set if the initial eap type suggested
   # by the server does not match the actual EAP Type or the Server rejects the wanted
   # EAP Type (e.g. because the client is configured to do EAP-PWD, but the server does not
   # support it.)
-  @wanted_eap_type = nil
+  @wanted_eap_type
 
   # [Integer] This is the initial offered EAP Type by the server.
   # It can differ from the selected EAP Type, e.g. if the Server supports
   # both EAP-TTLS and EAP-PEAP and it is set to default to PEAP, but the Clients are
   # configured to use TTLS.
-  @initial_eap_type = nil
+  @initial_eap_type
 
   # Initialize the EAP Stream. Parses the EAP Type and matches the EAP fragmentation (not the EAP-TLS Fragmentation!)
   # @param pktstream [RadiusStream] Packet Stream
   # @raise [EAPStreamError] if the EAP Stream was invalid in any way.
   # @todo I should read the EAP RFC. I suspect that the EAP Communication is always {Response, Request}+,Response,[Success|Failure] but I'm not sure about that
   def initialize(pktstream)
+    @eap_packets = []
+    @eap_type = nil
+    @wanted_eap_type = nil
+    @initial_eap_type = nil
     # Here the EAP Stream is parsed based on the RADIUS Packets.
     pktstream.packets.each do |radius_packet|
       eap_msg = []

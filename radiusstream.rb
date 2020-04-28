@@ -8,24 +8,24 @@ class RadiusStream
 
   attr_reader :last_updated, :current_pktid, :current_state, :udp_src_ip, :udp_dst_ip, :udp_src_port, :udp_dst_port, :packets
   # Timestamp of the last update of this specific stream. Used for timeouts.
-  @last_updated = nil
+  @last_updated
   # Current value of the State Attribute
-  @current_state = nil
+  @current_state
   # Current Radius Identifier
-  @current_pktid = nil
+  @current_pktid
   # IP Address of the NAS (e.g. the WiFi-Controller)
-  @udp_src_ip = nil
+  @udp_src_ip
   # IP Address of the RADIUS Server
-  @udp_dst_ip = nil
+  @udp_dst_ip
   # UDP Source Port at the NAS (e.g. WiFi-Controller)
-  @udp_src_port = nil
+  @udp_src_port
   # UDP Destination Port at the RADIUS Server.
   # @todo Currently this will always be `1812` but maybe this should be configurable.
-  @udp_dst_port = nil
+  @udp_dst_port
   # Indicates if the last package was sent by the server (true) or the client (false)
-  @last_from_server = false
+  @last_from_server
   # [Array<RadiusPacket>] Array of packets (RadiusPacket) in received order
-  @packets = []
+  @packets
 
   # Create a new Instance of a RadiusStream
   # @param pkt [RadiusPacket] Initial packet of the stream
@@ -38,6 +38,7 @@ class RadiusStream
     @udp_src_port = pkt.udp[:src][:port]
     @udp_dst_port = pkt.udp[:dst][:port]
     @last_from_server = false
+    @packets = []
   end
 
   # Add an answering packet from the radius
