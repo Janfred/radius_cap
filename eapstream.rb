@@ -1,6 +1,8 @@
 # Class for EAP Stream. This then does the destiction between EAP-TLS communication
 # (EAP-TLS, EAP-TTLS, EAP-PEAP) and all other EAP Communication
 class EAPStream
+  include SemanticLogger::Loggable
+
   attr_reader :eap_packets, :eap_type, :initial_eap_type, :wanted_eap_type
 
   # [Array<EAPPacket>]
@@ -27,6 +29,7 @@ class EAPStream
   # @raise [EAPStreamError] if the EAP Stream was invalid in any way.
   # @todo I should read the EAP RFC. I suspect that the EAP Communication is always {Response, Request}+,Response,[Success|Failure] but I'm not sure about that
   def initialize(pktstream)
+    logger.trace("Initialize new EAP Packet. Packet Stream length: #{pktstream.packets.length}")
     @eap_packets = []
     @eap_type = nil
     @wanted_eap_type = nil
@@ -60,6 +63,8 @@ class EAPStream
     # The first EAP Packet is always a EAP Response (For some weird reasons)
     # and EAP Type is Identity.
     # If this is not the case, the EAP Communication was most likely not captured completely.
+    logger.trace("Code of the first EAP Packet: #{@eap_packets[0].code}")
+    logger.trace("Type of the first EAP Packet: #{@eap_packets[0].type}")
     # TODO This Error should have a message
     raise EAPStreamError if @eap_packets[0].code != EAPPacket::Code::RESPONSE
     # TODO This Error should have a message
