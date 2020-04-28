@@ -239,8 +239,16 @@ class RadiusStreamHelper
   # Start Parsing of a certain Packetflow once it is done.
   # @param pktflow [RadiusStream] Stream to parse
   def self.notify_flow_done(pktflow)
+    RadiusStreamHelper.instance.priv_notify_flow_done(pktflow)
+  end
+
+  # Private helper method
+  # @param pktflow [RadiusStream]
+  # @private
+  def priv_notify_flow_done(pktflow)
     @known_streams.delete(pktflow)
-    # TODO Here there should be the Parsing for EAP
+    # TODO Here there should be the Parsing for EAP. Maybe as a Thread?
+    #  Don't know yet.
     eap_stream = EAPStream.new(pktflow)
   end
 
