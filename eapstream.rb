@@ -300,22 +300,22 @@ class EAPTLSFragment
   # This is the case when all flags are set to 0 and the payload is empty.
   # @return [Boolean] if the Fragment is an acknowledgement.
   def is_acknowledgement?
-    return !@tlsstart && !@length_included && !@more_fragments && @payload.length == 0
+    !@tlsstart && !@length_included && !@more_fragments && @payload.length == 0
   end
 
   # Getter for the Start Flag
   # @return [Boolean]
   def is_start?
-    return @tlsstart
+    @tlsstart
   end
   # Getter for the More Fragments Flag
   # @return [Boolean]
   def more_fragments?
-    return @more_fragments
+    @more_fragments
   end
   # Getter for the Length Included Flag
   # @return [Boolean]
   def length_included?
-    return @length_included
+    @length_included
   end
 end
