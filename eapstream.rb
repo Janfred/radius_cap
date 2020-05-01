@@ -280,9 +280,9 @@ class EAPTLSFragment
     logger.trace "Length of the EAP Packet: #{data.length}"
     flags = data[0]
     logger.trace "Flags: 0x%02X" % flags
-    @length_included = !!(flags & EAPTLSFragment::TLSFlags::LENGTHINCLUDED)
-    @more_fragments = !!(flags & EAPTLSFragment::TLSFlags::MOREFRAGMENTS)
-    @tlsstart = !!(flags & EAPTLSFragment::TLSFlags::START)
+    @length_included = (flags & EAPTLSFragment::TLSFlags::LENGTHINCLUDED) != 0
+    @more_fragments = (flags & EAPTLSFragment::TLSFlags::MOREFRAGMENTS) != 0
+    @tlsstart = (flags & EAPTLSFragment::TLSFlags::START) != 0
 
     logger.trace 'Included Flags:' + (@length_included ? ' Length included': '' ) +
                      (@more_fragments ? ' More Fragments' : '') +
