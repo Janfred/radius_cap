@@ -75,5 +75,6 @@ class EAPPacket
 
     @type = data[4]
     @type_data = data[5..-1]
+    logger.trace 'EAP Type Content: ' + @type_data.pack('C*').unpack('H*').first
   end
 end

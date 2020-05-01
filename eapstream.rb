@@ -33,7 +33,7 @@ class EAPStream
   # @raise [EAPStreamError] if the EAP Stream was invalid in any way.
   # @todo I should read the EAP RFC. I suspect that the EAP Communication is always {Response, Request}+,Response,[Success|Failure] but I'm not sure about that
   def initialize(pktstream)
-    logger.trace("Initialize new EAP Packet. Packet Stream length: #{pktstream.packets.length}")
+    logger.trace("Initialize new EAP Stream. Packet Stream length: #{pktstream.packets.length}")
     @eap_packets = []
     @eap_type = nil
     @wanted_eap_type = nil
@@ -49,12 +49,13 @@ class EAPStream
       if eap_msg == []
         # TODO Here should be a warning or even an error unless this is the final answer
       end
+      logger.trace 'EAP Content: ' + eap_msg.pack('C*').unpack('H*').first
+
       @eap_packets << EAPPacket.new(eap_msg)
     end
 
     if @eap_packets.length < 2
-      # TODO This should be a message for the Logging
-      $stderr.puts "The EAP Stream was less then 2 messages long. This won't be a valid EAP communication"
+      logger.warn 'The EAP Stream was less then 2 messages long. This won\'t be a valid EAP communication'
       # TODO This Error should have a message
       raise EAPStreamError
     end
