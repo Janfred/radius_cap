@@ -284,6 +284,10 @@ class EAPTLSFragment
     @more_fragments = !!(flags & EAPTLSFragment::TLSFlags::MOREFRAGMENTS)
     @tlsstart = !!(flags & EAPTLSFragment::TLSFlags::START)
 
+    logger.trace 'Included Flags:' + (@length_included ? ' Length included': '' ) +
+                     (@more_fragments ? ' More Fragments' : '') +
+                     (@tlsstart ? ' Start': '')
+
     @indicated_length = nil
     cur_ptr = 1
     if @length_included
