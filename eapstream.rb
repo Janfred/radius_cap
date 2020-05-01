@@ -145,7 +145,7 @@ class EAPStream
         EAPPacket::Type::TLS
       # This is exactly what we want. This is all EAP-TLS based, so they are all parseable by EAPTLSStream
       logger.info 'Found an EAP-TLS based EAP Type'
-      eaptlsstream = EAPTLSStream.new(self.eap_packets)
+      eaptlsstream = EAPTLSStream.new(@eap_packets[@first_eap_payload..-1])
 
       tlsstream = TLSStream.new(eaptlsstream.packets)
 
