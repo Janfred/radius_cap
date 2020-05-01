@@ -263,26 +263,7 @@ class RadiusStreamHelper
     # TODO Here there should be the Parsing for EAP. Maybe as a Thread?
     #  Don't know yet.
     eap_stream = EAPStream.new(pktflow)
-    case eap_stream.eap_type
-    when nil
-      # This EAP Stream has no EAP Type. So most likely the Client and Server could not agree on an EAP-Type
-    when EAPPacket::Type::TTLS,
-        EAPPacket::Type::PEAP,
-        EAPPacket::Type::TLS
-      # This is exactly what we want. This is all EAP-TLS based, so they are all parseable by EAPTLSStream
-      logger.trace("Found an EAP-TLS based EAP Type")
-    when EAPPacket::Type::EAPPWD
-      # This should also be interesting. Especially to see if some Servers try to use EAP-PWD with salt
-      logger.info("Found EAP PWD")
-    when EAPPacket::Type::MD5CHALLENGE
-      # This might be worth a warning, because this should not happen.
-      logger.info("Found MD5CHALLENGE")
-    when EAPPacket::Type::MSEAP
-      # I have no Idea what this is.
-      logger.info("Found MSEAP")
-    else
-      logger.warn("Unknown EAP Type #{eap_stream.eap_type}")
-    end
+    eap_stream.parse
   end
 
 end

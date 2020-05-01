@@ -24,6 +24,10 @@ class EAPStream
   # configured to use TTLS.
   @initial_eap_type
 
+  # [Integer] Packet with the first Payload content. Usually it is the second packet
+  # but it may also be the fourth, if a NAK is captured.
+  @first_eap_payload
+
   # Initialize the EAP Stream. Parses the EAP Type and matches the EAP fragmentation (not the EAP-TLS Fragmentation!)
   # @param pktstream [RadiusStream] Packet Stream
   # @raise [EAPStreamError] if the EAP Stream was invalid in any way.
@@ -34,6 +38,7 @@ class EAPStream
     @eap_type = nil
     @wanted_eap_type = nil
     @initial_eap_type = nil
+    @first_eap_payload = nil
     # Here the EAP Stream is parsed based on the RADIUS Packets.
     pktstream.packets.each do |radius_packet|
       eap_msg = []
@@ -85,6 +90,7 @@ class EAPStream
       # If the client answers with the same EAP Type we have a successful agreement
       # on the EAP type. We're done here.
       @eap_type = @initial_eap_type
+      @first_eap_payload = 1
       return nil
     end
 
@@ -117,11 +123,40 @@ class EAPStream
 
     # If this wasn't the case, we finally know our EAP Type.
     @eap_type = @wanted_eap_type
+    @first_eap_payload = 3
 
     # And then we return nil to not confuse the caller with our return value
     nil
   end
   private :set_eap_type
+
+  def parse
+    case @eap_type
+    when nil
+      # This EAP Stream has no EAP Type. So most likely the Client and Server could not agree on an EAP-Type
+      logger.info "Seen Failed EAP Communication. The Server offered #{@initial_eap_type} and the Client wanted #{@wanted_eap_type}"
+    when EAPPacket::Type::TTLS,
+        EAPPacket::Type::PEAP,
+        EAPPacket::Type::TLS
+      # This is exactly what we want. This is all EAP-TLS based, so they are all parseable by EAPTLSStream
+      logger.info 'Found an EAP-TLS based EAP Type'
+      eaptlsstream = EAPTLSStream.new(self.eap_packets)
+
+      tlsstream = TLSStream.new(eaptlsstream.packets)
+
+    when EAPPacket::Type::EAPPWD
+      # This should also be interesting. Especially to see if some Servers try to use EAP-PWD with salt
+      logger.info 'Found EAP PWD Communication'
+    when EAPPacket::Type::MD5CHALLENGE
+      # This might be worth a warning, because this should not happen.
+      logger.info 'Found MD5CHALLENGE Communication'
+    when EAPPacket::Type::MSEAP
+      # I have no Idea what this is.
+      logger.info 'Found MSEAP Communication'
+    else
+      logger.warn "Unknown EAP Type #{@eap_type}"
+    end
+  end
 end
 
 # Error to be thrown when the EAP Protocol is violated
@@ -132,11 +167,152 @@ end
 # This class handles some properties of the EAP-TLS specification e.g. the Fragmentation.
 # As a result the [[EAPTLSPacket]] objects included contain only the pure EAP-TLS communication
 # without the Meta-Packets (EAP-TLS Start, Acknowledgements for fragmented packets, ...)
+# The first packet in the internal packet Array is the EAP-TLS Client Hello. The initial EAP-TLS Start is
+# parsed, but left out.
 class EAPTLSStream
+  include SemanticLogger::Loggable
 
+  @packets
+
+  # Initialize new EAP-TLS Stream
+  # @param eapstream [Array<EAPPacket>] EAP Stream to parse
+  def initialize(eapstream)
+
+    current_eaptype = eapstream.first.type
+    @packets = []
+
+    # If the eapstream is shorter then two messages there must be something wrong.
+    # TODO This Error should have a message
+    raise EAPStreamError if eapstream.length < 2
+
+    cur_pkt = 0
+    frag = EAPTLSFragment.new(eapstream[cur_pkt].type_data)
+    # The first packet is A EAP-TLS Start (Only the Start Flag set)
+    # TODO This Error should have a message
+    raise EAPStreamError unless frag.is_start?
+
+    # Now we have verified the EAP-TLS Start.
+    cur_pkt += 1
+
+    # Now we go on parsing all packets until we have a success/failure
+    while eapstream[cur_pkt].type == current_eaptype do
+      cur_pkt_data = []
+      begin
+        # TODO This Error should have a message
+        raise EAPStreamError if eapstream[cur_pkt].nil?
+        # TODO This Error should have a message
+        raise EAPStreamError if eapstream[cur_pkt].type != current_eaptype
+        frag = EAPTLSFragment.new(eapstream[cur_pkt].type_data)
+        cur_pkt_data += frag.payload
+        more_fragments = frag.more_fragments?
+        indicated_length = frag.indicated_length
+
+        # If the sent packet had more fragments then the other communication partner has to acknowledge
+        # the Packet. This is done by sending an empty packet with no flags set.
+        if more_fragments
+          cur_pkt += 1
+
+          # TODO This Error should have a message
+          raise EAPStreamError if eapstream[cur_pkt].nil?
+
+          # TODO This Error should have a message
+          raise EAPStreamError if eapstream[cur_pkt].type != current_eaptype
+          frag = EAPTLSFragment.new(eapstream[cur_pkt].type_data)
+
+          # TODO This Error should have a message
+          raise EAPStreamError unless frag.is_acknowledgement?
+
+          cur_pkt += 1
+        end
+      end while more_fragments
+      # TODO This Error should have a message
+      raise EAPStreamError if cur_pkt_data.length != indicated_length
+      @packets << cur_pkt_data
+      cur_pkt += 1
+    end
+
+  end
 end
 
-# EAP TLS Packet
-class EAPTLSPacket
+# Helper class for parsing the EAP Packets
+class EAPTLSFragment
+  include SemanticLogger::Loggable
 
+  # Constants for EAP-TLS Flags
+  module TLSFlags
+    # Indicates, that the EAP Payload contains the Length of the EAP Payload
+    LENGTHINCLUDED = 0x80
+    # Indicates, that this EAP Packet is fragmented and that more fragments follow
+    MOREFRAGMENTS  = 0x40
+    # Indicates the Start of the EAP-TLS communication
+    START          = 0x20
+  end
+
+
+  attr_reader :indicated_length, :payload,
+  # [Boolean] Is Start Flag set?
+  @tlsstart
+  # [Boolean] Is the Length Included Flag set?
+  @length_included
+  # [Boolean] Is the More Fragments Option set?
+  @more_fragments
+  # [Integer] Indicated Length as set by the EAP-TLS Length parameter.
+  # Set to @payload_length if the Length Included Flag is not set.
+  @indicated_length
+  # [Array<Bytes>] Payload of the packet without Flags and Length
+  @payload
+
+  # Initalize new EAP TLS Fragment
+  # @param data [Array<Byte>] Payload of the EAP TLS Fragment
+  def initialize(data)
+    # If the data is empty, then this can't be a EAP-TLS Fragment.
+    # TODO This Error should have a message
+    raise EAPStreamError if data.length == 0
+
+    flags = data[0]
+    @length_included = !!(flags & EAPTLSFragment::TLSFlags::LENGTHINCLUDED)
+    @more_fragments = !!(flags & EAPTLSFragment::TLSFlags::MOREFRAGMENTS)
+    @tlsstart = !!(flags & EAPTLSFragment::TLSFlags::START)
+
+    @indicated_length = nil
+    cur_ptr = 1
+    if @length_included
+      # If the length is included, then the data must be at least 5 bytes long.
+      # TODO This Error should have a message
+      raise EAPStreamError if data.length < 5
+      @indicated_length = data[cur_ptr]*256*256*256 + data[cur_ptr+1]*256*256 + data[cur_ptr+2]*256 + data[cur_ptr+3]
+      cur_ptr += 4
+    end
+
+
+    @payload = data[cur_ptr..-1]
+    @indicated_length = @payload.length if @indicated_length.nil?
+
+    # Last we check that if the Start flag is set, the payload is empty. Otherwise the Packet would violate
+    # the protocol.
+    raise EAPStreamError if @tlsstart && @payload.length != 0
+  end
+
+  # Checks if the Fragment is an acknowledgement of a previous EAP-TLS Fragment.
+  # This is the case when all flags are set to 0 and the payload is empty.
+  # @return [Boolean] if the Fragment is an acknowledgement.
+  def is_acknowledgement?
+    return !@tlsstart && !@length_included && !@more_fragments && @payload.length == 0
+  end
+
+  # Getter for the Start Flag
+  # @return [Boolean]
+  def is_start?
+    return @tlsstart
+  end
+  # Getter for the More Fragments Flag
+  # @return [Boolean]
+  def more_fragments?
+    return @more_fragments
+  end
+  # Getter for the Length Included Flag
+  # @return [Boolean]
+  def length_included?
+    return @length_included
+  end
 end
