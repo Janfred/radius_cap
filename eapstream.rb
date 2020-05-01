@@ -287,12 +287,16 @@ class EAPTLSFragment
       cur_ptr += 4
     end
 
-
+    logger.trace("Parsing payload from position #{cur_ptr}")
     @payload = data[cur_ptr..-1]
     @indicated_length = @payload.length if @indicated_length.nil?
+    logger.trace("The Payload is #{@payload.length} bytes long")
+
+    logger.trace("Payload: #{@payload.inspect}") if @tlsstart
 
     # Last we check that if the Start flag is set, the payload is empty. Otherwise the Packet would violate
     # the protocol.
+    # TODO This Error should have a message
     raise EAPStreamError if @tlsstart && @payload.length != 0
   end
 
