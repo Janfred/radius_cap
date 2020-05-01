@@ -273,6 +273,7 @@ class EAPTLSFragment
     raise EAPStreamError if data.length == 0
 
     flags = data[0]
+    logger.trace "Flags: 0x%02X" % flags
     @length_included = !!(flags & EAPTLSFragment::TLSFlags::LENGTHINCLUDED)
     @more_fragments = !!(flags & EAPTLSFragment::TLSFlags::MOREFRAGMENTS)
     @tlsstart = !!(flags & EAPTLSFragment::TLSFlags::START)
