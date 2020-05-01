@@ -92,6 +92,7 @@ class EAPStream
       # on the EAP type. We're done here.
       @eap_type = @initial_eap_type
       @first_eap_payload = 1
+      logger.trace "The first EAP Payload is in packet #{@first_eap_payload}"
       return nil
     end
 
@@ -114,6 +115,7 @@ class EAPStream
       # If the Server answers with a Failure, it probably does not support
       # the desired auth type. In any case, the EAP Type is then set to nil.
       @eap_type = nil
+      logger.debug 'This EAP Stream ends with a Failure after the fourth packet'
       return nil
     end
 
@@ -125,6 +127,8 @@ class EAPStream
     # If this wasn't the case, we finally know our EAP Type.
     @eap_type = @wanted_eap_type
     @first_eap_payload = 3
+
+    logger.trace "The first EAP Payload is in packet #{@first_eap_payload}"
 
     # And then we return nil to not confuse the caller with our return value
     nil
