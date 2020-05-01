@@ -211,6 +211,8 @@ class EAPTLSStream
         cur_pkt_data += frag.payload
         more_fragments = frag.more_fragments?
         indicated_length = frag.indicated_length
+        logger.trace "New Indicated Length: #{indicated_length}"
+        logger.trace "Current Length: #{cur_pkt_data.length}"
 
         # If the sent packet had more fragments then the other communication partner has to acknowledge
         # the Packet. This is done by sending an empty packet with no flags set.
@@ -227,15 +229,17 @@ class EAPTLSStream
           # TODO This Error should have a message
           raise EAPStreamError unless frag.is_acknowledgement?
 
+          logger.trace 'Acknowledgement'
           cur_pkt += 1
         end
       end while more_fragments
       # TODO This Error should have a message
       raise EAPStreamError if cur_pkt_data.length != indicated_length
       @packets << cur_pkt_data
+      logger.trace 'Packet was parsed completely. Moving on to the next'
       cur_pkt += 1
     end
-
+    logger.trace 'Reached end of EAP-TLS communication'
   end
 end
 
