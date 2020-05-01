@@ -249,7 +249,10 @@ class EAPTLSFragment
   end
 
 
-  attr_reader :indicated_length, :payload,
+  # Attribute reader for some attributes.
+  # The other attributes have a dedicated getter method below.
+  attr_reader :indicated_length, :payload
+
   # [Boolean] Is Start Flag set?
   @tlsstart
   # [Boolean] Is the Length Included Flag set?
