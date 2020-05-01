@@ -277,6 +277,7 @@ class EAPTLSFragment
     # TODO This Error should have a message
     raise EAPStreamError if data.length == 0
 
+    logger.trace "Length of the EAP Packet: #{data.length}"
     flags = data[0]
     logger.trace "Flags: 0x%02X" % flags
     @length_included = !!(flags & EAPTLSFragment::TLSFlags::LENGTHINCLUDED)
