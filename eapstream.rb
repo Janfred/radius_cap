@@ -202,6 +202,8 @@ class EAPTLSStream
     # Now we go on parsing all packets until we have a success/failure
     while eapstream[cur_pkt].type == current_eaptype do
       cur_pkt_data = []
+      indicated_length = frag.indicated_length
+      logger.trace "Indicated Length: #{indicated_length}"
       begin
         # TODO This Error should have a message
         raise EAPStreamError if eapstream[cur_pkt].nil?
@@ -210,9 +212,8 @@ class EAPTLSStream
         frag = EAPTLSFragment.new(eapstream[cur_pkt].type_data)
         cur_pkt_data += frag.payload
         more_fragments = frag.more_fragments?
-        indicated_length = frag.indicated_length
-        logger.trace "New Indicated Length: #{indicated_length}"
-        logger.trace "Current Length: #{cur_pkt_data.length}"
+        logger.trace "Current Fragment Length: #{frag.payload.length}"
+        logger.trace "Current Packet Length: #{cur_pkt_data.length}"
 
         # If the sent packet had more fragments then the other communication partner has to acknowledge
         # the Packet. This is done by sending an empty packet with no flags set.
