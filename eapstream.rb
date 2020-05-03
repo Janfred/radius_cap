@@ -173,6 +173,7 @@ end
 class EAPTLSStream
   include SemanticLogger::Loggable
 
+  attr_reader :packets
   @packets
 
   # Initialize new EAP-TLS Stream

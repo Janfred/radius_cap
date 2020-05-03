@@ -77,6 +77,8 @@ end
 #   @return [Hash] EAP-TLS Data
 class ProtocolStack
 
+  include SemanticLogger::Loggable
+
   attr_reader :radius_data, :radius_stream, :eap_data, :eap_stream, :eap_tls_data, :eap_tls_stream, :tls_data
 
   def initialize(to_parse)
