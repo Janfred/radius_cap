@@ -1,4 +1,4 @@
-# Class for EAP Stream. This then does the destiction between EAP-TLS communication
+# Class for EAP Stream. This then does the distinction between EAP-TLS communication
 # (EAP-TLS, EAP-TTLS, EAP-PEAP) and all other EAP Communication
 # @!attribute [r] first_eap_payload
 #   @return [Integer] Packet with the first Payload content. Usually it is the second packet
@@ -128,6 +128,9 @@ class EAPStream
   end
   private :set_eap_type
 
+  # Parsing
+  # @todo This will be moved to {StackParser} or {ProtocolStack}
+  # @deprecated Deprecated before it was even usable
   def parse
     case @eap_type
     when nil
