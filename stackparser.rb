@@ -42,16 +42,20 @@ class StackParser
   # Parser Function invoked by the Parse Thread
   def parser
     loop do
-      to_parse = nil
-      @priv_stack_data.synchronize do
-        @priv_waitcond.wait_while { @priv_stack_data.empty? }
-        to_parse = @priv_stack_data.shift
+      begin
+        to_parse = nil
+        @priv_stack_data.synchronize do
+          @priv_waitcond.wait_while { @priv_stack_data.empty? }
+          to_parse = @priv_stack_data.shift
+        end
+        if to_parse.nil?
+          logger.error "Parser found a nil to parse. That seems not right."
+          next
+        end
+        ProtocolStack.new to_parse
+      rescue => e
+        logger.error("Error in parsing", exception: e)
       end
-      if to_parse.nil?
-        logger.error "Parser found a nil to parse. That seems not right."
-        next
-      end
-      ProtocolStack.new to_parse
     end
   end
 
@@ -205,6 +209,25 @@ class ProtocolStack
     @eap_data[:information][:actual_eaptype] = @eap_stream.eap_type
     @eap_data[:information][:roundtrips] = @eap_stream.eap_packets.length
 
+    @eap_data[:information][:max_server_pkt_size] = 0
+    @eap_data[:information][:max_client_pkt_size] = 0
+    @eap_data[:information][:total_server_pkt_size] = 0
+    @eap_data[:information][:total_client_pkt_size] = 0
+
+    is_client_pkt = true
+    @eap_stream.eap_packets.each do |pkt|
+      total = :total_server_pkt_size
+      max_c = :max_server_pkt_size
+      if is_client_pkt
+        total = :total_client_pkt_size
+        max_c = :max_client_pkt_size
+      end
+      size = pkt.raw_data.length
+      @eap_data[:information][total] += size
+      @eap_data[:information][max_c] = size if @eap_data[:information][max_c] < size
+      is_client_pkt = !is_client_pkt
+    end
+
     # Here is now decided how to proceed with the packet.
     case @eap_stream.eap_type
     when nil
@@ -215,6 +238,8 @@ class ProtocolStack
         EAPPacket::Type::TLS
       logger.info 'Found an EAP-TLS based EAP Type'
       @eap_tls_stream = EAPTLSStream.new(@eap_stream.eap_packets[@eap_stream.first_eap_payload..-1])
+      parse_from_eaptls
+
     when EAPPacket::Type::EAPPWD
       logger.info 'Found EAP-PWD Communication'
     when EAPPacket::Type::MD5CHALLENGE
@@ -230,7 +255,11 @@ class ProtocolStack
 
   # Parse from the EAP-TLS Layer upwards
   def parse_from_eaptls
-    # TODO
+    raise ProtocolStackError.new 'The EAP-TLS Stream must not be empty' if @eap_tls_stream.nil?
+    raise ProtocolStackError.new 'The EAP-TLS Stream ist not an EAPTLSStream Object' unless @eap_tls_stream.is_a? EAPTLSStream
+
+    # Parse EAP-TLS Metadata
+    @eap_tls_data[:information] = {}
   end
 
   # Initialize all class variables
