@@ -7,7 +7,10 @@ end
 class RadiusStream
   include SemanticLogger::Loggable
 
-  attr_reader :last_updated, :current_pktid, :current_state, :udp_src_ip, :udp_dst_ip, :udp_src_port, :udp_dst_port, :packets
+
+  attr_reader :time_created,:last_updated, :current_pktid, :current_state, :udp_src_ip, :udp_dst_ip, :udp_src_port, :udp_dst_port, :packets
+  # Timestamp of the Creation
+  @time_created
   # Timestamp of the last update of this specific stream. Used for timeouts.
   @last_updated
   # Current value of the State Attribute
@@ -32,6 +35,7 @@ class RadiusStream
   # @param pkt [RadiusPacket] Initial packet of the stream
   def initialize(pkt)
     logger.trace("Initialize new Packet stream with udp data #{pkt.udp}")
+    @time_created = Time.now
     @last_updated = Time.now
     @current_pktid = pkt.identifier
     @current_state = pkt.state
@@ -260,6 +264,7 @@ class RadiusStreamHelper
   # @private
   def priv_notify_flow_done(pktflow)
     @known_streams.delete(pktflow)
+    StackParser.insert_into_parser(:radius, pktflow)
     # TODO Here there should be the Parsing for EAP. Maybe as a Thread?
     #  Don't know yet.
     eap_stream = EAPStream.new(pktflow)

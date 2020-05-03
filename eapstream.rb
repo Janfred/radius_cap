@@ -1,32 +1,27 @@
 # Class for EAP Stream. This then does the destiction between EAP-TLS communication
 # (EAP-TLS, EAP-TTLS, EAP-PEAP) and all other EAP Communication
+# @!attribute [r] first_eap_payload
+#   @return [Integer] Packet with the first Payload content. Usually it is the second packet
+#     but it may also be the fourth, if a NAK is captured.
+# @!attribute [r] initial_eap_payload
+#   @return [Integer] This is the initial offered EAP Type by the server.
+#     It can differ from the selected EAP Type, e.g. if the Server supports
+#     both EAP-TTLS and EAP-PEAP and it is set to default to PEAP, but the Clients are
+#     configured to use TTLS.
+# @!attribute [r] eap_packets
+#   @return [Array<EAPPacket>] Parsed EAP Packets
+# @!attribute [r] eap_type
+#   @return [Integer] EAP Type of the communication in this stream. Might be nil, if the
+#     client and server don't agree on an EAP Type.
+# @!attribute [r] wanted_eap_type
+#   @return [Integer] Requested EAP Type of the client. Only set if the initial eap type suggested
+#     by the server does not match the actual EAP Type or the Server rejects the wanted
+#     EAP Type (e.g. because the client is configured to do EAP-PWD, but the server does not
+#     support it.)
 class EAPStream
   include SemanticLogger::Loggable
 
-  attr_reader :eap_packets, :eap_type, :initial_eap_type, :wanted_eap_type
-
-  # [Array<EAPPacket>]
-  @eap_packets
-
-  # [Integer] EAP Type of the communication in this stream. Might be nil, if the client and server don't agree on
-  # an EAP Type
-  @eap_type
-
-  # [Integer] Requested EAP Type of the client. Only set if the initial eap type suggested
-  # by the server does not match the actual EAP Type or the Server rejects the wanted
-  # EAP Type (e.g. because the client is configured to do EAP-PWD, but the server does not
-  # support it.)
-  @wanted_eap_type
-
-  # [Integer] This is the initial offered EAP Type by the server.
-  # It can differ from the selected EAP Type, e.g. if the Server supports
-  # both EAP-TTLS and EAP-PEAP and it is set to default to PEAP, but the Clients are
-  # configured to use TTLS.
-  @initial_eap_type
-
-  # [Integer] Packet with the first Payload content. Usually it is the second packet
-  # but it may also be the fourth, if a NAK is captured.
-  @first_eap_payload
+  attr_reader :eap_packets, :eap_type, :initial_eap_type, :wanted_eap_type, :first_eap_payload
 
   # Initialize the EAP Stream. Parses the EAP Type and matches the EAP fragmentation (not the EAP-TLS Fragmentation!)
   # @param pktstream [RadiusStream] Packet Stream

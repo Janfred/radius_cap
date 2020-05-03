@@ -349,7 +349,7 @@ def read_eaptls_fragment(eap, eap_type)
         $stderr.puts 'Reply packet had different type'
         raise EAPFragParseError
       end
-      if (reply.type_data[0] & ( EAPPacket::TLSFlags::LENGTHINCLUDED | EAPPacket::TLSFlags::MOREFRAGMENTS | EAPPacket::TLSFlags::START )) != 0 || reply.length != 6 then
+      if (reply.type_data[0] & ( EAPPacket::TLSFlags::LENGTHINCLUDED | EAPPacket::TLSFlags::MOREFRAGMENTS | EAPPacket::TLSFlags::START )) != 0 || reply.length != 6
         $stderr.puts 'EAP-TLS fragment with MoreFragments set was not acked.'
         return
       end
