@@ -74,8 +74,15 @@ class EAPStream
     raise EAPStreamError.new "The first EAP Packet has not a Response Code" if @eap_packets[0].code != EAPPacket::Code::RESPONSE
     raise EAPStreamError.new "The first EAP Packet is not an Identity Type" if @eap_packets[0].type != EAPPacket::Type::IDENTITY
 
-    # The Answer by the server is an EAP Request. If it is not, something is wrong.
+    @initial_eap_type = nil
+    @wanted_eap_type = nil
+    @eap_type = nil
+
+    # The Answer by the server is either an EAP Failure, in which case the Server
+    # rejected the Client immediately or an EAP Request. If it is not, something is wrong.
+    return if @eap_packets[1].code == EAPPacket::Code::FAILURE
     raise EAPStreamError if @eap_packets[1].code != EAPPacket::Code::REQUEST
+
     # Now we check for the EAP Type.
     # The initial message by the server contains the Server Default EAP Method
     @initial_eap_type = @eap_packets[1].type
