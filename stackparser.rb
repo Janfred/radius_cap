@@ -222,7 +222,7 @@ class ProtocolStack
         total = :total_client_pkt_size
         max_c = :max_client_pkt_size
       end
-      size = pkt.raw_data.length
+      size = pkt.length
       @eap_data[:information][total] += size
       @eap_data[:information][max_c] = size if @eap_data[:information][max_c] < size
       is_client_pkt = !is_client_pkt
