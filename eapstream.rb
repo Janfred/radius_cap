@@ -42,7 +42,13 @@ class EAPStream
         eap_msg += attr[:data]
       end
       if eap_msg == []
-        # TODO Here should be a warning or even an error unless this is the final answer
+        case radius_packet.type
+        when RadiusPacket::Type::ACCEPT,
+            RadiusPacket::Type::REJECT
+          logger.trace 'Seen empty EAP Message with a Accept or Reject type'
+        else
+          logger.warn 'Seen a RADIUS Packet without an EAP Content'
+        end
       end
       logger.trace 'EAP Content: ' + eap_msg.pack('C*').unpack('H*').first
 
@@ -51,8 +57,7 @@ class EAPStream
 
     if @eap_packets.length < 2
       logger.warn 'The EAP Stream was less then 2 messages long. This won\'t be a valid EAP communication'
-      # TODO This Error should have a message
-      raise EAPStreamError
+      raise EAPStreamError.new 'The Communication is too short (less then 2 messages long)'
     end
 
     set_eap_type
@@ -66,10 +71,8 @@ class EAPStream
     # If this is not the case, the EAP Communication was most likely not captured completely.
     logger.trace("Code of the first EAP Packet: #{@eap_packets[0].code}")
     logger.trace("Type of the first EAP Packet: #{@eap_packets[0].type}")
-    # TODO This Error should have a message
-    raise EAPStreamError if @eap_packets[0].code != EAPPacket::Code::RESPONSE
-    # TODO This Error should have a message
-    raise EAPStreamError if @eap_packets[0].type != EAPPacket::Type::IDENTITY
+    raise EAPStreamError.new "The first EAP Packet has not a Response Code" if @eap_packets[0].code != EAPPacket::Code::RESPONSE
+    raise EAPStreamError.new "The first EAP Packet is not an Identity Type" if @eap_packets[0].type != EAPPacket::Type::IDENTITY
 
     # The Answer by the server is an EAP Request. If it is not, something is wrong.
     raise EAPStreamError if @eap_packets[1].code != EAPPacket::Code::REQUEST
@@ -79,8 +82,7 @@ class EAPStream
 
     # Now that we have the initial EAP type we have to make sure that the client continues
     # talking to the server and does not reject the suggested EAP Type
-    # TODO This Error should have a message
-    raise EAPStreamError if @eap_packets[2].nil?
+    raise EAPStreamError.new "EAP Communication ended after 2 Messages" if @eap_packets[2].nil?
 
     if @eap_packets[2].type == @initial_eap_type
       # If the client answers with the same EAP Type we have a successful agreement
@@ -93,17 +95,14 @@ class EAPStream
 
     # If we're not done yet, the client most likely wants another EAP Type, so it
     # must answer with a Legacy NAK
-    # TODO This Error should have a message
-    raise EAPStreamError if @eap_packets[2].type != EAPPacket::Type::NAK
+    raise EAPStreamError.new "The Client and Server want different EAP Types, but the Client did not send a NAK" if @eap_packets[2].type != EAPPacket::Type::NAK
     # The EAP NAK packet has a payload of 1 byte containing the desired auth type.
-    # TODO This Error should have a message. The check might even be moved to the EAPPacket parser.
-    raise EAPStreamError if @eap_packets[2].type_data.length != 1
+    raise EAPStreamError.new 'The clien\'s NAK had an invalid length' if @eap_packets[2].type_data.length != 1
 
     @wanted_eap_type = @eap_packets[2].type_data[0]
 
     # Now the client has stated it's desired auth type. We are now parsing the Servers answer to that.
-    # TODO This Error should have a message.
-    raise EAPStreamError if @eap_packets[3].nil?
+    raise EAPStreamError.new 'The Client sent a NAK but the server didn\'t answer' if @eap_packets[3].nil?
 
     # We now have to determine between a rejection and a success in agreement.
     if @eap_packets[3].code == EAPPacket::Code::FAILURE
@@ -116,8 +115,7 @@ class EAPStream
 
     # If the server didn't reject the client, we just need to make sure the Server actually answeres
     # with a packet that matches the desired auth type sent by the client
-    # TODO This Error should have a message.
-    raise EAPStreamError if @eap_packets[3].type != @wanted_eap_type
+    raise EAPStreamError.new 'The Server answered with a different EAP Type then the Client requested' if @eap_packets[3].type != @wanted_eap_type
 
     # If this wasn't the case, we finally know our EAP Type.
     @eap_type = @wanted_eap_type
@@ -165,7 +163,7 @@ end
 
 # Stream of EAP-TLS Packets.
 # This class handles some properties of the EAP-TLS specification e.g. the Fragmentation.
-# As a result the [[EAPTLSPacket]] objects included contain only the pure EAP-TLS communication
+# As a result the packets objects included contain only the pure EAP-TLS communication
 # without the Meta-Packets (EAP-TLS Start, Acknowledgements for fragmented packets, ...)
 # The first packet in the internal packet Array is the EAP-TLS Client Hello. The initial EAP-TLS Start is
 # parsed, but left out.
@@ -178,18 +176,23 @@ class EAPTLSStream
   # @param eapstream [Array<EAPPacket>] EAP Stream to parse
   def initialize(eapstream)
 
-    current_eaptype = eapstream.first.type
+    raise EAPStreamError.new "The EAP Stream is to short to be an actually EAP-TLS Communication" if eapstream.length < 2
+
+    firstpkt = eapstream.first
+    # Error Message intentionally left blank.
+    raise EAPStreamError if firstpkt.nil?
+    raise EAPStreamError unless firstpkt.is_a? EAPPacket
+    current_eaptype = firstpkt.type
+
+
     @packets = []
 
     # If the eapstream is shorter then two messages there must be something wrong.
-    # TODO This Error should have a message
-    raise EAPStreamError if eapstream.length < 2
 
     cur_pkt = 0
     frag = EAPTLSFragment.new(eapstream[cur_pkt].type_data)
     # The first packet is A EAP-TLS Start (Only the Start Flag set)
-    # TODO This Error should have a message
-    raise EAPStreamError unless frag.is_start?
+    raise EAPStreamError.new "The first fragment was no EAP-TLS Start Packet" unless frag.is_start?
 
     # Now we have verified the EAP-TLS Start.
     cur_pkt += 1
@@ -199,10 +202,8 @@ class EAPTLSStream
       cur_pkt_data = []
       indicated_length = 0
       begin
-        # TODO This Error should have a message
-        raise EAPStreamError if eapstream[cur_pkt].nil?
-        # TODO This Error should have a message
-        raise EAPStreamError if eapstream[cur_pkt].type != current_eaptype
+        raise EAPStreamError.new "EAP Communication ended unexpectedly" if eapstream[cur_pkt].nil?
+        raise EAPStreamError.new "The EAP Type of the current packet does not match the EAP Type of the other EAP Packets" if eapstream[cur_pkt].type != current_eaptype
         frag = EAPTLSFragment.new(eapstream[cur_pkt].type_data)
         cur_pkt_data += frag.payload
         more_fragments = frag.more_fragments?
@@ -216,22 +217,18 @@ class EAPTLSStream
         if more_fragments
           cur_pkt += 1
 
-          # TODO This Error should have a message
-          raise EAPStreamError if eapstream[cur_pkt].nil?
+          raise EAPStreamError.new "A EAP Fragment with MoreFragments set was left unacknowledged" if eapstream[cur_pkt].nil?
 
-          # TODO This Error should have a message
-          raise EAPStreamError if eapstream[cur_pkt].type != current_eaptype
+          raise EAPStreamError.new "The EAP Type of the acknowledgement packet does not match the EAP Type of the other EAP Packets" if eapstream[cur_pkt].type != current_eaptype
           frag = EAPTLSFragment.new(eapstream[cur_pkt].type_data)
 
-          # TODO This Error should have a message
-          raise EAPStreamError unless frag.is_acknowledgement?
+          raise EAPStreamError.new "The expected acknowledgement Packet is not actually an acknowledgement" unless frag.is_acknowledgement?
 
           logger.trace 'Acknowledgement'
           cur_pkt += 1
         end
       end while more_fragments
-      # TODO This Error should have a message
-      raise EAPStreamError if cur_pkt_data.length != indicated_length
+      raise EAPStreamError.new "The Indicated Length did not match the actual Length of the packet" if cur_pkt_data.length != indicated_length
       @packets << cur_pkt_data
       logger.trace 'Packet was parsed completely. Moving on to the next'
       cur_pkt += 1
@@ -275,8 +272,7 @@ class EAPTLSFragment
   # @param data [Array<Byte>] Payload of the EAP TLS Fragment
   def initialize(data)
     # If the data is empty, then this can't be a EAP-TLS Fragment.
-    # TODO This Error should have a message
-    raise EAPStreamError if data.length == 0
+    raise EAPStreamError.new "The EAP Packet has no content" if data.length == 0
 
     logger.trace "Length of the EAP Packet: #{data.length}"
     flags = data[0]
@@ -293,8 +289,7 @@ class EAPTLSFragment
     cur_ptr = 1
     if @length_included
       # If the length is included, then the data must be at least 5 bytes long.
-      # TODO This Error should have a message
-      raise EAPStreamError if data.length < 5
+      raise EAPStreamError.new "The EAP Packet is to short to contain a length" if data.length < 5
       @indicated_length = data[cur_ptr]*256*256*256 + data[cur_ptr+1]*256*256 + data[cur_ptr+2]*256 + data[cur_ptr+3]
       cur_ptr += 4
     end
@@ -308,8 +303,7 @@ class EAPTLSFragment
 
     # Last we check that if the Start flag is set, the payload is empty. Otherwise the Packet would violate
     # the protocol.
-    # TODO This Error should have a message
-    raise EAPStreamError if @tlsstart && @payload.length != 0
+    raise EAPStreamError.new "The EAP-TLS Start flag was set but the Packet had content" if @tlsstart && @payload.length != 0
   end
 
   # Checks if the Fragment is an acknowledgement of a previous EAP-TLS Fragment.
