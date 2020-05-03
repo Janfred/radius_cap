@@ -19,6 +19,8 @@ require './write_to_elastic.rb'
 require './macvendor.rb'
 require './radiusstream.rb'
 require './eapstream.rb'
+require './stackparser.rb'
+require './tlsstream.rb'
 
 @config[:debug] = false if @config[:debug].nil?
 @config[:eap_timeout] ||= 60
@@ -33,6 +35,7 @@ SemanticLogger.add_appender(io: STDOUT, formatter: :color) if @config[:debug]
 logger = SemanticLogger['radius_cap']
 
 logger.info("Requirements done. Loading radius_cap.rb functions")
+
 class EAPFragParseError < StandardError
 end
 
@@ -60,21 +63,21 @@ def insert_in_packetflow(pkt)
     if pkt.state.nil?
       # Probably a completely new request
       state = {
-        last_updated: Time.now,
-        state: nil,
-        udp_data: {
-          ip: pkt.udp[:src][:ip],
-          port: pkt.udp[:src][:port],
-          id: pkt.identifier
-        },
-        pkt: [
-          pkt
-        ]
+          last_updated: Time.now,
+          state: nil,
+          udp_data: {
+              ip: pkt.udp[:src][:ip],
+              port: pkt.udp[:src][:port],
+              id: pkt.identifier
+          },
+          pkt: [
+              pkt
+          ]
       }
       @packetflow << state
     else
       # ProxyState exists, so this is ongoing communication
-      p = @packetflow.select{ |x| x[:state] == pkt.state }
+      p = @packetflow.select { |x| x[:state] == pkt.state }
       if p.empty?
         $stderr.puts "Could not find EAP state 0x#{pkt.state.pack('C*').unpack('H*').first}"
         # TODO Insert Packet in debug output
@@ -89,9 +92,9 @@ def insert_in_packetflow(pkt)
       flow[:last_updated] = Time.now
       flow[:pkt] << pkt
       flow[:udp_data] = {
-        ip: pkt.udp[:src][:ip],
-        port: pkt.udp[:src][:port],
-        id: pkt.identifier
+          ip: pkt.udp[:src][:ip],
+          port: pkt.udp[:src][:port],
+          id: pkt.identifier
       }
     end
   else
@@ -143,7 +146,7 @@ def insert_in_packetflow(pkt)
 
   # Now do housekeeping
   t = Time.now
-  old = @packetflow.select { |x| (t-x[:last_updated]) > @config[:eap_timeout]}
+  old = @packetflow.select { |x| (t - x[:last_updated]) > @config[:eap_timeout] }
   old.each do |o|
     $stderr.puts "Timing out 0x#{o[:state].pack('C*').unpack('H*').first}" if o[:state]
     $stderr.puts "Timing out state without state variable" unless o[:state]
@@ -156,7 +159,7 @@ def normalize_mac(mac)
   mac.downcase!
   m_d = mac.match /^([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2})$/
   if m_d && m_d.length == 7
-    return m_d[1,6].join ":"
+    return m_d[1, 6].join ":"
   end
 
   # Default Return
@@ -170,12 +173,12 @@ def parse_eap(data)
 
   firstpkt = data[:pkt].first
   return if firstpkt.nil?
-  username_a = firstpkt.attributes.select{|x| x[:type] == RadiusPacket::Attribute::USERNAME }
+  username_a = firstpkt.attributes.select { |x| x[:type] == RadiusPacket::Attribute::USERNAME }
   return if username_a.length != 1
   username = username_a.first[:data].pack('C*')
   return if username.split("@").length != 2
 
-  mac_a = firstpkt.attributes.select{|x| x[:type] == RadiusPacket::Attribute::CALLINGSTATIONID }
+  mac_a = firstpkt.attributes.select { |x| x[:type] == RadiusPacket::Attribute::CALLINGSTATIONID }
   return if mac_a.length != 1
   mac = mac_a.first[:data].pack('C*')
 
@@ -183,13 +186,13 @@ def parse_eap(data)
   macaddr = normalize_mac(mac)
 
   elastic_data = {
-    username: username,
-    mac: macaddr,
-    scheme_ver: 4,
-    capture_ver: 3,
-    eapmethod: nil,
-    tlsclienthello: nil,
-    tlsserverhello: nil
+      username: username,
+      mac: macaddr,
+      scheme_ver: 4,
+      capture_ver: 3,
+      eapmethod: nil,
+      tlsclienthello: nil,
+      tlsserverhello: nil
   }
 
   eap = []
@@ -224,28 +227,28 @@ def parse_eap(data)
     # The Client can deny this (NAK) and send its own desired authentication mechanism
     eap_start = eap.shift
     case eap_start.type
-      when EAPPacket::Type::TTLS,
-           EAPPacket::Type::PEAP,
-           EAPPacket::Type::TLS
-        # Check if start flag is set
-        if eap_start.length != 6
-          $stderr.puts "Invalid length for EAP-TLS Start"
-          return
-        end
-        if eap_start.type_data[0] != EAPPacket::TLSFlags::START
-        end
-        supported_eap_method = true
-        eap_method = eap_start.type
-      when EAPPacket::Type::EAPPWD,
-           EAPPacket::Type::MD5CHALLENGE,
-           EAPPacket::Type::MSEAP
-        # These methods are not implemented.
-        # The Client could still reply with a NAK, in this case we can
-        # continue to parse.
-        supported_eap_method = false
-      else
-        $stderr.puts "Unknown EAP Type #{eap_start.type}"
+    when EAPPacket::Type::TTLS,
+        EAPPacket::Type::PEAP,
+        EAPPacket::Type::TLS
+      # Check if start flag is set
+      if eap_start.length != 6
+        $stderr.puts "Invalid length for EAP-TLS Start"
         return
+      end
+      if eap_start.type_data[0] != EAPPacket::TLSFlags::START
+      end
+      supported_eap_method = true
+      eap_method = eap_start.type
+    when EAPPacket::Type::EAPPWD,
+        EAPPacket::Type::MD5CHALLENGE,
+        EAPPacket::Type::MSEAP
+      # These methods are not implemented.
+      # The Client could still reply with a NAK, in this case we can
+      # continue to parse.
+      supported_eap_method = false
+    else
+      $stderr.puts "Unknown EAP Type #{eap_start.type}"
+      return
     end
     eap_reply = eap.first
   end
@@ -254,12 +257,15 @@ def parse_eap(data)
   return unless supported_eap_method
 
   elastic_data[:eapmethod] = case eap_method
-    when EAPPacket::Type::TTLS; "TTLS";
-    when EAPPacket::Type::PEAP; "PEAP";
-    when EAPPacket::Type::TLS;  "TLS";
-    else
-      "Unknown"
-  end
+                             when EAPPacket::Type::TTLS;
+                               "TTLS";
+                             when EAPPacket::Type::PEAP;
+                               "PEAP";
+                             when EAPPacket::Type::TLS;
+                               "TLS";
+                             else
+                               "Unknown"
+                             end
 
   eap_tls_clienthello = nil
   begin
@@ -330,7 +336,7 @@ def read_eaptls_fragment(eap, eap_type)
     flags = frag.type_data[0]
     cur_ptr = 1
     if (flags & EAPPacket::TLSFlags::LENGTHINCLUDED) != 0
-      ind_length = frag.type_data[1]*256*256*256 + frag.type_data[2]*256*256 + frag.type_data[3]*256 + frag.type_data[4]
+      ind_length = frag.type_data[1] * 256 * 256 * 256 + frag.type_data[2] * 256 * 256 + frag.type_data[3] * 256 + frag.type_data[4]
       length ||= ind_length
       # If a length is included, it should be the same among all eap packets
       if length != ind_length
@@ -349,7 +355,7 @@ def read_eaptls_fragment(eap, eap_type)
         $stderr.puts 'Reply packet had different type'
         raise EAPFragParseError
       end
-      if (reply.type_data[0] & ( EAPPacket::TLSFlags::LENGTHINCLUDED | EAPPacket::TLSFlags::MOREFRAGMENTS | EAPPacket::TLSFlags::START )) != 0 || reply.length != 6
+      if (reply.type_data[0] & (EAPPacket::TLSFlags::LENGTHINCLUDED | EAPPacket::TLSFlags::MOREFRAGMENTS | EAPPacket::TLSFlags::START)) != 0 || reply.length != 6
         $stderr.puts 'EAP-TLS fragment with MoreFragments set was not acked.'
         return
       end
@@ -403,8 +409,8 @@ Thread.start do
       begin
         # Parse Radius packets
         rp = RadiusPacket.new(pkt)
-        #puts rp.inspect
-        #binding.irb
+          #puts rp.inspect
+          #binding.irb
       rescue PacketLengthNotValidError => e
         ##################################################
         # THIS IS A CASE THAT SHOULDN'T OCCUR.           #
@@ -416,7 +422,7 @@ Thread.start do
         puts e.backtrace.join "\n"
         puts p.unpack("H*").first
         $stderr.puts e.message
-        #binding.irb
+          #binding.irb
       rescue => e
         # This is here for debugging.
         # TODO: remove irb binding
@@ -452,8 +458,8 @@ begin
 #    puts "Packet #{pcap_id}"
     logger.trace("Packet captured.")
     pktbuf.synchronize do
-       pktbuf.push p
-       empty_cond.signal
+      pktbuf.push p
+      empty_cond.signal
     end
   end
 rescue Interrupt
