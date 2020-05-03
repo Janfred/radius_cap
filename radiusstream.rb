@@ -236,7 +236,6 @@ class RadiusStreamHelper
     t = Time.now
     old = @known_streams.select{ |x| (t-x.last_updated) > @timeout }
     old.each do |o|
-      # TODO This should become a message for the Logging
       logger.info "Timing out 0x#{o.current_state.pack('C*').unpack('H*').first}" if o.current_state
       logger.info 'Timing out state without state variable' unless o.current_state
       @known_streams.delete o
@@ -265,10 +264,6 @@ class RadiusStreamHelper
   def priv_notify_flow_done(pktflow)
     @known_streams.delete(pktflow)
     StackParser.insert_into_parser(:radius, pktflow)
-    # TODO Here there should be the Parsing for EAP. Maybe as a Thread?
-    #  Don't know yet.
-    eap_stream = EAPStream.new(pktflow)
-    eap_stream.parse
   end
 
 end

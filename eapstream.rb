@@ -127,37 +127,6 @@ class EAPStream
     nil
   end
   private :set_eap_type
-
-  # Parsing
-  # @todo This will be moved to {StackParser} or {ProtocolStack}
-  # @deprecated Deprecated before it was even usable
-  def parse
-    case @eap_type
-    when nil
-      # This EAP Stream has no EAP Type. So most likely the Client and Server could not agree on an EAP-Type
-      logger.info "Seen Failed EAP Communication. The Server offered #{@initial_eap_type} and the Client wanted #{@wanted_eap_type}"
-    when EAPPacket::Type::TTLS,
-        EAPPacket::Type::PEAP,
-        EAPPacket::Type::TLS
-      # This is exactly what we want. This is all EAP-TLS based, so they are all parseable by EAPTLSStream
-      logger.info 'Found an EAP-TLS based EAP Type'
-      eaptlsstream = EAPTLSStream.new(@eap_packets[@first_eap_payload..-1])
-
-      tlsstream = TLSStream.new(eaptlsstream.packets)
-
-    when EAPPacket::Type::EAPPWD
-      # This should also be interesting. Especially to see if some Servers try to use EAP-PWD with salt
-      logger.info 'Found EAP PWD Communication'
-    when EAPPacket::Type::MD5CHALLENGE
-      # This might be worth a warning, because this should not happen.
-      logger.info 'Found MD5CHALLENGE Communication'
-    when EAPPacket::Type::MSEAP
-      # I have no Idea what this is.
-      logger.info 'Found MSEAP Communication'
-    else
-      logger.warn "Unknown EAP Type #{@eap_type}"
-    end
-  end
 end
 
 # Error to be thrown when the EAP Protocol is violated
@@ -187,7 +156,6 @@ class EAPTLSStream
     raise EAPStreamError if firstpkt.nil?
     raise EAPStreamError unless firstpkt.is_a? EAPPacket
     current_eaptype = firstpkt.type
-
 
     @packets = []
 

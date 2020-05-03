@@ -36,7 +36,6 @@ class StackParser
       instance.priv_stack_data << {type: type, data: data}
       instance.priv_waitcond.signal
     end
-
     nil
   end
 
@@ -174,6 +173,8 @@ class ProtocolStack
     end
     normalize_mac!
 
+    logger.debug 'Radius Data: ' + @radius_data.to_s
+
     # Now we can parse the EAP Content of the Packets
     @eap_stream = EAPStream.new(@radius_stream)
     parse_from_eap
@@ -223,11 +224,13 @@ class ProtocolStack
     else
       logger.warn "Unknown EAP Type #{@eap_stream.eap_type}"
     end
+
+    logger.debug 'EAP Data: ' + @eap_data.to_s
   end
 
   # Parse from the EAP-TLS Layer upwards
   def parse_from_eaptls
-
+    # TODO
   end
 
   # Initialize all class variables
