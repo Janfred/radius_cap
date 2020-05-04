@@ -87,25 +87,30 @@ class ProtocolStack
   def initialize(to_parse)
     initialize_variables
 
-    case to_parse[:type]
-    when :radius
-      # RADIUS Packets
-      check_passed_type(RadiusStream, to_parse[:data].class)
-      @radius_stream = to_parse[:data]
-      parse_from_radius
-    when :eap
-      # EAP Packets
-      check_passed_type(EAPStream, to_parse[:data].class)
-      @eap_stream = to_parse[:data]
-      parse_from_eap
-    when :eap_tls
-      # EAP-TLS Packets
-      check_passed_type(EAPTLSStream, to_parse[:data].class)
-      @eap_tls_stream = to_parse[:data]
-      parse_from_eaptls
-    else
-      # Something weird here.
-      logger.warn "Seen unknown type #{to_parse[:type]}. Doing nothing."
+    begin
+      case to_parse[:type]
+      when :radius
+        # RADIUS Packets
+        check_passed_type(RadiusStream, to_parse[:data].class)
+        @radius_stream = to_parse[:data]
+        parse_from_radius
+      when :eap
+        # EAP Packets
+        check_passed_type(EAPStream, to_parse[:data].class)
+        @eap_stream = to_parse[:data]
+        parse_from_eap
+      when :eap_tls
+        # EAP-TLS Packets
+        check_passed_type(EAPTLSStream, to_parse[:data].class)
+        @eap_tls_stream = to_parse[:data]
+        parse_from_eaptls
+      else
+        # Something weird here.
+        logger.warn "Seen unknown type #{to_parse[:type]}. Doing nothing."
+      end
+    rescue => e
+      write_debug_capture_log
+      raise e
     end
   end
 
@@ -115,6 +120,22 @@ class ProtocolStack
   end
 
   private
+
+  def write_debug_capture_log
+    if @radius_stream && @radius_stream.is_a?(RadiusStream)
+      pcapng_file = PacketFu::PcapNG::File.new
+      packets = []
+      @radius_stream.packets.each do |pkt|
+        if pkt.packetfu_pkt && pkt.packetfu_pkt.is_a?(PacketFu::Packet)
+          packets << pkt.packetfu_pkt
+        end
+      end
+      # TODO This should be disableable by configuration option
+      pcap_file_name = File.join('debugcapture', 'debug_' + DateTime.now.strftime('%s') + '.pcap')
+      logger.info "Saving debug capture to #{pcap_file_name}"
+      pcapng_file.array_to_file(array: packets, file: pcap_file_name)
+    end
+  end
 
   # Helper Method to check if the passed class is the expected class
   # @raise ProtocolStackError

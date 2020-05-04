@@ -7,5 +7,7 @@
 /.yardoc
 /data/*
 !/data/.gitkeep
+/debugcapture/*
+!/debugcapture/.gitkeep
 /development.log
 /production.log

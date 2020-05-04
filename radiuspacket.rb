@@ -73,6 +73,7 @@ class RadiusPacket
     WLANRFBAND           = 190
   end
 
+  attr_reader :packetfu_pkt
   attr_reader :raw_data
   attr_reader :packettype
   attr_reader :identifier
@@ -92,6 +93,7 @@ class RadiusPacket
     @udp = {src: {ip: pkt.ip_saddr, port: pkt.udp_sport}, dst: {ip: pkt.ip_daddr, port: pkt.udp_dport}}
 
     @raw_data = pkt.payload.unpack('C*')
+    @packetfu_pkt = pkt
 
     # Parse Radius Headers
     @packettype = @raw_data[0]
