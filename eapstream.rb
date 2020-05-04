@@ -46,8 +46,10 @@ class EAPStream
         when RadiusPacket::Type::ACCEPT,
             RadiusPacket::Type::REJECT
           logger.trace 'Seen empty EAP Message with a Accept or Reject type'
+          next
         else
-          logger.warn 'Seen a RADIUS Packet without an EAP Content'
+          logger.error 'Seen a RADIUS Packet without an EAP Content and it was not a final Message'
+          raise EAPStreamError.new 'Ongoing RADIUS Packet without EAP Content captured'
         end
       end
       logger.trace 'EAP Content: ' + eap_msg.pack('C*').unpack('H*').first
