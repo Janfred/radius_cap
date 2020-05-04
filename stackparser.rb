@@ -123,6 +123,28 @@ class ProtocolStack
     raise ProtocolStackError.new "The actual type of the Stream (#{actual_klass.to_s}) does not match expected (#{expected_klass.to_s})"
   end
 
+  # Parse Packetsize
+  # @param dest_var [Symbol] Destination Variable
+  # @param loop_var [Array] Variable with packets
+  # @param start_with_client [Boolean] Sets if the first packet is a packet from the client
+  # @yield [pkt] Block to determine the size of the packet
+  # @yieldparam pkt Packet to parse
+  # @yieldreturn [Integer] Size of the given packet
+  def parse_packetsize(dest_var, loop_var, start_with_client = true, &size_block)
+    is_client_pkt = start_with_client
+    loop_var.each do |pkt|
+      total = :total_server_pkt_size
+      max_s = :max_server_pkt_size
+      if is_client_pkt
+        total = :total_client_pkt_size
+        max_s = :max_client_pkt_size
+      end
+      size = size_block.call(pkt)
+      instance_variable_get(("@#{dest_var.to_s}").intern)[:information][total] += size
+      instance_variable_get(("@#{dest_var.to_s}").intern)[:information][max_s] = size if instance_variable_get(("@#{dest_var.to_s}").intern)[:information][max_s] > size
+    end
+  end
+
   # Parse from the RADIUS Layer upwards
   def parse_from_radius
 
@@ -144,19 +166,8 @@ class ProtocolStack
     raise ProtocolStackError unless lastpkt.is_a? RadiusPacket
     @radius_data[:information][:accept] = lastpkt.packettype == RadiusPacket::Type::ACCEPT
 
-    is_client_pkt = true
-    @radius_stream.packets.each do |pkt|
-      total = :total_server_pkt_size
-      max_c = :max_server_pkt_size
-      if is_client_pkt
-        total = :total_client_pkt_size
-        max_c = :max_client_pkt_size
-      end
-      size = pkt.raw_data.length
-      @radius_data[:information][total] += size
-      @radius_data[:information][max_c] = size if @radius_data[:information][max_c] < size
-      is_client_pkt = !is_client_pkt
-    end
+    parse_packetsize(:radius_data, @radius_stream.packets) { |x| x.raw_data.length }
+
     @radius_data[:attributes] = {}
     firstpkt = @radius_stream.packets.first
 
@@ -214,19 +225,7 @@ class ProtocolStack
     @eap_data[:information][:total_server_pkt_size] = 0
     @eap_data[:information][:total_client_pkt_size] = 0
 
-    is_client_pkt = true
-    @eap_stream.eap_packets.each do |pkt|
-      total = :total_server_pkt_size
-      max_c = :max_server_pkt_size
-      if is_client_pkt
-        total = :total_client_pkt_size
-        max_c = :max_client_pkt_size
-      end
-      size = pkt.length
-      @eap_data[:information][total] += size
-      @eap_data[:information][max_c] = size if @eap_data[:information][max_c] < size
-      is_client_pkt = !is_client_pkt
-    end
+    parse_packetsize(:eap_data, @eap_stream.eap_packets) { |x| x.length }
 
     # Here is now decided how to proceed with the packet.
     case @eap_stream.eap_type

@@ -1,4 +1,3 @@
-* stackparser.rb: Duplicated Code Fragments L144 and L.214 -> Dedicated function
 * stackparser.rb: Metadata Parsing EAP-TLS
 * stackparser.rb: Parsing TLS
 * stackparser.rb: Function to_h

@@ -42,7 +42,7 @@ class EAPStream
         eap_msg += attr[:data]
       end
       if eap_msg == []
-        case radius_packet.type
+        case radius_packet.packettype
         when RadiusPacket::Type::ACCEPT,
             RadiusPacket::Type::REJECT
           logger.trace 'Seen empty EAP Message with a Accept or Reject type'
