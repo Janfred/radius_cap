@@ -236,7 +236,7 @@ class ProtocolStack
         EAPPacket::Type::PEAP,
         EAPPacket::Type::TLS
       logger.info 'Found an EAP-TLS based EAP Type'
-      @eap_tls_stream = EAPTLSStream.new(@eap_stream.eap_packets[@eap_stream.first_eap_payload..-1])
+      @eap_tls_stream = EAPTLSStream.new(@eap_stream.eap_payload_packets)
       parse_from_eaptls
 
     when EAPPacket::Type::EAPPWD

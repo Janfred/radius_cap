@@ -134,6 +134,12 @@ class EAPStream
     nil
   end
   private :set_eap_type
+
+  # Get Only Packets with the EAP Payload
+  # @return [Array<EAPPacket>] Packets containing the EAP Payload
+  def eap_payload_packets
+    @eap_packets[@first_eap_payload..-1]
+  end
 end
 
 # Error to be thrown when the EAP Protocol is violated

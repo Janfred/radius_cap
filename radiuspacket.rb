@@ -14,9 +14,9 @@ class RadiusPacket
 
   # All supported RADIUS Types
   module Type
-    REQUEST = 1
-    ACCEPT = 2
-    REJECT = 3
+    REQUEST   =  1
+    ACCEPT    =  2
+    REJECT    =  3
     CHALLENGE = 11
   end
 
