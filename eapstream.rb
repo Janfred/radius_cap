@@ -106,7 +106,7 @@ class EAPStream
     # must answer with a Legacy NAK
     raise EAPStreamError.new "The Client and Server want different EAP Types, but the Client did not send a NAK" if @eap_packets[2].type != EAPPacket::Type::NAK
     # Normally, the EAP NAK packet has a payload of 1 byte containing the desired auth type, but is it also allowed to send multiple EAP Types.
-    raise EAPStreamError.new 'The Client\'s NAK did not contain a desired EAP Type.' if @eap_packets[2].type_data.length = 0
+    raise EAPStreamError.new 'The Client\'s NAK did not contain a desired EAP Type.' if @eap_packets[2].type_data.length == 0
     logger.info "The client's NAK had more then one wanted eap type (#{@eap_packets[2].type_data})" if @eap_packets[2].type_data.length != 1
 
     @wanted_eap_types = @eap_packets[2].type_data
