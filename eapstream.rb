@@ -125,7 +125,7 @@ class EAPStream
 
     # If the server didn't reject the client, we just need to make sure the Server actually answeres
     # with a packet that matches the desired auth type sent by the client
-    raise EAPStreamError.new 'The Server answered with a different EAP Type then the Client requested' if @wanted_eap_types.include?(@eap_packets[3].type)
+    raise EAPStreamError.new 'The Server answered with a different EAP Type then the Client requested' unless @wanted_eap_types.include?(@eap_packets[3].type)
 
     # If this wasn't the case, we finally know our EAP Type.
     @eap_type = @eap_packets[3].type
