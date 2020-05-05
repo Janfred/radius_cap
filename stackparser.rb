@@ -167,7 +167,8 @@ class ProtocolStack
       end
       size = size_block.call(pkt)
       to_return[total] += size
-      to_return[max_s] = size if to_return[max_s] > size
+      to_return[max_s] = size if to_return[max_s] < size
+      is_client_pkt = !is_client_pkt
     end
 
     to_return
