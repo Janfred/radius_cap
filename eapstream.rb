@@ -192,6 +192,10 @@ class EAPTLSStream
         raise EAPStreamError.new "EAP Communication ended unexpectedly" if eapstream[cur_pkt].nil?
         raise EAPStreamError.new "The EAP Type of the current packet does not match the EAP Type of the other EAP Packets" if eapstream[cur_pkt].type != current_eaptype
         frag = EAPTLSFragment.new(eapstream[cur_pkt].type_data)
+
+        if frag.is_acknowledgement?
+          logger.warn 'Captured an acknowledgement packet after a Fragment without MoreFragments set'
+        end
         cur_pkt_data += frag.payload
         more_fragments = frag.more_fragments?
         indicated_length = frag.indicated_length if indicated_length == 0
@@ -219,6 +223,7 @@ class EAPTLSStream
       @packets << cur_pkt_data
       logger.trace 'Packet was parsed completely. Moving on to the next'
       cur_pkt += 1
+      raise EAPStreamError.new "EAP Communication ended unexpectedly" if eapstream[cur_pkt].nil?
     end
     logger.trace 'Reached end of EAP-TLS communication'
   end
