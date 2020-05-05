@@ -245,7 +245,7 @@ class ProtocolStack
     # First Parse EAP Metadata
     @eap_data[:information] = {}
     @eap_data[:information][:initial_eaptype] = @eap_stream.initial_eap_type
-    @eap_data[:information][:wanted_eaptype] = @eap_stream.wanted_eap_type
+    @eap_data[:information][:wanted_eaptypes] = @eap_stream.wanted_eap_types
     @eap_data[:information][:actual_eaptype] = @eap_stream.eap_type
     @eap_data[:information][:roundtrips] = @eap_stream.eap_packets.length
 

@@ -13,15 +13,15 @@
 # @!attribute [r] eap_type
 #   @return [Integer] EAP Type of the communication in this stream. Might be nil, if the
 #     client and server don't agree on an EAP Type.
-# @!attribute [r] wanted_eap_type
-#   @return [Integer] Requested EAP Type of the client. Only set if the initial eap type suggested
+# @!attribute [r] wanted_eap_types
+#   @return [Array<Integer>] Requested EAP Types of the client. Defaults to empty Array and is only changed if the initial eap type suggested
 #     by the server does not match the actual EAP Type or the Server rejects the wanted
 #     EAP Type (e.g. because the client is configured to do EAP-PWD, but the server does not
 #     support it.)
 class EAPStream
   include SemanticLogger::Loggable
 
-  attr_reader :eap_packets, :eap_type, :initial_eap_type, :wanted_eap_type, :first_eap_payload
+  attr_reader :eap_packets, :eap_type, :initial_eap_type, :wanted_eap_types, :first_eap_payload
 
   # Initialize the EAP Stream. Parses the EAP Type and matches the EAP fragmentation (not the EAP-TLS Fragmentation!)
   # @param pktstream [RadiusStream] Packet Stream
@@ -31,7 +31,7 @@ class EAPStream
     logger.trace("Initialize new EAP Stream. Packet Stream length: #{pktstream.packets.length}")
     @eap_packets = []
     @eap_type = nil
-    @wanted_eap_type = nil
+    @wanted_eap_types = []
     @initial_eap_type = nil
     @first_eap_payload = nil
     # Here the EAP Stream is parsed based on the RADIUS Packets.
@@ -77,7 +77,7 @@ class EAPStream
     raise EAPStreamError.new "The first EAP Packet is not an Identity Type" if @eap_packets[0].type != EAPPacket::Type::IDENTITY
 
     @initial_eap_type = nil
-    @wanted_eap_type = nil
+    @wanted_eap_types = []
     @eap_type = nil
 
     # The Answer by the server is either an EAP Failure, in which case the Server
@@ -105,10 +105,10 @@ class EAPStream
     # If we're not done yet, the client most likely wants another EAP Type, so it
     # must answer with a Legacy NAK
     raise EAPStreamError.new "The Client and Server want different EAP Types, but the Client did not send a NAK" if @eap_packets[2].type != EAPPacket::Type::NAK
-    # The EAP NAK packet has a payload of 1 byte containing the desired auth type.
-    raise EAPStreamError.new "The clien's NAK had an invalid length (#{@eap_packets[2].type_data.length})" if @eap_packets[2].type_data.length != 1
+    # Normally, the EAP NAK packet has a payload of 1 byte containing the desired auth type, but is it also allowed to send multiple EAP Types.
+    logger.info "The clien's NAK had more then one wanted eap type (total: #{@eap_packets[2].type_data.length})" if @eap_packets[2].type_data.length != 1
 
-    @wanted_eap_type = @eap_packets[2].type_data[0]
+    @wanted_eap_types = @eap_packets[2].type_data
 
     # Now the client has stated it's desired auth type. We are now parsing the Servers answer to that.
     raise EAPStreamError.new 'The Client sent a NAK but the server didn\'t answer' if @eap_packets[3].nil?
@@ -124,10 +124,10 @@ class EAPStream
 
     # If the server didn't reject the client, we just need to make sure the Server actually answeres
     # with a packet that matches the desired auth type sent by the client
-    raise EAPStreamError.new 'The Server answered with a different EAP Type then the Client requested' if @eap_packets[3].type != @wanted_eap_type
+    raise EAPStreamError.new 'The Server answered with a different EAP Type then the Client requested' if @wanted_eap_types.include?(@eap_packets[3].type)
 
     # If this wasn't the case, we finally know our EAP Type.
-    @eap_type = @wanted_eap_type
+    @eap_type = @eap_packets[3].type
     @first_eap_payload = 3
 
     logger.trace "The first EAP Payload is in packet #{@first_eap_payload}"
