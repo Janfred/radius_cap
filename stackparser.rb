@@ -145,13 +145,18 @@ class ProtocolStack
   end
 
   # Parse Packetsize
-  # @param dest_var [Symbol] Destination Variable
   # @param loop_var [Array] Variable with packets
   # @param start_with_client [Boolean] Sets if the first packet is a packet from the client
+  # @return [Hash] Hash containing the Metadata
   # @yield [pkt] Block to determine the size of the packet
   # @yieldparam pkt Packet to parse
   # @yieldreturn [Integer] Size of the given packet
-  def parse_packetsize(dest_var, loop_var, start_with_client = true, &size_block)
+  def parse_packetsize(loop_var, start_with_client = true, &size_block)
+    to_return = {}
+    to_return[:max_client_pkt_size] = 0
+    to_return[:max_server_pkt_size] = 0
+    to_return[:total_client_pkt_size] = 0
+    to_return[:total_server_pkt_size] = 0
     is_client_pkt = start_with_client
     loop_var.each do |pkt|
       total = :total_server_pkt_size
@@ -161,9 +166,11 @@ class ProtocolStack
         max_s = :max_client_pkt_size
       end
       size = size_block.call(pkt)
-      instance_variable_get(("@#{dest_var.to_s}").intern)[:information][total] += size
-      instance_variable_get(("@#{dest_var.to_s}").intern)[:information][max_s] = size if instance_variable_get(("@#{dest_var.to_s}").intern)[:information][max_s] > size
+      to_return[total] += size
+      to_return[max_s] = size if to_return[max_s] > size
     end
+
+    to_return
   end
 
   # Parse from the RADIUS Layer upwards
@@ -187,7 +194,7 @@ class ProtocolStack
     raise ProtocolStackError unless lastpkt.is_a? RadiusPacket
     @radius_data[:information][:accept] = lastpkt.packettype == RadiusPacket::Type::ACCEPT
 
-    parse_packetsize(:radius_data, @radius_stream.packets) { |x| x.raw_data.length }
+    @radius_data[:information].merge!(parse_packetsize(@radius_stream.packets) { |x| x.raw_data.length })
 
     @radius_data[:attributes] = {}
     firstpkt = @radius_stream.packets.first
@@ -246,7 +253,7 @@ class ProtocolStack
     @eap_data[:information][:total_server_pkt_size] = 0
     @eap_data[:information][:total_client_pkt_size] = 0
 
-    parse_packetsize(:eap_data, @eap_stream.eap_packets) { |x| x.length }
+    @eap_data[:information].merge!(parse_packetsize(@eap_stream.eap_packets) { |x| x.length })
 
     # Here is now decided how to proceed with the packet.
     case @eap_stream.eap_type
