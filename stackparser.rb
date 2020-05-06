@@ -52,7 +52,9 @@ class StackParser
           logger.error "Parser found a nil to parse. That seems not right."
           next
         end
-        ProtocolStack.new to_parse
+        result = ProtocolStack.new to_parse
+        to_insert_in_elastic = result.to_h
+        logger.debug 'Complete Data: ' + to_insert_in_elastic.to_s
       rescue => e
         logger.error("Error in parsing", exception: e)
       end
@@ -116,7 +118,11 @@ class ProtocolStack
 
   # Generate Hash to insert into Elasticsearch
   def to_h
-
+    to_ret = {}
+    to_ret[:radius] = @radius_data if @radius_data
+    to_ret[:eap] = @eap_data if @eap_data
+    to_ret[:eaptls] = @eap_tls_data if @eap_tls_data
+    to_ret[:tls] = @tls_data if @tls_data
   end
 
   private

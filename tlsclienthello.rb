@@ -120,10 +120,10 @@ class TLSClientHello
     @extensions.each do |exten|
       exten_s = TLSTypes::Extensions::get_extension_name_by_code(exten[:type])
       to_ret[:all_extensions] << exten_s
-      to_ret[:extensionorder] += exten_s + ' '
     end
+    to_ret[:extensionorder] = to_ret[:all_extensions].join ' '
 
-    to_ret[:renegotion] = @ciphersuites.include?([0x00,0xFF]) || !!@byexten[TLSTypes::Extensions::RENEGOTIATION_INFO]
+    to_ret[:renegotion] = @ciphersuites.include?([0x00, 0xFF]) || !!@byexten[TLSTypes::Extensions::RENEGOTIATION_INFO]
     to_ret[:servername] = parse_servername(@byexten[TLSTypes::Extensions::SERVER_NAME]) if @byexten[TLSTypes::Extensions::SERVER_NAME]
     to_ret[:extendedmastersecret] = !!@byexten[TLSTypes::Extensions::EXTENDED_MASTER_SECRET]
     if @byexten[TLSTypes::Extensions::SUPPORTED_VERSIONS]
@@ -145,7 +145,7 @@ class TLSClientHello
     else
       to_ret[:signaturealgorithms] = []
     end
-    to_ret[:ciphersuites] = @ciphersuites.map {|c| "0x%02X%02X" % c}
+    to_ret[:ciphersuites] = @ciphersuites.map { |c| "0x%02X%02X" % c }
     to_ret[:cipherdata] = {}
     cdata = TLSCipherSuite.new(@ciphersuites)
     to_ret[:cipherdata][:pfs_avail] = cdata.pfs_avail?
@@ -167,13 +167,13 @@ class TLSClientHello
     to_ret[:fingerprinting] = {}
 
     to_ret[:fingerprinting][:v2] = Digest::SHA2.hexdigest(
-      to_ret[:version] + '|' +
-      to_ret[:cipherdata][:cipherset] + '|' +
-      to_ret[:cipherdata][:supported_group_set] + '|' +
-      to_ret[:cipherdata][:signature_algorithm_set] + '|' +
-      ((to_ret[:statusrequest].nil? || to_ret[:statusrequest] == []) ? 'False' : to_ret[:statusrequest]) + '|' +
-      (to_ret[:renegotiation] ? 'True' : 'False') + '|' +
-      (to_ret[:extendedmastersecret] ? 'True' : 'False') )
+        to_ret[:version] + '|' +
+            to_ret[:cipherdata][:cipherset] + '|' +
+            to_ret[:cipherdata][:supported_group_set] + '|' +
+            to_ret[:cipherdata][:signature_algorithm_set] + '|' +
+            ((to_ret[:statusrequest].nil? || to_ret[:statusrequest] == []) ? 'False' : to_ret[:statusrequest]) + '|' +
+            (to_ret[:renegotiation] ? 'True' : 'False') + '|' +
+            (to_ret[:extendedmastersecret] ? 'True' : 'False'))
 
     to_ret[:fingerprinting][:osdetails] = Fingerprint.to_h(to_ret[:fingerprinting][:v2])
 
