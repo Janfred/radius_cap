@@ -6,6 +6,7 @@ require './macvendor.rb'
 # Helper class for dealing with ElasticSearch
 class ElasticHelper
   include Singleton
+  include SemanticLogger::Loggable
 
   attr_reader :priv_elasticdata
   attr_reader :priv_waitcond
@@ -66,10 +67,12 @@ def convert_data_to_elasticsearch(data)
   # Get Username and MAC-Address and remove it from the data
   username = ""
   if data[:radius] && data[:radius][:attributes] && data[:radius][:attributes][:username]
+    logger.trace 'Username from RADIUS ' + data[:radius][:attributes][:username]
     username = data[:radius][:attributes][:username]
     data[:radius][:attributes].delete :username
   end
   if data[:eap] && data[:eap][:information] && data[:eap][:information][:eap_identity]
+    logger.trace 'Username from EAP ' + data[:eap][:information][:eap_identity]
     username ||= data[:eap][:information][:eap_identity]
     data[:eap][:information].delete :eap_identity
   end
@@ -78,6 +81,7 @@ def convert_data_to_elasticsearch(data)
 
   mac = 'ff:ff:ff:ff:ff:ff'
   if data[:radius] && data[:radius][:attributes] && data[:radius][:attributes][:mac]
+    logger.trace 'MAC from RADIUS ' + data[:radius][:attributes][:mac]
     mac = data[:radius][:attributes][:mac]
     data[:radius][:attributes].delete :mac
   end

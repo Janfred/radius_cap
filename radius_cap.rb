@@ -61,9 +61,11 @@ Thread.start do
         mac = nil
         if toins[:radius] && toins[:radius][:attributes] && toins[:radius][:attributes][:username]
           username = toins[:radius][:attributes][:username]
+          logger.trace 'Username from RADIUS ' + username
         end
         if toins[:radius] && toins[:radius][:attributes] && toins[:radius][:attributes][:mac]
           mac = toins[:radius][:attributes][:mac]
+          logger.trace 'MAC from RADIUS ' + mac
         end
 
         filters = @config[:elastic_filter].select { |x|
