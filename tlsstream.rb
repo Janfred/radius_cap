@@ -43,7 +43,7 @@ class TLSRecord
 
   def initialize(version, length, data)
     @version = version
-    raise TLSParseError.new "TLS Indicated Length (#{length}) did not match actual length (#{data.length})" if @length != data.length
+    raise TLSParseError.new "TLS Indicated Length (#{length}) did not match actual length (#{data.length})" if length != data.length
     @data = data
   end
 
