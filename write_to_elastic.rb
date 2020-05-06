@@ -82,6 +82,7 @@ class ElasticHelper
       mac = data[:radius][:attributes][:mac]
       data[:radius][:attributes].delete :mac
     end
+
     meta = {}
     meta[:last_seen] = Time.now.utc.iso8601
     meta[:scheme_ver] = 0 # TODO
@@ -93,7 +94,7 @@ class ElasticHelper
     data[:meta] = meta
 
     to_insert = {id: nil, data: data}
-    to_insert[:id] = Digest::SHA2.hexdigest "#{data[:username]}#{data[:mac]}"
+    to_insert[:id] = Digest::SHA2.hexdigest "#{username}#{mac}"
     to_insert
   end
 
