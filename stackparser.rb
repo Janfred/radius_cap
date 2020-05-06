@@ -259,12 +259,12 @@ class ProtocolStack
     # First Parse EAP Metadata
     @eap_data[:information] = {}
     @eap_data[:information][:eap_identity] = @eap_stream.eap_identity
-    @eap_data[:information][:initial_eaptype] = EAPPacket::Type.get_type_name_by_code(@eap_stream.initial_eap_type)
+    @eap_data[:information][:initial_eaptype] = EAPPacket::Type::get_type_name_by_code(@eap_stream.initial_eap_type)
     @eap_data[:information][:wanted_eaptypes] = []
     @eap_stream.wanted_eap_types.each do |t|
-      @eap_data[:information][:wanted_eaptypes] << EAPPacket::Type.get_type_name_by_code(t)
+      @eap_data[:information][:wanted_eaptypes] << EAPPacket::Type::get_type_name_by_code(t)
     end
-    @eap_data[:information][:actual_eaptype] = EAPPacket::Type.get_type_name_by_code(@eap_stream.eap_type)
+    @eap_data[:information][:actual_eaptype] = EAPPacket::Type::get_type_name_by_code(@eap_stream.eap_type)
     @eap_data[:information][:roundtrips] = @eap_stream.eap_packets.length
 
     @eap_data[:information][:max_server_pkt_size] = 0
