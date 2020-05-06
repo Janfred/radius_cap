@@ -93,7 +93,15 @@ class EAPStream
     # talking to the server and does not reject the suggested EAP Type
     raise EAPStreamError.new "EAP Communication ended after 2 Messages" if @eap_packets[2].nil?
 
-    if @eap_packets[2].type == @initial_eap_type
+    cur_ptr = 2
+    # CAUTION: I have witnessed a case where the client retransmitted the EAP-Identity. This case will be handled here
+    if @eap_packets[cur_ptr].type == EAPPacket::Type::IDENTITY
+      logger.warn "Seen a retransmission of the EAP Identity at packet #{cur_ptr}"
+      raise EAPStreamError.new "The Server answered to a EAP-Identity Retransmission with a different type then he did before." if @eap_packets[cur_ptr+1].type != @initial_eap_type
+      cur_ptr += 2
+    end
+
+    if @eap_packets[cur_ptr].type == @initial_eap_type
       # If the client answers with the same EAP Type we have a successful agreement
       # on the EAP type. We're done here.
       @eap_type = @initial_eap_type
@@ -102,20 +110,23 @@ class EAPStream
       return nil
     end
 
+
     # If we're not done yet, the client most likely wants another EAP Type, so it
     # must answer with a Legacy NAK
-    raise EAPStreamError.new "The Client and Server want different EAP Types, but the Client did not send a NAK" if @eap_packets[2].type != EAPPacket::Type::NAK
+    raise EAPStreamError.new "The Client and Server want different EAP Types, but the Client did not send a NAK" if @eap_packets[cur_ptr].type != EAPPacket::Type::NAK
     # Normally, the EAP NAK packet has a payload of 1 byte containing the desired auth type, but is it also allowed to send multiple EAP Types.
-    raise EAPStreamError.new 'The Client\'s NAK did not contain a desired EAP Type.' if @eap_packets[2].type_data.length == 0
-    logger.info "The client's NAK had more then one wanted eap type (#{@eap_packets[2].type_data})" if @eap_packets[2].type_data.length != 1
+    raise EAPStreamError.new 'The Client\'s NAK did not contain a desired EAP Type.' if @eap_packets[cur_ptr].type_data.length == 0
+    logger.info "The client's NAK had more then one wanted eap type (#{@eap_packets[cur_ptr].type_data})" if @eap_packets[cur_ptr].type_data.length != 1
 
-    @wanted_eap_types = @eap_packets[2].type_data
+    @wanted_eap_types = @eap_packets[cur_ptr].type_data
+
+    cur_ptr += 1
 
     # Now the client has stated it's desired auth type. We are now parsing the Servers answer to that.
-    raise EAPStreamError.new 'The Client sent a NAK but the server didn\'t answer' if @eap_packets[3].nil?
+    raise EAPStreamError.new 'The Client sent a NAK but the server didn\'t answer' if @eap_packets[cur_ptr].nil?
 
     # We now have to determine between a rejection and a success in agreement.
-    if @eap_packets[3].code == EAPPacket::Code::FAILURE
+    if @eap_packets[cur_ptr].code == EAPPacket::Code::FAILURE
       # If the Server answers with a Failure, it probably does not support
       # the desired auth type. In any case, the EAP Type is then set to nil.
       @eap_type = nil
@@ -128,8 +139,8 @@ class EAPStream
     raise EAPStreamError.new 'The Server answered with a different EAP Type then the Client requested' unless @wanted_eap_types.include?(@eap_packets[3].type)
 
     # If this wasn't the case, we finally know our EAP Type.
-    @eap_type = @eap_packets[3].type
-    @first_eap_payload = 3
+    @eap_type = @eap_packets[cur_ptr].type
+    @first_eap_payload = cur_ptr
 
     logger.trace "The first EAP Payload is in packet #{@first_eap_payload}"
 
@@ -195,7 +206,12 @@ class EAPTLSStream
         frag = EAPTLSFragment.new(eapstream[cur_pkt].type_data)
 
         if frag.is_acknowledgement?
-          logger.warn 'Captured an acknowledgement packet after a Fragment without MoreFragments set'
+          # I first thought this was an edge-case, but these fragments are actually sent on regular
+          # bases, mostly as the last packet after the server (presumably) sends cryptographic information
+          # inside the TLS Tunnel
+          # This Packet is not yet the Accept-Packet, so the client needs to send an acknowledgement.
+          # Practically, this will result in an empty packet inserted in the @packets.
+          logger.info 'Captured an acknowledgement packet after a Fragment without MoreFragments set'
         end
         cur_pkt_data += frag.payload
         more_fragments = frag.more_fragments?

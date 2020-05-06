@@ -287,7 +287,7 @@ class ProtocolStack
     raise ProtocolStackError.new 'The EAP-TLS Stream ist not an EAPTLSStream Object' unless @eap_tls_stream.is_a? EAPTLSStream
 
     # Parse EAP-TLS Metadata
-    @eap_tls_data[:information] = {}
+    @tls_stream = TLSStream.new @eap_tls_stream.packets
   end
 
   # Initialize all class variables

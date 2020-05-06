@@ -11,7 +11,10 @@ module TLSTypes
   # Supported TLS Record Types.
   # @todo Currently this is only the Handshake record. In future it might be a good Idea to also support other types.
   module RecordType
-    HANDSHAKE = 0x16
+    CHANGE_CIPHER_SPEC = 0x14
+    ALERT              = 0x15
+    HANDSHAKE          = 0x16
+    APPLICATION_DATA   = 0x17
   end
   # Supported Handshake Types
   module HandshakeType
@@ -21,6 +24,21 @@ module TLSTypes
     SERVERKEYEXCHANGE = 12
     SERVERHELLODONE   = 14
     CERTIFICATESTATUS = 22
+  end
+
+  module Alerts
+    PROTOCOL_VERSION = 0x46
+
+    # Get alert name by the given code
+    # @param code [Byte] Code of the Alert
+    # @return [String] Name of the Alert, or "UNKNOWN_ALERT_<num>" if Alert is unknown
+    def Alerts::get_altert_name_by_code(code)
+      Alerts.constants.each do |const|
+        next if Alerts.const_get(const) != code
+        return const.to_s
+      end
+      "UNKNOWN_ALERT_#{code}"
+    end
   end
 
   # Supported TLS Extensions
