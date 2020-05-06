@@ -33,8 +33,21 @@ class EAPPacket
     # MSEAP Type
     # @todo I don't know what this is. Subject to research
     MSEAP        = 26
+    # FAST Type
+    FAST         = 43
     # EAP-PWD Type
     EAPPWD       = 52
+
+    # Get EAP Type by the given code
+    # @param code [Byte] Code of the EAP Type
+    # @return [String] Name of the EAP Type, or "UNKNOWN_EAPTYPE_<num>" if EAP Type is unknown
+    def Type::get_type_name_by_code(code)
+      Type.constants.each do |const|
+        next if Type.const_get(const) != code
+        return const.to_s
+      end
+      "UNKNOWN_EAPTYPE_#{code}"
+    end
   end
 
   # Constants for EAP-TLS Flags
