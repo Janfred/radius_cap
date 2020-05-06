@@ -290,13 +290,19 @@ class ProtocolStack
     # Parse EAP-TLS Metadata
     @tls_stream = TLSStream.new @eap_tls_stream.packets
 
+    tlspackets = @tls_stream.tlspackets
     # Now we have some assumptions. This might be a little
     # TLS Client Hello
-    raise ProtocolStackError.new 'The first EAP-TLS Packet does not exist' if @tls_stream.first.nil?
-    raise ProtocolStackError.new 'The first EAP-TLS Packet contained not exactly one Record' if @tls_stream.first.length != 1
-    client_hello = @tls_stream.first[0]
-    tlsclienthello = TLSClientHello.new(client_hello)
-    @tls_data[:tlsclient] = tlsclienthello.to_h
+    raise ProtocolStackError.new 'The first EAP-TLS Packet does not exist' if tlspackets.first.nil?
+    raise ProtocolStackError.new 'The first EAP-TLS Packet contained not exactly one Record' if tlspackets.first.length != 1
+    client_hello = tlspackets.packets.first[0]
+    raise ProtocolStackError.new 'The supposed TLS Client Hello was not a TLSHandshakeRecord' unless client_hello.is_a? TLSHandshakeRecord
+    tlsclienthello = TLSClientHello.new(client_hello.data)
+    @tls_data[:tlsclienthello] = tlsclienthello.to_h
+
+    raise ProtocolStackError.new 'The next EAP-TLS Packet with the ServerHello does not exist' if tlspackets[1].nil?
+    tlsserverhello = TLSServerHello.new(tlspackets[1])
+    @tls_data[:tlsserverhello] = tlsserverhello.to_h
 
     logger.debug 'TLS Data: ' + @tls_data.to_s
   end

@@ -6,6 +6,9 @@ end
 
 # Class for parsing the TLS Server Hello
 class TLSServerHello
+
+  include SemanticLogger::Loggable
+
   # [Array] Outer TLS Version (TLS Record Version) as Array of two bytes (e.g. [0x03,0x01])
   attr_reader :outervers
   # [Array] Version of the TLS Server Hello as Array of two bytes (e.g. [0x03,0x03])
@@ -111,36 +114,37 @@ class TLSServerHello
   end
 
   # Parses complete ServerHello and returns a new Instance
-  # @param data [Array] Bytes from Server Hello until ServerHelloDone
+  # @param data [Array<TLSHandshakeRecord>] Bytes from Server Hello until ServerHelloDone
   # @return New Instance of TLSServerHello
   def initialize(data)
     @ocsp_included = false
-    cur_ptr = 0
-    while cur_ptr < data.length do
-      outertype = data[cur_ptr]
-      @outervers = data[cur_ptr+1, 2]
-      outerlength = data[cur_ptr+3]*256 + data[cur_ptr+4]
-      cur_ptr += 5
-      type = data[cur_ptr]
-      length = data[cur_ptr+1]*256*256 + data[cur_ptr+2]*256 + data[cur_ptr+3]
-      if outerlength-length != 4
-        raise TLSServerHelloError, 'Outer Length and Inner Length did not match'
-      end
+    data.each do |cur_record|
+      raise ProtocolStackError.new 'The Record in the TLS Server Hello was not a TLSHandshakeRecord' unless cur_record.is_a? TLSHandshakeRecord
+      raise ProtocolStackError.new 'The Handshake type was not set' if cur_record.handshake_type.nil?
+
+      cur_data = cur_record.data
+      type = cur_record.handshake_type
+      length = cur_data[1] * 256 * 256 + cur_data[2] * 256 + cur_data[3]
+
       case type
-        when TLSTypes::HandshakeType::SERVERHELLO
-          parse_serverhello data[cur_ptr+4, length]
-        when TLSTypes::HandshakeType::CERTIFICATE
-          parse_certificate data[cur_ptr+4, length]
-        when TLSTypes::HandshakeType::SERVERKEYEXCHANGE
-          parse_serverkeyexchange data[cur_ptr+4, length]
-        when TLSTypes::HandshakeType::SERVERHELLODONE
-          parse_serverhellodone data[cur_ptr+4, length]
-        when TLSTypes::HandshakeType::CERTIFICATESTATUS
-          parse_certificatestatus data[cur_ptr+4, length]
-        else
-          $stderr.puts "Unknown TLS Handshaketype #{type}"
+      when TLSTypes::HandshakeType::SERVERHELLO
+        logger.trace 'TLS ServerHello SERVERHELLO'
+        parse_serverhello cur_data[4, length]
+      when TLSTypes::HandshakeType::CERTIFICATE
+        logger.trace 'TLS ServerHello Certificate'
+        parse_certificate cur_data[4, length]
+      when TLSTypes::HandshakeType::SERVERKEYEXCHANGE
+        logger.trace 'TLS ServerHello SERVERKEYEXCHANGE'
+        parse_serverkeyexchange cur_data[4, length]
+      when TLSTypes::HandshakeType::SERVERHELLODONE
+        logger.trace 'TLS ServerHello SERVERHELLODONE'
+        parse_serverhellodone cur_data[4, length]
+      when TLSTypes::HandshakeType::CERTIFICATESTATUS
+        logger.trace 'TLS ServerHello CERTIFICATESTATUS'
+        parse_certificatestatus cur_data[4, length]
+      else
+        logger.warn "Unknown TLS Handshake Type #{type} for the Server Hello"
       end
-      cur_ptr += outerlength
     end
   end
 

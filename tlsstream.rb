@@ -3,6 +3,7 @@ class TLSStream
 
   include SemanticLogger::Loggable
 
+  attr_reader :tlspackets
   @tlspackets
 
   # Initialize new TLS Stream based on EAP-TLS Packets
