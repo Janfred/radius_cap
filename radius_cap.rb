@@ -50,26 +50,30 @@ ElasticHelper.initialize_elasticdata @config[:debug]
 
 Thread.start do
   loop do
-    ElasticHelper.elasticdata.synchronize do
-      ElasticHelper.waitcond.wait_while { ElasticHelper.elasticdata.empty? }
-      toins = ElasticHelper.elasticdata.shift
+    begin
+      ElasticHelper.elasticdata.synchronize do
+        ElasticHelper.waitcond.wait_while { ElasticHelper.elasticdata.empty? }
+        toins = ElasticHelper.elasticdata.shift
 
-      username = nil
-      mac = nil
-      if toins[:radius] && toins[:radius][:attributes] && toins[:radius][:attributes][:username]
-        username = toins[:radius][:attributes][:username]
-      end
-      if toins[:radius] && toins[:radius][:attributes] && toins[:radius][:attributes][:mac]
-        mac = toins[:radius][:attributes][:mac]
-      end
+        username = nil
+        mac = nil
+        if toins[:radius] && toins[:radius][:attributes] && toins[:radius][:attributes][:username]
+          username = toins[:radius][:attributes][:username]
+        end
+        if toins[:radius] && toins[:radius][:attributes] && toins[:radius][:attributes][:mac]
+          mac = toins[:radius][:attributes][:mac]
+        end
 
-      if @config[:elastic_filter].filter { |x|
-        (x[:username].nil? || username.nil? || x[:username] == username) &&
-            (x[:mac].nil? || mac.nil? || x[:mac] == mac)
-      }
-      end
+        if @config[:elastic_filter].filter { |x|
+          (x[:username].nil? || username.nil? || x[:username] == username) &&
+              (x[:mac].nil? || mac.nil? || x[:mac] == mac)
+        }
+        end
 
-      insert_into_elastic(toins, @config[:debug], @config[:noelastic], @config[:filewrite])
+        insert_into_elastic(toins, @config[:debug], @config[:noelastic], @config[:filewrite])
+      end
+    rescue => e
+      logger.error("Error in Elastic Write", exception: e)
     end
   end
 end
