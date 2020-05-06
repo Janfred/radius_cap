@@ -64,13 +64,16 @@ Thread.start do
           mac = toins[:radius][:attributes][:mac]
         end
 
-        if @config[:elastic_filter].filter { |x|
+        filters = @config[:elastic_filter].select { |x|
           (x[:username].nil? || username.nil? || x[:username] == username) &&
               (x[:mac].nil? || mac.nil? || x[:mac] == mac)
         }
-        end
 
-        insert_into_elastic(toins, @config[:debug], @config[:noelastic], @config[:filewrite])
+        if filters.length == 0
+          insert_into_elastic(toins, @config[:debug], @config[:noelastic], @config[:filewrite])
+        else
+          logger.debug 'Filtered out the Elasticdata'
+        end
       end
     rescue => e
       logger.error("Error in Elastic Write", exception: e)
