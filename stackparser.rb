@@ -55,6 +55,11 @@ class StackParser
         result = ProtocolStack.new to_parse
         to_insert_in_elastic = result.to_h
         logger.debug 'Complete Data: ' + to_insert_in_elastic.to_s
+
+        ElasticHelper.elasticdata.synchronize do
+          ElasticHelper.elasticdata.push to_insert_in_elastic
+          ElasticHelper.waitcond.signal
+        end
       rescue => e
         logger.error("Error in parsing", exception: e)
       end
@@ -253,6 +258,7 @@ class ProtocolStack
     raise ProtocolStackError.new "The EAP Stream ist not an EAPStream Object" unless @eap_stream.is_a? EAPStream
     # First Parse EAP Metadata
     @eap_data[:information] = {}
+    @eap_data[:information][:eap_identity] = @eap_stream.eap_identity
     @eap_data[:information][:initial_eaptype] = @eap_stream.initial_eap_type
     @eap_data[:information][:wanted_eaptypes] = @eap_stream.wanted_eap_types
     @eap_data[:information][:actual_eaptype] = @eap_stream.eap_type

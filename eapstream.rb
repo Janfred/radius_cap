@@ -18,10 +18,12 @@
 #     by the server does not match the actual EAP Type or the Server rejects the wanted
 #     EAP Type (e.g. because the client is configured to do EAP-PWD, but the server does not
 #     support it.)
+# @!attribute [r] eap_identity
+#   @return [String] EAP Identity
 class EAPStream
   include SemanticLogger::Loggable
 
-  attr_reader :eap_packets, :eap_type, :initial_eap_type, :wanted_eap_types, :first_eap_payload
+  attr_reader :eap_packets, :eap_type, :initial_eap_type, :wanted_eap_types, :first_eap_payload, :eap_identity
 
   # Initialize the EAP Stream. Parses the EAP Type and matches the EAP fragmentation (not the EAP-TLS Fragmentation!)
   # @param pktstream [RadiusStream] Packet Stream
@@ -76,6 +78,8 @@ class EAPStream
     raise EAPStreamError.new "The first EAP Packet has not a Response Code" if @eap_packets[0].code != EAPPacket::Code::RESPONSE
     raise EAPStreamError.new "The first EAP Packet is not an Identity Type" if @eap_packets[0].type != EAPPacket::Type::IDENTITY
 
+    @eap_identity = @eap_packets[0].type_data
+
     @initial_eap_type = nil
     @wanted_eap_types = []
     @eap_type = nil
@@ -98,6 +102,7 @@ class EAPStream
     if @eap_packets[cur_ptr].type == EAPPacket::Type::IDENTITY
       logger.warn "Seen a retransmission of the EAP Identity at packet #{cur_ptr}"
       raise EAPStreamError.new "The Server answered to a EAP-Identity Retransmission with a different type then he did before." if @eap_packets[cur_ptr+1].type != @initial_eap_type
+      logger.warn 'EAP-Identities did not match' if @eap_packets[cur_ptr].type_data == @eap_identity
       cur_ptr += 2
     end
 

@@ -62,16 +62,36 @@ end
 # @param data [Hash] Data from TLS Handshake Parsing
 # @return [Hash] Data in Elasticsearch format
 def convert_data_to_elasticsearch(data)
-  to_insert = {id: nil, data: {}}
-  to_insert[:data][:last_seen] = Time.now.utc.iso8601
-  to_insert[:data][:scheme_ver] = data[:scheme_ver]
-  to_insert[:data][:capture_ver] = data[:capture_ver]
-  to_insert[:data][:realm] = data[:username].split("@")[1]
-  to_insert[:data][:oui] = data[:mac].split(":")[0,3].join(":")
-  to_insert[:data][:vendor] = MacVendor.by_oid(to_insert[:data][:oui])
-  to_insert[:data][:eapmethod] = data[:eapmethod]
-  to_insert[:data][:tlsclienthello] = data[:tlsclienthello]
-  to_insert[:data][:tlsserverhello] = data[:tlsserverhello]
+
+  # Get Username and MAC-Address and remove it from the data
+  username = ""
+  if data[:radius] && data[:radius][:attributes] && data[:radius][:attributes][:username]
+    username = data[:radius][:attributes][:username]
+    data[:radius][:attributes].delete :username
+  end
+  if data[:eap] && data[:eap][:information] && data[:eap][:information][:eap_identity]
+    username ||= data[:eap][:information][:eap_identity]
+    data[:eap][:information].delete :eap_identity
+  end
+
+  realm = username.split('@')[1]
+
+  mac = 'ff:ff:ff:ff:ff:ff'
+  if data[:radius] && data[:radius][:attributes] && data[:radius][:attributes][:mac]
+    mac = data[:radius][:attributes][:mac]
+    data[:radius][:attributes].delete :mac
+  end
+  meta = {}
+  meta[:last_seen] = Time.now.utc.iso8601
+  meta[:scheme_ver] = 0 # TODO
+  meta[:caputre_ver] = 0 # TODO
+  meta[:realm] = realm
+  meta[:oui] = mac.split(':')[0,3].join ':'
+  meta[:vendor] = MacVendor.by_oid(meta[:oui])
+
+  data[:meta] = meta
+
+  to_insert = {id: nil, data: data}
   to_insert[:id] = Digest::SHA2.hexdigest "#{data[:username]}#{data[:mac]}"
   to_insert
 end
