@@ -85,10 +85,6 @@ end
 # Class for parsing the TLS Client Hello
 class TLSClientHello
 
-  # [Array] Outer TLS Version (TLS Record Version) as Array of two bytes (e.g. [0x03,0x03])
-  attr_reader :outervers
-  # [Integer] Length of the TLS Record
-  attr_reader :outerlen
   # [Integer] Length of inner TLS Data (in this case TLS Client Hello)
   attr_reader :innerlen
   # [Array] Version of the TLS Client Hello as Array of two bytes (e.g. [0x03,0x04])
@@ -326,14 +322,11 @@ class TLSClientHello
   # @raise TLSClientHelloError if any parsing error occurs
   # @return New Instance of TLSClientHello
   def initialize(data)
-    raise TLSClientHelloError unless data[0] == TLSTypes::RecordType::HANDSHAKE
-    @outervers = data[1, 2]
-    @outerlen  = data[3]*256 + data[4]
-    raise TLSClientHelloError, 'Not a TLS Client Hello' unless data[5] == TLSTypes::HandshakeType::CLIENTHELLO
-    @innerlen = data[6]*256*256 + data[7]*256 + data[8]
-    @innervers = data[9, 2]
-    @random = data[11..42]
-    cur_ptr = 43
+    raise TLSClientHelloError, 'Not a TLS Client Hello' unless data[0] == TLSTypes::HandshakeType::CLIENTHELLO
+    @innerlen = data[1]*256*256 + data[2]*256 + data[3]
+    @innervers = data[4, 2]
+    @random = data[6, 32]
+    cur_ptr = 38
 
     # Session ID (optional)
     sessionid_len = data[cur_ptr]

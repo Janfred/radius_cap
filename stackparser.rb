@@ -121,6 +121,7 @@ class ProtocolStack
 
   private
 
+  # Write the complete RADIUS Stream to a pcap File
   def write_debug_capture_log
     if @radius_stream && @radius_stream.is_a?(RadiusStream)
       pcapng_file = PacketFu::PcapNG::File.new
@@ -288,6 +289,16 @@ class ProtocolStack
 
     # Parse EAP-TLS Metadata
     @tls_stream = TLSStream.new @eap_tls_stream.packets
+
+    # Now we have some assumptions. This might be a little
+    # TLS Client Hello
+    raise ProtocolStackError.new 'The first EAP-TLS Packet does not exist' if @tls_stream.first.nil?
+    raise ProtocolStackError.new 'The first EAP-TLS Packet contained not exactly one Record' if @tls_stream.first.length != 1
+    client_hello = @tls_stream.first[0]
+    tlsclienthello = TLSClientHello.new(client_hello)
+    @tls_data[:tlsclient] = tlsclienthello.to_h
+
+    logger.debug 'TLS Data: ' + @tls_data.to_s
   end
 
   # Initialize all class variables
