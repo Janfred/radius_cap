@@ -123,6 +123,8 @@ class ProtocolStack
     to_ret[:eap] = @eap_data if @eap_data
     to_ret[:eaptls] = @eap_tls_data if @eap_tls_data
     to_ret[:tls] = @tls_data if @tls_data
+
+    to_ret
   end
 
   private
