@@ -55,6 +55,8 @@ Thread.start do
         ElasticHelper.waitcond.wait_while { ElasticHelper.elasticdata.empty? }
         toins = ElasticHelper.elasticdata.shift
 
+        logger.trace 'To insert: ' + toins.to_s
+
         username = nil
         mac = nil
         if toins[:radius] && toins[:radius][:attributes] && toins[:radius][:attributes][:username]

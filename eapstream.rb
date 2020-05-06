@@ -36,6 +36,7 @@ class EAPStream
     @wanted_eap_types = []
     @initial_eap_type = nil
     @first_eap_payload = nil
+    @eap_identity = ""
     # Here the EAP Stream is parsed based on the RADIUS Packets.
     pktstream.packets.each do |radius_packet|
       eap_msg = []
@@ -78,7 +79,8 @@ class EAPStream
     raise EAPStreamError.new "The first EAP Packet has not a Response Code" if @eap_packets[0].code != EAPPacket::Code::RESPONSE
     raise EAPStreamError.new "The first EAP Packet is not an Identity Type" if @eap_packets[0].type != EAPPacket::Type::IDENTITY
 
-    @eap_identity = @eap_packets[0].type_data
+    eap_identity_bytes = @eap_packets[0].type_data
+    @eap_identity = eap_identity_bytes.pack('C*')
 
     @initial_eap_type = nil
     @wanted_eap_types = []
@@ -102,7 +104,7 @@ class EAPStream
     if @eap_packets[cur_ptr].type == EAPPacket::Type::IDENTITY
       logger.warn "Seen a retransmission of the EAP Identity at packet #{cur_ptr}"
       raise EAPStreamError.new "The Server answered to a EAP-Identity Retransmission with a different type then he did before." if @eap_packets[cur_ptr+1].type != @initial_eap_type
-      logger.warn 'EAP-Identities did not match' if @eap_packets[cur_ptr].type_data == @eap_identity
+      logger.warn 'EAP-Identities did not match' if @eap_packets[cur_ptr].type_data == eap_identity_bytes
       cur_ptr += 2
     end
 
