@@ -118,7 +118,7 @@ class TLSAlertRecord < TLSRecord
 
   def initialize(version, length, data)
     super
-    raise TLSParseError.new "The Alert must be exactly 2 Bytes long"
+    raise TLSParseError.new "The Alert must be exactly 2 Bytes long" if data.length != 2
   end
 end
 
