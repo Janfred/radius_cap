@@ -74,7 +74,7 @@ Thread.start do
         }
 
         if filters.length == 0
-          insert_into_elastic(toins, @config[:debug], @config[:noelastic], @config[:filewrite])
+          ElasticHelper.insert_into_elastic(toins, @config[:debug], @config[:noelastic], @config[:filewrite])
         else
           logger.debug 'Filtered out the Elasticdata'
         end
