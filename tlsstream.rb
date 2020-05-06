@@ -12,7 +12,7 @@ class TLSStream
     @tlspackets = []
     seen_change_cipher_spec = false
     eaptlspackets.each do |eaptlspkt|
-      cur_records =  TLSRecord.parse(eaptlspkt)
+      cur_records = TLSRecord.parse(eaptlspkt)
       i = 0
       until seen_change_cipher_spec || i >= cur_records.length do
         cur_rec = cur_records[i]
@@ -23,6 +23,7 @@ class TLSStream
         # TODO THIS IS JUST HERE TO GET A DUMP FOR DEBUGGING
         #  This is probably a rare case and I need to decide how to deal with it.
         raise TLSParseError.new "THIS IS AN ALERT!" if cur_rec.is_a? TLSAlertRecord
+        i += 1
       end
       @tlspackets << cur_records
     end
@@ -56,6 +57,7 @@ class TLSRecord
   end
 
   def self.parse(data)
+    logger.trace "Parse TLS Record set with length #{data.length}"
     cur_ptr = 0
     records = []
     while cur_ptr < data.length
@@ -90,6 +92,7 @@ end
 class TLSHandshakeRecord < TLSRecord
   attr_reader :handshake_type
   @handshake_type
+
   def initialize(version, length, data)
     @handshake_type = nil
     super
@@ -104,7 +107,7 @@ class TLSHandshakeRecord < TLSRecord
   def set_handshake_type
     raise TLSParseError.new "The Handshake is too short" if @data.length < 4
     @handshake_type = data[0]
-    @handshake_length = data[1]*256*256 + data[2]*256 + data[3]
+    @handshake_length = data[1] * 256 * 256 + data[2] * 256 + data[3]
     raise TLSParseError.new "The Indicated length did not match the actual length" if @data.length - 4 != @handshake_length
   end
 end
