@@ -295,7 +295,7 @@ class ProtocolStack
     # TLS Client Hello
     raise ProtocolStackError.new 'The first EAP-TLS Packet does not exist' if tlspackets.first.nil?
     raise ProtocolStackError.new 'The first EAP-TLS Packet contained not exactly one Record' if tlspackets.first.length != 1
-    client_hello = tlspackets.packets.first[0]
+    client_hello = tlspackets.first[0]
     raise ProtocolStackError.new 'The supposed TLS Client Hello was not a TLSHandshakeRecord' unless client_hello.is_a? TLSHandshakeRecord
     tlsclienthello = TLSClientHello.new(client_hello.data)
     @tls_data[:tlsclienthello] = tlsclienthello.to_h
