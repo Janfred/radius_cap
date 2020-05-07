@@ -232,14 +232,16 @@ class TLSServerHello
       TLSCertStoreHelper.save_server_cert(server_cert)
 
       chain.each do |c|
-        next if TLSCertStoreHelper.check_trust_anchor(c)
+        if TLSCertStoreHelper.check_trust_anchor(c)
+          TLSCertStoreHelper.add_trust_anchor(c)
+        end
         TLSCertStoreHelper.add_known_intermediate(c)
       end
 
-      public_trusted = TLSCertStoreHelper.check_public_trust(server_cert, chain)
-      logger.trace 'Public Cert Result: ' + public_trusted.inspect
-      additional_trusted = TLSCertStoreHelper.check_additional_trust(server_cert, chain)
-      logger.trace 'Additional Cert Result: ' + additional_trusted.inspect
+      @public_trusted = TLSCertStoreHelper.check_public_trust(server_cert, chain)
+      logger.trace 'Public Cert Result: ' + @public_trusted.inspect
+      @additional_trusted = TLSCertStoreHelper.check_additional_trust(server_cert, chain)
+      logger.trace 'Additional Cert Result: ' + @additional_trusted.inspect
     end
     nil
   end
@@ -321,6 +323,19 @@ class TLSCertStoreHelper
     unless File.exists? File.join('known_certs', issuer_path, cert_path)
       File.write File.join('known_certs', issuer_path, cert_path), cert.to_pem
       @additional_cert_store.add_cert(cert) if intermediate
+    end
+  end
+
+  def self.add_trust_anchor(cert)
+    TLSCertStoreHelper.instance.priv_add_trust_anchor(cert)
+  end
+
+  def priv_add_trust_anchor(cert)
+    raise StandardError unless cert.is_a? OpenSSL::X509::Certificate
+    certname = subj_to_filename(cert.subject.to_s) + '.pem'
+    unless File.exists? File.join('known_certs', certname)
+      File.write(File.join('known_certs', certname), cert.to_pem)
+      @additional_cert_store.add_cert(cert)
     end
   end
 
