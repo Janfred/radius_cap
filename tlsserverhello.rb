@@ -227,7 +227,7 @@ class TLSServerHello
 
     if @cert_data.length > 0
       server_cert = @cert_data.first
-      chain = @cert_data[1,-1]
+      chain = @cert_data[1..-1]
 
       chain.each do |c|
         next if TLSCertStoreHelper.check_trust_anchor(c)
