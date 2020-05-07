@@ -229,6 +229,8 @@ class TLSServerHello
       server_cert = @cert_data.first
       chain = @cert_data[1..-1]
 
+      TLSCertStoreHelper.save_server_cert(server_cert)
+
       chain.each do |c|
         next if TLSCertStoreHelper.check_trust_anchor(c)
         TLSCertStoreHelper.add_known_intermediate(c)
@@ -298,7 +300,11 @@ class TLSCertStoreHelper
     to_return
   end
 
-  def priv_add_known_intermediate(cert)
+  def self.save_server_cert(cert)
+    TLSCertStoreHelper.instance.priv_add_cert(cert, false)
+  end
+
+  def priv_add_cert(cert, intermediate=false)
     raise StandardError unless cert.is_a? OpenSSL::X509::Certificate
     issuer = cert.issuer.to_s
     cert_serial = cert.serial
@@ -314,12 +320,12 @@ class TLSCertStoreHelper
     end
     unless File.exists? File.join('known_certs', issuer_path, cert_path)
       File.write File.join('known_certs', issuer_path, cert_path), cert.to_pem
-      @additional_cert_store.add_cert(cert)
+      @additional_cert_store.add_cert(cert) if intermediate
     end
   end
 
   def self.add_known_intermediate(cert)
-    TLSCertStoreHelper.instance.priv_add_known_intermediate(cert)
+    TLSCertStoreHelper.instance.priv_add_cert(cert, true)
   end
 
   def self.check_trust_anchor(cert)
