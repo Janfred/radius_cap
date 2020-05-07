@@ -70,6 +70,24 @@ class TLSServerHello
     to_ret[:keyexchange] = @keyexchange.to_h if @keyexchange
     # If no keyexchange is present, set to None to distinguish between not captured (before this change) and captured, but not existent
     to_ret[:keyexchange] ||= [sig_scheme: "None", curve_name: "None"]
+
+    to_ret[:certificate] = {}
+    to_ret[:certificate][:sent_chain_length] = @cert_data.length
+    to_ret[:certificate][:public_trusted] = @public_trusted[:valid]
+
+    if @public_trusted[:valid]
+      to_ret[:certificate][:complete_public_chain_length] = @public_trusted[:chain].length
+      to_ret[:certificate][:public_trust_anchor] = @public_trusted[:chain].last.subject.to_s
+    else
+      to_ret[:certificate][:complete_public_chain_length] = 0
+      to_ret[:certificate][:public_trust_anchor] = "UNKNOWN"
+    end
+
+    to_ret[:certificate][:additional_trusted] = @additional_trusted[:valid]
+    to_ret[:certificate][:complete_additional_chain_length] = @additional_trusted[:chain].length
+    to_ret[:certificate][:additional_trust_anchor] = @additional_trusted[:chain].last.subject.to_s
+
+
     to_ret
   end
 
