@@ -234,7 +234,7 @@ class TLSServerHello
 
       cur_cert_data = OpenSSL::X509::Certificate.new cur_cert.pack('C*')
 
-      logger.info 'Cert data ' + cur_cert_data.inspect
+      logger.debug 'Cert data ' + cur_cert_data.inspect
 
       @certificates ||= []
       @certificates << cur_cert
