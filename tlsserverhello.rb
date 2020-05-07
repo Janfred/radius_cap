@@ -1,4 +1,5 @@
 require './tlsciphersuites.rb'
+require 'openssl'
 
 # Error to be thrown whenever the parsing of the TLS Server Hello fails.
 class TLSServerHelloError < StandardError
@@ -27,8 +28,10 @@ class TLSServerHello
   attr_reader :extensions
   # [Array] Sent Certificates as Array of Arrays of Bytes
   attr_reader :certificates
+  attr_reader :cert_data
   # Not yet used
   attr_reader :additional
+
 
   # Converts parsed TLS Server Hello to Hash
   # @todo Lacks support for TLSv1.3
@@ -209,8 +212,16 @@ class TLSServerHello
     while cur_ptr < cert_end do
       this_length = data[cur_ptr]*256*256 + data[cur_ptr+1]*256 + data[cur_ptr+2]
       cur_ptr += 3
+      cur_cert = data[cur_ptr, this_length]
+
+      cur_cert_data = OpenSSL::X509::Certificate.new cur_cert.pack('C*')
+
+      logger.info 'Cert data ' + cur_cert_data.inspect
+
       @certificates ||= []
-      @certificates << data[cur_ptr, this_length]
+      @certificates << cur_cert
+      @cert_data ||= []
+      @cert_data << cur_cert_data
       cur_ptr += this_length
     end
     nil

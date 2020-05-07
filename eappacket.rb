@@ -42,6 +42,7 @@ class EAPPacket
     # @param code [Byte] Code of the EAP Type
     # @return [String] Name of the EAP Type, or "UNKNOWN_EAPTYPE_<num>" if EAP Type is unknown
     def Type::get_type_name_by_code(code)
+      return nil if code.nil?
       Type.constants.each do |const|
         next if Type.const_get(const) != code
         return const.to_s
