@@ -224,6 +224,16 @@ class TLSServerHello
       @cert_data << cur_cert_data
       cur_ptr += this_length
     end
+
+    if @cert_data.length < 0
+      server_cert = @cert_data.first
+      chain = @cert_data[1,-1]
+
+      chain.each do |c|
+        next if TLSCertStoreHelper.check_trust_anchor(c)
+        TLSCertStoreHelper.add_known_intermediate(c)
+      end
+    end
     nil
   end
 
@@ -250,5 +260,41 @@ class TLSServerHello
   def parse_serverhellodone(data)
     # Nothing to do.
     nil
+  end
+end
+
+class TLSCertStoreHelper
+  include Singleton
+  include SemanticLogger::Loggable
+
+  def initialize
+    @trusted_cert_store = OpenSSL::X509::Store.new
+    @trusted_cert_store.set_default_paths
+
+    @additional_cert_store = OpenSSL::X509::Store.new
+    @additional_cert_store.set_default_paths
+
+    priv_add_known_intermediates
+  end
+
+  def priv_add_known_intermediates
+    @additional_cert_store.add_path('known_certs')
+  end
+
+  def priv_add_known_intermediate(cert)
+    raise StandardError unless cert.is_a? OpenSSL::X509::Certificate
+    issuer = cert.issuer.to_s
+    cert_serial = cert.serial
+    cert_name = cert.subject.to_s
+    logger.trace "Issuer: #{issuer} | Serial: #{cert_serial} | Cert Name: #{cert_name}"
+  end
+
+  def self.add_known_intermediate(cert)
+    TLSCertStoreHelper.instance.priv_add_known_intermediate(cert)
+  end
+
+  def self.check_trust_anchor(cert)
+    raise StandardError unless cert.is_a? OpenSSL::X509::Certificate
+    return cert.issuer.eql? cert.subject
   end
 end
