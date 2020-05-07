@@ -233,6 +233,11 @@ class TLSServerHello
         next if TLSCertStoreHelper.check_trust_anchor(c)
         TLSCertStoreHelper.add_known_intermediate(c)
       end
+
+      public_trusted = TLSCertStoreHelper.check_public_trust(server_cert, chain)
+      logger.trace 'Public Cert Result: ' + public_trusted.inspect
+      additional_trusted = TLSCertStoreHelper.check_additional_trust(server_cert, chain)
+      logger.trace 'Additional Cert Result: ' + additional_trusted.inspect
     end
     nil
   end
@@ -267,6 +272,10 @@ class TLSCertStoreHelper
   include Singleton
   include SemanticLogger::Loggable
 
+
+  attr_reader :trusted_cert_store
+  attr_reader :additional_cert_store
+
   def initialize
     @trusted_cert_store = OpenSSL::X509::Store.new
     @trusted_cert_store.set_default_paths
@@ -281,12 +290,30 @@ class TLSCertStoreHelper
     @additional_cert_store.add_path('known_certs')
   end
 
+  def self.subj_to_filename(orig_name)
+    to_return = orig_name
+    to_return.gsub!(/\//,'§')
+    to_return.gsub!(/[^0-9a-zA-Z. _=§-]/, '_')
+  end
+
   def priv_add_known_intermediate(cert)
     raise StandardError unless cert.is_a? OpenSSL::X509::Certificate
     issuer = cert.issuer.to_s
     cert_serial = cert.serial
     cert_name = cert.subject.to_s
+
     logger.trace "Issuer: #{issuer} | Serial: #{cert_serial} | Cert Name: #{cert_name}"
+
+    issuer_path = subj_to_filename(issuer)
+    cert_path = cert_serial.to_s + subj_to_filename(cert_name)
+
+    unless File.directory? File.join('known_certs', issuer_path)
+      Dir.mkdir(File.join('known_certs', issuer_path))
+    end
+    unless File.exists? File.join('known_certs', issuer_path, cert_path)
+      File.write File.join('known_certs', issuer_path, cert_path), cert.to_pem
+      @additional_cert_store.add_cert(cert)
+    end
   end
 
   def self.add_known_intermediate(cert)
@@ -297,5 +324,24 @@ class TLSCertStoreHelper
     raise StandardError unless cert.is_a? OpenSSL::X509::Certificate
     logger.trace "Checking #{cert.issuer.to_s} against #{cert.subject.to_s}"
     return cert.issuer.eql? cert.subject
+  end
+
+  def self.check_public_trust(cert, chain)
+    certstore = TLSCertStoreHelper.instance.trusted_cert_store
+    raise StandardError unless certstore.is_a? OpenSSL::X509::Store
+    to_return = {}
+    to_return[:valid] = certstore.verify(cert, chain)
+    to_return[:chain] = certstore.chain
+
+    to_return
+  end
+  def self.check_additional_trust(cert, chain)
+    certstore = TLSCertStoreHelper.instance.additional_cert_store
+    raise StandardError unless certstore.is_a? OpenSSL::X509::Store
+    to_return = {}
+    to_return[:valid] = certstore.verify(cert, chain)
+    to_return[:chain] = certstore.chain
+
+    to_return
   end
 end
