@@ -225,7 +225,7 @@ class TLSServerHello
       cur_ptr += this_length
     end
 
-    if @cert_data.length < 0
+    if @cert_data.length > 0
       server_cert = @cert_data.first
       chain = @cert_data[1,-1]
 
@@ -295,6 +295,7 @@ class TLSCertStoreHelper
 
   def self.check_trust_anchor(cert)
     raise StandardError unless cert.is_a? OpenSSL::X509::Certificate
+    logger.trace "Checking #{cert.issuer.to_s} against #{cert.subject.to_s}"
     return cert.issuer.eql? cert.subject
   end
 end
