@@ -294,6 +294,8 @@ class TLSCertStoreHelper
     to_return = orig_name
     to_return.gsub!(/\//,'§')
     to_return.gsub!(/[^0-9a-zA-Z. _=§-]/, '_')
+
+    to_return
   end
 
   def priv_add_known_intermediate(cert)
