@@ -83,6 +83,26 @@ class TLSServerHello
       to_ret[:certificate][:public_trust_anchor] = "UNKNOWN"
     end
 
+    index = 0
+    to_ret[:certificate][:public_chain] = {}
+    to_ret[:certificate][:public_chain][:array] = {}
+    to_ret[:certificate][:public_chain][:by_index] = {}
+    @public_trusted[:chain].reverse.each do |c|
+      to_ret[:certificate][:public_chain][:array] << c.subject.to_s
+      to_ret[:certificate][:public_chain][:by_index][index] = c.subject.to_s
+      index += 1
+    end
+
+    index = 0
+    to_ret[:certificate][:additional_chain] = []
+    to_ret[:certificate][:additional_chain][:array] = {}
+    to_ret[:certificate][:additional_chain][:by_index] = {}
+    @additional_trusted[:chain].reverse.each do |c|
+      to_ret[:certificate][:additional_chain][:array] << c.subject.to_s
+      to_ret[:certificate][:additional_chain][:by_index][index] = c.subject.to_s
+      index += 1
+    end
+
     to_ret[:certificate][:additional_trusted] = @additional_trusted[:valid]
     to_ret[:certificate][:complete_additional_chain_length] = @additional_trusted[:chain].length
     to_ret[:certificate][:additional_trust_anchor] = @additional_trusted[:chain].last.subject.to_s
