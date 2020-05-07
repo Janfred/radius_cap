@@ -85,7 +85,7 @@ class TLSServerHello
 
     index = 0
     to_ret[:certificate][:public_chain] = {}
-    to_ret[:certificate][:public_chain][:array] = {}
+    to_ret[:certificate][:public_chain][:array] = []
     to_ret[:certificate][:public_chain][:by_index] = {}
     @public_trusted[:chain].reverse.each do |c|
       to_ret[:certificate][:public_chain][:array] << c.subject.to_s
@@ -95,7 +95,7 @@ class TLSServerHello
 
     index = 0
     to_ret[:certificate][:additional_chain] = []
-    to_ret[:certificate][:additional_chain][:array] = {}
+    to_ret[:certificate][:additional_chain][:array] = []
     to_ret[:certificate][:additional_chain][:by_index] = {}
     @additional_trusted[:chain].reverse.each do |c|
       to_ret[:certificate][:additional_chain][:array] << c.subject.to_s
