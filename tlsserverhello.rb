@@ -290,7 +290,7 @@ class TLSCertStoreHelper
     @additional_cert_store.add_path('known_certs')
   end
 
-  def self.subj_to_filename(orig_name)
+  def subj_to_filename(orig_name)
     to_return = orig_name
     to_return.gsub!(/\//,'§')
     to_return.gsub!(/[^0-9a-zA-Z. _=§-]/, '_')
