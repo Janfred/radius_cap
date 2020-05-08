@@ -1,4 +1,4 @@
-require './tlsciphersuites.rb'
+require_relative './tlsciphersuites.rb'
 require 'openssl'
 
 # Error to be thrown whenever the parsing of the TLS Server Hello fails.

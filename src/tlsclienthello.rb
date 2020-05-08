@@ -1,6 +1,6 @@
 require 'digest'
-require './tlsciphersuites.rb'
-require './fingerprint.rb'
+require_relative './tlsciphersuites.rb'
+require_relative './fingerprint.rb'
 
 # Error thrown when the TLS Client Hello parsing fails.
 class TLSClientHelloError < StandardError

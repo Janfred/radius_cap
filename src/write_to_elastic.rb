@@ -1,7 +1,7 @@
 require 'elasticsearch'
 require 'singleton'
 require 'digest'
-require './macvendor.rb'
+require_relative './macvendor.rb'
 
 # Helper class for dealing with ElasticSearch
 class ElasticHelper
