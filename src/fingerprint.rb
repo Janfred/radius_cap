@@ -22,12 +22,12 @@ class Fingerprint
   # This allows hotswaping the fingerprint database without the need to restart the capture process
   # @return nil
   def self.check_new_file
-    thisupdate = File.mtime("./fingerprint.#{VERSION}.txt")
+    thisupdate = File.mtime(File.join('resources', "./fingerprint.#{VERSION}.txt"))
 
     if @@fingerprintdb_lastupdate.nil? || thisupdate > @@fingerprintdb_lastupdate
       temp_db = {}
       begin
-        File.read("./fingerprint.#{VERSION}.txt").each_line do |l|
+        File.read(File.join('resources', "./fingerprint.#{VERSION}.txt")).each_line do |l|
           next unless l.match /^[0-9a-f]{64}|[^|]*|[^|]*|[^|]*$/
           d = l.split('|').collect(&:strip)
           next if d[0] == 'Fingerprint'

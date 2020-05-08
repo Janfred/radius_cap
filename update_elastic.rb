@@ -3,8 +3,8 @@ require 'rubygems'
 require 'bundler/setup'
 require 'elasticsearch'
 require 'digest'
-require './tlsciphersuites.rb'
-require './macvendor.rb'
+require './src/tlsciphersuites.rb'
+require './src/macvendor.rb'
 
 
 MacVendor.init_data

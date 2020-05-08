@@ -10,7 +10,7 @@ class MacVendor
   # @private
   def priv_init_data
     @vendorhash = {}
-    File.open("./oui.txt") do |f|
+    File.open(File.join('resources', 'oui.txt')) do |f|
       f.each do |line|
         match = line.match /^([0-9A-F]{2})-([0-9A-F]{2})-([0-9A-F]{2}) {3}\(hex\)\t\t(.*)\r$/
         next unless match

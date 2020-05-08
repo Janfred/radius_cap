@@ -10,17 +10,17 @@ require 'monitor'
 require 'semantic_logger'
 
 # Require local files
-require './radiuspacket.rb'
-require './eappacket.rb'
-require './tlsclienthello.rb'
-require './tlsserverhello.rb'
+require './src/radiuspacket.rb'
+require './src/eappacket.rb'
+require './src/tlsclienthello.rb'
+require './src/tlsserverhello.rb'
 require './localconfig.rb'
-require './write_to_elastic.rb'
-require './macvendor.rb'
-require './radiusstream.rb'
-require './eapstream.rb'
-require './stackparser.rb'
-require './tlsstream.rb'
+require './src/write_to_elastic.rb'
+require './src/macvendor.rb'
+require './src/radiusstream.rb'
+require './src/eapstream.rb'
+require './src/stackparser.rb'
+require './src/tlsstream.rb'
 
 @config[:debug] = false if @config[:debug].nil?
 @config[:eap_timeout] ||= 60

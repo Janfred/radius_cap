@@ -85,20 +85,29 @@ class RadiusPacket
   attr_reader :state
 
   def initialize(pkt)
-    if pkt.udp_len < 20
-      raise 'Length of packet violates RFC2865'
+    if pkt.is_a? PacketFu::Packet
+      if pkt.udp_len < 20
+        raise PacketLengthNotValidError.new 'Length of packet violates RFC2865'
+      end
+
+      # Save UDP Header information (needed for matching packets
+      @udp = {src: {ip: pkt.ip_saddr, port: pkt.udp_sport}, dst: {ip: pkt.ip_daddr, port: pkt.udp_dport}}
+
+      @raw_data = pkt.payload.unpack('C*')
+      @packetfu_pkt = pkt
+    elsif pkt.is_a? Array
+      if pkt.length < 20
+        raise PacketLengthNotValidError.new 'Length of packet violates RFC2865'
+      end
+      @udp = {src: {ip: nil, port: nil}, dst: {ip: nil, port: nil}}
+      @packetfu_pkt = nil
+    else
+      raise StandardError.new 'Invalid input to RadiusPacket init'
     end
-
-    # Save UDP Header information (needed for matching packets
-    @udp = {src: {ip: pkt.ip_saddr, port: pkt.udp_sport}, dst: {ip: pkt.ip_daddr, port: pkt.udp_dport}}
-
-    @raw_data = pkt.payload.unpack('C*')
-    @packetfu_pkt = pkt
-
     # Parse Radius Headers
     @packettype = @raw_data[0]
     @identifier = @raw_data[1]
-    @length = @raw_data[2]*256 + @raw_data[3]
+    @length = @raw_data[2] * 256 + @raw_data[3]
 
     # This case should actually not happen, but it happened. (I hate IP fragmentation)
     if @length != @raw_data.length
