@@ -1,3 +1,5 @@
+require 'packetfu'
+
 # Error to be raised if the actual length of the packet does not match the specified length.
 # This could happen if the IP packet was fragmented or the Radius Packet is faulty
 class PacketLengthNotValidError < StandardError
@@ -71,6 +73,18 @@ class RadiusPacket
     WLANAKMSUITE         = 188
     WLANGROUPMGMTCIPHER  = 189
     WLANRFBAND           = 190
+
+    # Get Attribute name by the given code
+    # @param code [Byte] Code of the Attribute
+    # @return [String] Name of the Attribute, or "UNKNOWN_ATTRIBUTE_<num>" if Attribute is unknown.
+    def Attribute::get_attribute_name_by_code(code)
+      return nil if code.nil?
+      Attribute.constants.each do |const|
+        next if Attribute.const_get(const) != code
+        return const.to_s
+      end
+      "UNKNOWN_ATTRIBUTE_#{code}"
+    end
   end
 
   attr_reader :packetfu_pkt
@@ -101,6 +115,7 @@ class RadiusPacket
       end
       @udp = {src: {ip: nil, port: nil}, dst: {ip: nil, port: nil}}
       @packetfu_pkt = nil
+      @raw_data = pkt
     else
       raise StandardError.new 'Invalid input to RadiusPacket init'
     end
@@ -222,5 +237,36 @@ class RadiusPacket
     end
     # Add end and return
     str + ">"
+  end
+
+  def deep_inspect
+    str  = "#<#{self.class.name}: "
+    str += case @packettype
+           when RadiusPacket::Type::REQUEST
+             "Request"
+           when RadiusPacket::Type::ACCEPT
+             "Accept"
+           when RadiusPacket::Type::REJECT
+             "Reject"
+           when RadiusPacket::Type::CHALLENGE
+             "Challenge"
+           else
+             "UNKNOWN!"
+           end
+    str += ' id:0x%02X' % @identifier
+    attrs=[]
+    @attributes.each do |a|
+      attr_name = RadiusPacket::Attribute::get_attribute_name_by_code(a[:type])
+      case a[:type]
+      when RadiusPacket::Attribute::CALLEDSTATIONID,
+        RadiusPacket::Attribute::CALLINGSTATIONID,
+        RadiusPacket::Attribute::USERNAME
+        attr_val = a[:data].pack('C*')
+      else
+        attr_val = a[:data].pack('C*').unpack('H*').first
+      end
+      attrs << ' ' + attr_name + ': ' + attr_val
+    end
+    ([str] + attrs + ['>']).join "\n"
   end
 end
