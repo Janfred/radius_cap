@@ -166,6 +166,11 @@ class TLSServerHello
     @ocsp_included = false
     @additional = {}
     @serverhellodone = false
+    @cert_data = []
+    @public_trusted = {}
+    @public_trusted[:chain] = []
+    @additional_trusted = {}
+    @additional_trusted[:chain] = []
     data.each do |cur_record|
       if cur_record.is_a? TLSChangeCipherSpecRecord
         # If this is the case, this probably is a Session resumption.
