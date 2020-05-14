@@ -122,7 +122,7 @@ class TLSHandshakeRecord < TLSRecord
     cur_ptr = 0
     to_return = []
 
-    while cur_ptr <= data.length
+    while cur_ptr < data.length
       cur_type = data[cur_ptr]
       cur_length = data[cur_ptr + 1] * 256 * 256 + data[cur_ptr + 2] * 256 + data[cur_ptr + 3]
       to_return << TLSHandshakeRecord.new(version, length, data[cur_ptr, cur_length + 4])
