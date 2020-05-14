@@ -15,7 +15,7 @@ class TLSStream
     @alerted = false
     seen_change_cipher_spec = false
     eaptlspackets.each do |eaptlspkt|
-      cur_records = TLSRecord.parse(eaptlspkt)
+      cur_records = TLSRecord.parse(eaptlspkt, seen_change_cipher_spec)
       i = 0
       until seen_change_cipher_spec || i >= cur_records.length do
         cur_rec = cur_records[i]
@@ -63,7 +63,7 @@ class TLSRecord
     @record_type
   end
 
-  def self.parse(data)
+  def self.parse(data,change_cipher_spec_seen = false)
     logger.trace "Parse TLS Record set with length #{data.length}"
     cur_ptr = 0
     records = []
@@ -74,13 +74,18 @@ class TLSRecord
       case type
       when TLSTypes::RecordType::HANDSHAKE
         logger.trace 'TLS Handshake Record'
-        records += TLSHandshakeRecord.parse_handshakes(version, length, data[cur_ptr + 5, length])
+        if change_cipher_spec_seen
+          records << TLSHandshakeRecord.new(version, length, data[cur_ptr + 5, length])
+        else
+          records += TLSHandshakeRecord.parse_handshakes(version, length, data[cur_ptr + 5, length])
+        end
       when TLSTypes::RecordType::ALERT
         logger.info 'Seen TLS Record Alert'
         records << TLSAlertRecord.new(version, length, data[cur_ptr + 5, length])
       when TLSTypes::RecordType::CHANGE_CIPHER_SPEC
         logger.trace 'Change Cipher Spec'
         records << TLSChangeCipherSpecRecord.new(version, length, data[cur_ptr + 5, length])
+        change_cipher_spec_seen = true
       when TLSTypes::RecordType::APPLICATION_DATA
         logger.trace 'ApplicationData'
         records << TLSApplicationDataRecord.new(version, length, data[cur_ptr + 5, length])
