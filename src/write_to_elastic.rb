@@ -85,8 +85,12 @@ class ElasticHelper
 
     meta = {}
     meta[:last_seen] = Time.now.utc.iso8601
-    meta[:scheme_ver] = 0 # TODO
-    meta[:caputre_ver] = 0 # TODO
+    # TODO THIS IS THE SCHEME AND CAPTURE VERSION.
+    #   THIS SHOULD DEFINITELY BE CONFIGURABLE OR AT LEST SIT
+    #   AT A MORE VISIBLE POINT OF THE CODE, SO IT CAN BE
+    #   CHANGED EASIYL IF THE VERSIONS NEED TO BE BUMPED
+    meta[:scheme_ver] = 1
+    meta[:caputre_ver] = 1
     meta[:realm] = realm
     meta[:oui] = mac.split(':')[0,3].join ':'
     meta[:vendor] = MacVendor.by_oid(meta[:oui])
