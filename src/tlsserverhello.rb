@@ -110,7 +110,7 @@ class TLSServerHello
 
     to_ret[:certificate][:additional_trusted] = @additional_trusted[:valid]
     to_ret[:certificate][:complete_additional_chain_length] = @additional_trusted[:chain].length
-    to_ret[:certificate][:additional_trust_anchor] = @additional_trusted[:chain].last.subject.to_s
+    to_ret[:certificate][:additional_trust_anchor] = @additional_trusted[:chain].last.subject.to_s unless @additional_trusted[:chain].last.nil?
 
 
     to_ret
@@ -212,6 +212,9 @@ class TLSServerHello
       when TLSTypes::HandshakeType::CERTIFICATESTATUS
         logger.trace 'TLS ServerHello CERTIFICATESTATUS'
         parse_certificatestatus cur_data[4, length]
+      when TLSTypes::HandshakeType::CERTIFICATE_REQUEST
+        logger.trace 'TLS ServerHello CERTIFICATE_REQUEST'
+        parse_certificaterequest cur_data[4, length]
       else
         logger.warn "Unknown TLS Handshake Type #{type} for the Server Hello"
       end
@@ -327,6 +330,12 @@ class TLSServerHello
   # @return nil
   def parse_certificatestatus(data)
     @ocsp_included = true
+    nil
+  end
+
+  # Parses Certificate Request
+  # @todo This is just a stub, it should be extended.
+  def parse_certificaterequest(dat)
     nil
   end
 

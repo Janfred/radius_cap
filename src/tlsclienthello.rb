@@ -18,12 +18,13 @@ module TLSTypes
   end
   # Supported Handshake Types
   module HandshakeType
-    CLIENTHELLO       =  1
-    SERVERHELLO       =  2
-    CERTIFICATE       = 11
-    SERVERKEYEXCHANGE = 12
-    SERVERHELLODONE   = 14
-    CERTIFICATESTATUS = 22
+    CLIENTHELLO         =  1
+    SERVERHELLO         =  2
+    CERTIFICATE         = 11
+    SERVERKEYEXCHANGE   = 12
+    CERTIFICATE_REQUEST = 13
+    SERVERHELLODONE     = 14
+    CERTIFICATESTATUS   = 22
   end
 
   module Alerts
