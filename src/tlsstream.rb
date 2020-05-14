@@ -125,8 +125,8 @@ class TLSHandshakeRecord < TLSRecord
     while cur_ptr < data.length
       cur_type = data[cur_ptr]
       cur_length = data[cur_ptr + 1] * 256 * 256 + data[cur_ptr + 2] * 256 + data[cur_ptr + 3]
-      to_return << TLSHandshakeRecord.new(version, length, data[cur_ptr, cur_length + 4])
-      cur_ptr += 4 + cur_length
+      to_return << TLSHandshakeRecord.new(version, cur_length + 4, data[cur_ptr, cur_length + 4])
+      cur_ptr += cur_length + 4
     end
 
     raise TLSParseError.new "The indicated lengths did not match with the data" unless cur_ptr == data.length
