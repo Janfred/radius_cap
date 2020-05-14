@@ -122,11 +122,15 @@ class TLSHandshakeRecord < TLSRecord
     cur_ptr = 0
     to_return = []
 
+    logger.trace "Parsing TLS Handshake Record with indicated length #{length} and data length #{data.length}"
     while cur_ptr < data.length
+      logger.trace "First data: #{data[0,4].inspect}"
       cur_type = data[cur_ptr]
       cur_length = data[cur_ptr + 1] * 256 * 256 + data[cur_ptr + 2] * 256 + data[cur_ptr + 3]
+      logger.trace "Type: #{cur_type}, Length: #{cur_length}"
       to_return << TLSHandshakeRecord.new(version, cur_length + 4, data[cur_ptr, cur_length + 4])
       cur_ptr += cur_length + 4
+      logger.trace "New pointer position: #{cur_ptr}"
     end
 
     raise TLSParseError.new "The indicated lengths did not match with the data" unless cur_ptr == data.length
