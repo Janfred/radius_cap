@@ -3,14 +3,16 @@ class TLSStream
 
   include SemanticLogger::Loggable
 
-  attr_reader :tlspackets
+  attr_reader :tlspackets, :alerted
   @tlspackets
+  @alerted
 
   # Initialize new TLS Stream based on EAP-TLS Packets
   # @param eaptlspackets
   def initialize(eaptlspackets)
     logger.trace("Initialize TLS Stream with #{eaptlspackets.length} packets")
     @tlspackets = []
+    @alerted = false
     seen_change_cipher_spec = false
     eaptlspackets.each do |eaptlspkt|
       cur_records = TLSRecord.parse(eaptlspkt)
@@ -23,7 +25,11 @@ class TLSStream
         end
         # TODO THIS IS JUST HERE TO GET A DUMP FOR DEBUGGING
         #  This is probably a rare case and I need to decide how to deal with it.
-        raise TLSParseError.new "THIS IS AN ALERT!" if cur_rec.is_a? TLSAlertRecord
+        if cur_rec.is_a? TLSAlertRecord
+          logger.warn "Seen a TLS Alert #{cur_rec.ispect_alert}"
+          @alerted = true
+          return
+        end
         i += 1
       end
       @tlspackets << cur_records
@@ -68,7 +74,7 @@ class TLSRecord
       case type
       when TLSTypes::RecordType::HANDSHAKE
         logger.trace 'TLS Handshake Record'
-        records << TLSHandshakeRecord.new(version, length, data[cur_ptr + 5, length])
+        records += TLSHandshakeRecord.parse_handshakes(version, length, data[cur_ptr + 5, length])
       when TLSTypes::RecordType::ALERT
         logger.info 'Seen TLS Record Alert'
         records << TLSAlertRecord.new(version, length, data[cur_ptr + 5, length])
@@ -111,6 +117,22 @@ class TLSHandshakeRecord < TLSRecord
     @handshake_length = data[1] * 256 * 256 + data[2] * 256 + data[3]
     raise TLSParseError.new "The Indicated length did not match the actual length" if @data.length - 4 != @handshake_length
   end
+
+  def self.parse_handshakes(version, length, data)
+    cur_ptr = 0
+    to_return = []
+
+    while cur_ptr <= data.length
+      cur_type = data[cur_ptr]
+      cur_length = data[cur_ptr + 1] * 256 * 256 + data[cur_ptr + 2] * 256 + data[cur_ptr + 3]
+      to_return << TLSHandshakeRecord.new(version, length, data[cur_ptr, cur_length + 4])
+      cur_ptr += 4 + cur_length
+    end
+
+    raise TLSParseError.new "The indicated lengths did not match with the data" unless cur_ptr == data.length
+
+    to_return
+  end
 end
 
 class TLSAlertRecord < TLSRecord
@@ -120,6 +142,28 @@ class TLSAlertRecord < TLSRecord
   def initialize(version, length, data)
     super
     raise TLSParseError.new "The Alert must be exactly 2 Bytes long" if data.length != 2
+    @alert_level = data[0]
+    @alert_code = data[1]
+  end
+
+  def ispect_alert
+    "Level #{@alert_level} (#{level_string}): #{code_string} (#{@alert_code})"
+  end
+
+  private
+  def level_string
+    case @alert_level
+    when 2
+      "Fatal"
+    when 1
+      "Warning"
+    else
+      "Unknown"
+    end
+  end
+
+  def code_string
+    TLSTypes::Alerts.get_altert_name_by_code(@alert_code)
   end
 end
 

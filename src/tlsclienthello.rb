@@ -27,6 +27,7 @@ module TLSTypes
   end
 
   module Alerts
+    DECRYPT_ERROR    = 0x33
     PROTOCOL_VERSION = 0x46
 
     # Get alert name by the given code

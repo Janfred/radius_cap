@@ -32,6 +32,11 @@ class TLSServerHello
   # Not yet used
   attr_reader :additional
 
+  # Sets if the ServerHelloDone Record was captured.
+  # This will be false until the Record was seen and remains false if it is
+  # a session resumption.
+  attr_reader :serverhellodone
+
 
   # Converts parsed TLS Server Hello to Hash
   # @todo Lacks support for TLSv1.3
@@ -159,7 +164,26 @@ class TLSServerHello
   # @return New Instance of TLSServerHello
   def initialize(data)
     @ocsp_included = false
+    @additional = {}
+    @serverhellodone = false
     data.each do |cur_record|
+      if cur_record.is_a? TLSChangeCipherSpecRecord
+        # If this is the case, this probably is a Session resumption.
+        # We have to abort here, because the server will continue with encrypted
+        # data, but we have to save the fact that the session was resumed.
+        if @serverhellodone
+          # The ChangeCipherSpec came after the ServerHelloDone, so it is
+          # normal operation. We can just break and do nothing more.
+          break
+        else
+          # If the ChangeCipherSpec is before we capture the ServerHelloDone
+          # it probably is a Session Resumption.
+          # We save that before we break.
+          logger.info "Seen a probable Session Resumption"
+          @additional[:resumption] = true
+          break
+        end
+      end
       raise ProtocolStackError.new 'The Record in the TLS Server Hello was not a TLSHandshakeRecord' unless cur_record.is_a? TLSHandshakeRecord
       raise ProtocolStackError.new 'The Handshake type was not set' if cur_record.handshake_type.nil?
 
@@ -301,10 +325,10 @@ class TLSServerHello
     nil
   end
 
-  # Parses ServerHelloDone. This does nothing for now.
-  # @todo Once the parsing is advancing, this might do some housekeeping or signalling
+  # Parses ServerHelloDone. This just sents the serverhellodone to true
   # @return nil
   def parse_serverhellodone(data)
+    @serverhellodone = true
     # Nothing to do.
     nil
   end

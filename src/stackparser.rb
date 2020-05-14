@@ -53,6 +53,10 @@ class StackParser
           next
         end
         result = ProtocolStack.new to_parse
+
+        # If the DontSave flag is set, we just skip this.
+        next if result.dontsave
+
         to_insert_in_elastic = result.to_h
         logger.debug 'Complete Data: ' + to_insert_in_elastic.to_s
 
@@ -89,7 +93,7 @@ class ProtocolStack
 
   include SemanticLogger::Loggable
 
-  attr_reader :radius_data, :radius_stream, :eap_data, :eap_stream, :eap_tls_data, :eap_tls_stream, :tls_data
+  attr_reader :radius_data, :radius_stream, :eap_data, :eap_stream, :eap_tls_data, :eap_tls_stream, :tls_data, :dontsave
 
   def initialize(to_parse)
     initialize_variables
@@ -278,11 +282,11 @@ class ProtocolStack
     case @eap_stream.eap_type
     when nil
       # This EAP Stream contains most likely a failed agreement between Client and server
-      logger.info "Seen Failed EAP Communication."
+      logger.debug "Seen Failed EAP Communication."
     when EAPPacket::Type::TTLS,
         EAPPacket::Type::PEAP,
         EAPPacket::Type::TLS
-      logger.info 'Found an EAP-TLS based EAP Type'
+      logger.debug 'Found an EAP-TLS based EAP Type'
       @eap_tls_stream = EAPTLSStream.new(@eap_stream.eap_payload_packets)
       parse_from_eaptls
 
@@ -307,6 +311,12 @@ class ProtocolStack
     # Parse EAP-TLS Metadata
     @tls_stream = TLSStream.new @eap_tls_stream.packets
 
+    # If we captured an alert, we dont need to save it.
+    if @tls_stream.alerted
+      @dontsave = true
+      return
+    end
+
     tlspackets = @tls_stream.tlspackets
     # Now we have some assumptions. This might be a little
     # TLS Client Hello
@@ -321,6 +331,11 @@ class ProtocolStack
     tlsserverhello = TLSServerHello.new(tlspackets[1])
     @tls_data[:tlsserverhello] = tlsserverhello.to_h
 
+    if tlsserverhello.additional[:resumption]
+      # If this is a Session Resumption, we don't save the data but just log the incident.
+      @dontsave = true
+    end
+
     logger.debug 'TLS Data: ' + @tls_data.to_s
   end
 
@@ -333,5 +348,6 @@ class ProtocolStack
     @eap_tls_data = {}
     @eap_tls_stream = nil
     @tls_data = {}
+    @dontsave = false
   end
 end

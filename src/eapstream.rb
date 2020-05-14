@@ -218,7 +218,7 @@ class EAPTLSStream
           # inside the TLS Tunnel
           # This Packet is not yet the Accept-Packet, so the client needs to send an acknowledgement.
           # Practically, this will result in an empty packet inserted in the @packets.
-          logger.info 'Captured an acknowledgement packet after a Fragment without MoreFragments set'
+          logger.debug 'Captured an acknowledgement packet after a Fragment without MoreFragments set'
         end
         cur_pkt_data += frag.payload
         more_fragments = frag.more_fragments?
