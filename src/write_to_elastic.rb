@@ -90,7 +90,7 @@ class ElasticHelper
     #   AT A MORE VISIBLE POINT OF THE CODE, SO IT CAN BE
     #   CHANGED EASIYL IF THE VERSIONS NEED TO BE BUMPED
     meta[:scheme_ver] = 1
-    meta[:caputre_ver] = 1
+    meta[:capture_ver] = 1
     meta[:realm] = realm
     meta[:oui] = mac.split(':')[0,3].join ':'
     meta[:vendor] = MacVendor.by_oid(meta[:oui])
