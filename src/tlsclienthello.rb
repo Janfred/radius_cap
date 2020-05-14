@@ -27,8 +27,19 @@ module TLSTypes
   end
 
   module Alerts
-    DECRYPT_ERROR    = 0x33
-    PROTOCOL_VERSION = 0x46
+    HANDSHAKE_FAILURE       = 0x28
+    NO_CERTIFICATE          = 0x29
+    BAD_CERTIFICATE         = 0x2A
+    UNSUPPORTED_CERTIFICATE = 0x2B
+    CERTIFICATE_REVOKED     = 0x2C
+    CERTIFICATE_EXPIRED     = 0x2D
+    CERTIFICATE_UNKNOWN     = 0x2E
+    ILLEGAL_PARAMETER       = 0x2F
+    UNKNOWN_CA              = 0x30
+    ACCESS_DENIED           = 0x31
+    DECODE_ERROR            = 0x32
+    DECRYPT_ERROR           = 0x33
+    PROTOCOL_VERSION        = 0x46
 
     # Get alert name by the given code
     # @param code [Byte] Code of the Alert
