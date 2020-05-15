@@ -16,27 +16,35 @@ class EAPPacket
     FAILURE  = 4
   end
   # Constants for EAP Types
+  # https://www.iana.org/assignments/eap-numbers/eap-numbers.xhtml
   module Type
+    # Reserved code. This code should never be transmitted
+    RESERVED       = 0
     # Sent by the Client in the first EAP Message.
-    IDENTITY     =  1
+    IDENTITY       =  1
     # (Also known as `Legacy Nak`) Rejection of the proposed EAP-Type. Sent by the Client together with a desired EAP Type
-    NAK          =  3
+    NAK            =  3
     # MD5 Challenge Type
     # @todo This is weird. This should actually never occur in the Eduroam environment because it is insecure. Maybe we should emit a warning once we see it
-    MD5CHALLENGE =  4
+    MD5CHALLENGE   =  4
     # TLS Type (not TTLS or PEAP)
-    TLS          = 13
+    TLS            = 13
+    # EAP-Cisco Wireless
+    # @todo I don't know what this is. Subject to research
+    CISCO_WIRELESS = 17
     # TTLS Type
-    TTLS         = 21
+    TTLS           = 21
     # PEAP Type
-    PEAP         = 25
+    PEAP           = 25
     # MSEAP Type
     # @todo I don't know what this is. Subject to research
-    MSEAP        = 26
+    MSEAP          = 26
     # FAST Type
-    FAST         = 43
+    # @todo This is also interesting to research
+    FAST           = 43
     # EAP-PWD Type
-    EAPPWD       = 52
+    # @todo EAP-PWD is not yet analysed, but it will be interesting to analyse it.
+    EAPPWD         = 52
 
     # Get EAP Type by the given code
     # @param code [Byte] Code of the EAP Type
