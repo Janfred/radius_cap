@@ -46,6 +46,31 @@ Thread.start do
     begin
       ElasticHelper.elasticdata.synchronize do
         ElasticHelper.waitcond.wait_while { ElasticHelper.elasticdata.empty? }
+        toins = ElasticHelper.elasticdata.shift
+
+        logger.trace 'To insert: ' + toins.to_s
+
+        username = nil
+        mac = nil
+        if toins[:radsec] && toins[:radsec][:attributes] && toins[:radsec][:attributes][:username]
+          username = toins[:radsec][:attributes][:username]
+          logger.trace 'Username from RADSEC ' + username
+        end
+        if toins[:radsec] && toins[:radsec][:attributes] && toins[:radsec][:attributes][:mac]
+          mac = toins[:radsec][:attributes][:mac]
+          logger.trace 'MAC from RADSEC ' + mac
+        end
+
+        filters = @config[:elastic_filter].select { |x|
+          (x[:username].nil? || username.nil? || x[:username] == username) &&
+              (x[:mac].nil? || mac.nil? || x[:mac] == mac)
+        }
+
+        if filters.length == 0
+          ElasticHelper.insert_into_elastic(toins, @config[:debug], @config[:noelastic], @config[:filewrite])
+        else
+          logger.debug 'Filtered out Elasticdata'
+        end
       end
     rescue => e
       logger.error("Error in Elastic Write", exception: e)
