@@ -30,7 +30,7 @@ require_relative './src/tlsstream.rb'
 
 SemanticLogger.default_level = @config[:debug_level]
 SemanticLogger.add_appender(file_name: 'development.log')
-SemanticLogger.add_appender(io: STDOUT, formatter: :color) if @config[:debug
+SemanticLogger.add_appender(io: STDOUT, formatter: :color) if @config[:debug]
 
 logger = SemanticLogger['radius_cap']
 logger.info("Requirements done. Loading radsecproxy_cap.rb functions")
@@ -91,41 +91,44 @@ logger.info("Start Packet capture")
 begin
   socket = UNIXSocket.new('/tmp/radsecproxy.sock')
   bytes = ""
-  bytes += socket.recv(1500)
+  loop do
+    bytes += socket.recv(1500)
 
-  while bytes.length < 3
-    i = 0
-    request = bytes[] == 0
-    i += 1
+    while bytes.length < 3
+      i = 0
+      request = bytes[] == 0
+      i += 1
 
-    from_length = bytes[i, 2].unpack('n').first
-    i += 2
+      from_length = bytes[i, 2].unpack('n').first
+      i += 2
 
-    break if bytes.length < i + from_length + 2
+      break if bytes.length < i + from_length + 2
 
-    from = bytes[i, from_length]
-    i += from_length
+      from = bytes[i, from_length]
+      i += from_length
 
-    to_length = bytes[i, 2].unpack('n').first
-    i += 2
+      to_length = bytes[i, 2].unpack('n').first
+      i += 2
 
-    break if bytes.length < i + to_length
+      break if bytes.length < i + to_length
 
-    to = bytes[i, to_length]
-    i += to_length
+      to = bytes[i, to_length]
+      i += to_length
 
-    break if bytes.length < i+4
+      break if bytes.length < i+4
 
-    radius_length = bytes[i+2,2].unpack('n').first
+      radius_length = bytes[i+2,2].unpack('n').first
 
-    break if bytes.length < i+radius_length
+      break if bytes.length < i+radius_length
 
-    radius_pkt = bytes[i, radius_length]
+      radius_pkt = bytes[i, radius_length]
 
-    bytes = bytes[i+radius_length .. -1]
+      bytes = bytes[i+radius_length .. -1]
 
-    pktbuf.synchronize do
-      pktbuf << {request: request, from: from, to: to, pkt: radius_pkt}
+      pktbuf.synchronize do
+        logger.trace("Inserting Packet to pktbuf (from #{from} to #{to}")
+        pktbuf << {request: request, from: from, to: to, pkt: radius_pkt}
+      end
     end
   end
 rescue Interrupt
