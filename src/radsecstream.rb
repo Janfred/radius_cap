@@ -13,6 +13,8 @@ class RadsecStream
   @server
   @last_from_server
   @packets
+  @username
+  @callingstationid
 
   def initialize(pkt,client,server)
     @time_created = Time.now
@@ -21,13 +23,45 @@ class RadsecStream
     @current_state = pkt.state
     @last_from_server = false
     @packets = [pkt]
+    @client = client
+    @server = server
+    @username = nil
+    username_attrs = pkt.attributes.filter{ |x| x[:type] == RadiusPacket::Attribute::USERNAME}
+    if username_attrs.length > 0
+      @username = username_attrs.first[:data]
+    end
+    @callingstationid = nil
+    callingstationid_attrs = pkt.attributes.filter{ |x| x[:type] == RadiusPacket::Attribute::CALLINGSTATIONID}
+    if callingstationid_attrs.length > 0
+      @callingstationid = callingstationid_attrs.first[:data]
+    end
   end
 
   def add_request(pkt)
-    # TODO
+    logger.trace("Add Request packet")
+    raise PacketFlowInsertionError unless @last_from_server
+    raise PacketFlowInsertionError if pkt.state != @current_state
+
+    @last_from_server = false
+    @current_pktid = pkt.identifier
+    @last_updated = Time.now
+    @packets << pkt
+    nil
   end
   def add_response(pkt)
-    # TODO
+    logger.trace("Add response packet")
+    raise PacketFlowInsertionError if @last_from_server
+    raise PacketFlowInsertionError if pkt.identifier != @current_pktid
+
+    @last_from_server = true
+    @current_state = pkt.state
+    @last_updated = Time.now
+    @packets << pkt
+
+    if pkt.packettype == RadiusPacket::Type::ACCEPT || pkt.packettype == RadiusPacket::Type::REJECT
+      logger.debug 'Final answer added, notify RadsecStreamHelper'
+      RadsecStreamHelper.notify_flow_done(self)
+    end
   end
 end
 

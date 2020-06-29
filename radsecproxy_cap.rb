@@ -160,6 +160,7 @@ begin
       pktbuf.synchronize do
         logger.trace("Inserting Packet to pktbuf (from #{from} to #{to})")
         pktbuf << {request: request, from: from, to: to, pkt: radius_pkt}
+        empty_cond.signal
       end
     end
   end
