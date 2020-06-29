@@ -26,12 +26,12 @@ class RadsecStream
     @client = client
     @server = server
     @username = nil
-    username_attrs = pkt.attributes.filter{ |x| x[:type] == RadiusPacket::Attribute::USERNAME}
+    username_attrs = pkt.attributes.select{ |x| x[:type] == RadiusPacket::Attribute::USERNAME}
     if username_attrs.length > 0
       @username = username_attrs.first[:data]
     end
     @callingstationid = nil
-    callingstationid_attrs = pkt.attributes.filter{ |x| x[:type] == RadiusPacket::Attribute::CALLINGSTATIONID}
+    callingstationid_attrs = pkt.attributes.select{ |x| x[:type] == RadiusPacket::Attribute::CALLINGSTATIONID}
     if callingstationid_attrs.length > 0
       @callingstationid = callingstationid_attrs.first[:data]
     end
