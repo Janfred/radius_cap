@@ -35,6 +35,8 @@ class RadsecStream
     if callingstationid_attrs.length > 0
       @callingstationid = callingstationid_attrs.first[:data]
     end
+
+    logger.trace "Created RadsecStream for Username #{@username} MAC #{@callingstationid} from #{@client} to #{@server} and pktid #{@current_pktid}"
   end
 
   def add_request(pkt)
