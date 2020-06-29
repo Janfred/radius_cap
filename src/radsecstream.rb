@@ -111,8 +111,8 @@ class RadsecStreamHelper
   def insert_response(pkt, server, client)
     logger.trace("Inserting packet from server")
     p = @known_streams.select { |x|
-      x.client == server &&
-      x.server == client &&
+      x.client == client &&
+      x.server == server &&
       x.current_pktid == pkt.identifier
     }
 
