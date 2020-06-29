@@ -96,7 +96,7 @@ begin
 
     while bytes.length > 3
       i = 0
-      request = bytes[0] == 0
+      request = bytes[0] == "\0"
       logger.trace "Request" if request
       logger.trace "Response" unless request
       i += 1
