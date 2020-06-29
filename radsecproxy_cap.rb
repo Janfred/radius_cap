@@ -97,6 +97,8 @@ begin
     while bytes.length > 3
       i = 0
       request = bytes[0] == 0
+      logger.trace "Request" if request
+      logger.trace "Response" unless request
       i += 1
 
       from_length = bytes[i, 2].unpack('n').first
@@ -131,7 +133,7 @@ begin
       bytes = bytes[i+radius_length .. -1]
 
       pktbuf.synchronize do
-        logger.trace("Inserting Packet to pktbuf (from #{from} to #{to}")
+        logger.trace("Inserting Packet to pktbuf (from #{from} to #{to})")
         pktbuf << {request: request, from: from, to: to, pkt: radius_pkt}
       end
     end
