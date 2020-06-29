@@ -101,8 +101,8 @@ class RadsecStreamHelper
       if p.empty?
         logger.warn "Could not find EAP State 0x#{pkt.state.pack('C*').unpack('H*').first}"
         return
-      else p.length > 1
-      logger.warn "Found multiple EAP States for 0x#{pkt.state.pack('C*').unpack('H*').first}"
+      elsif p.length > 1
+        logger.warn "Found multiple EAP States for 0x#{pkt.state.pack('C*').unpack('H*').first}"
       end
       flow = p.first
       logger.trace "Insert Packet in RadsecStream"
@@ -145,7 +145,7 @@ class RadsecStreamHelper
 
   def self.notify_flow_done(pktflow)
     logger.trace("Notify Packetflow is done")
-    RadsecStream.instance.priv_notify_flow_done(pktflow)
+    RadsecStreamHelper.instance.priv_notify_flow_done(pktflow)
   end
 
   def priv_notify_flow_done(pktflow)
