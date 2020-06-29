@@ -94,30 +94,35 @@ begin
   loop do
     bytes += socket.recv(1500)
 
-    while bytes.length < 3
+    while bytes.length > 3
       i = 0
       request = bytes[] == 0
       i += 1
 
       from_length = bytes[i, 2].unpack('n').first
+      logger.trace "From Length: #{from_length}"
       i += 2
 
       break if bytes.length < i + from_length + 2
 
       from = bytes[i, from_length]
+      logger.trace "From: #{from}"
       i += from_length
 
       to_length = bytes[i, 2].unpack('n').first
+      logger.trace "To Length: #{to_length}"
       i += 2
 
       break if bytes.length < i + to_length
 
       to = bytes[i, to_length]
+      logger.trace "To: #{to}"
       i += to_length
 
       break if bytes.length < i+4
 
       radius_length = bytes[i+2,2].unpack('n').first
+      logger.trace "RADIUS Length: #{radius_length}"
 
       break if bytes.length < i+radius_length
 
