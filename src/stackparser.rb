@@ -239,7 +239,7 @@ class ProtocolStack
     else
       @radius_data[:attributes][:mac] = mac_a.first[:data].pack('C*')
     end
-    normalize_mac!
+    normalize_mac! @radius_data
 
     logger.debug 'Radius Data: ' + @radius_data.to_s
 
@@ -287,7 +287,7 @@ class ProtocolStack
     else
       @radsec_data[:attributes][:mac] = mac_a.first[:data].pack('C*')
     end
-    normalize_mac!
+    normalize_mac! @radsec_data
 
     logger.debug 'Radsec Data: ' + @radsec_data.to_s
     @eap_stream = EAPStream.new(@radsec_stream)
@@ -295,15 +295,15 @@ class ProtocolStack
   end
 
   # Normalize the MAC Address saved in @radius_data[:attributes][:mac]
-  def normalize_mac!
-    raise ProtocolStackError.new "MAC Address is not available!" if @radius_data[:attributes][:mac].nil?
-    @radius_data[:attributes][:mac].downcase!
-    m_d = @radius_data[:attributes][:mac].match /^([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2})$/
+  def normalize_mac!(data)
+    raise ProtocolStackError.new "MAC Address is not available!" if data[:attributes][:mac].nil?
+    data[:attributes][:mac].downcase!
+    m_d = data[:attributes][:mac].match /^([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2})$/
     if m_d && m_d.length == 7
-      @radius_data[:attributes][:mac] = m_d[1, 6].join ":"
+      data[:attributes][:mac] = m_d[1, 6].join ":"
     else
-      logger.warn "Found bad formatted or invalid MAC-Address: #{@radius_data[:attributes][:mac]} Falling back to default."
-      @radius_data[:attributes][:mac] = "ff:ff:ff:ff:ff:ff"
+      logger.warn "Found bad formatted or invalid MAC-Address: #{data[:attributes][:mac]} Falling back to default."
+      data[:attributes][:mac] = "ff:ff:ff:ff:ff:ff"
     end
   end
 
