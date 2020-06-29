@@ -17,6 +17,7 @@ require_relative './localconfig.rb'
 require_relative './src/write_to_elastic.rb'
 require_relative './src/macvendor.rb'
 require_relative './src/radiusstream.rb'
+require_relative './src/radsecstream.rb'
 require_relative './src/eapstream.rb'
 require_relative './src/stackparser.rb'
 require_relative './src/tlsstream.rb'
@@ -89,7 +90,7 @@ Thread.start do
       rp = nil
 
       begin
-        rp = RadiusPacket.new(pkt[:pkt].pack('C*'))
+        rp = RadiusPacket.new(pkt[:pkt].unpack('C*'))
       rescue PacketLengthNotValidError => e
         puts "PacketLengthNotValidError"
         puts e.message
