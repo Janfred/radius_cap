@@ -91,7 +91,7 @@ class RadsecStreamHelper
       logger.trace("Creating a new RadsecStream")
       @known_streams << RadsecStream.new(pkt, client, server)
     else
-      p = @known_streams.select {|x| x.current_state == pkt.state }
+      p = @known_streams.select {|x| x.current_state == pkt.state && x.client == client && x.server == server }
       if p.empty?
         logger.warn "Could not find EAP State 0x#{pkt.state.pack('C*').unpack('H*').first}"
         return
@@ -107,8 +107,8 @@ class RadsecStreamHelper
   def insert_response(pkt, server, client)
     logger.trace("Inserting packet from server")
     p = @known_streams.select { |x|
-      x.src_client == server &&
-      x.dst_client == client &&
+      x.client == server &&
+      x.client == client &&
       x.current_pktid == pkt.identifier
     }
 
