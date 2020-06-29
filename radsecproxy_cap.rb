@@ -96,7 +96,7 @@ begin
 
     while bytes.length > 3
       i = 0
-      request = bytes[] == 0
+      request = bytes[0] == 0
       i += 1
 
       from_length = bytes[i, 2].unpack('n').first
