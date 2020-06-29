@@ -26,7 +26,7 @@ class EAPStream
   attr_reader :eap_packets, :eap_type, :initial_eap_type, :wanted_eap_types, :first_eap_payload, :eap_identity
 
   # Initialize the EAP Stream. Parses the EAP Type and matches the EAP fragmentation (not the EAP-TLS Fragmentation!)
-  # @param pktstream [RadiusStream] Packet Stream
+  # @param pktstream [RadiusStream,RadsecStream] Packet Stream
   # @raise [EAPStreamError] if the EAP Stream was invalid in any way.
   # @todo I should read the EAP RFC. I suspect that the EAP Communication is always {Response, Request}+,Response,[Success|Failure] but I'm not sure about that
   def initialize(pktstream)

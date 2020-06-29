@@ -93,7 +93,7 @@ class ProtocolStack
 
   include SemanticLogger::Loggable
 
-  attr_reader :radius_data, :radius_stream, :eap_data, :eap_stream, :eap_tls_data, :eap_tls_stream, :tls_data, :dontsave
+  attr_reader :radius_data, :radius_stream, :radsec_data, :radsec_stream, :eap_data, :eap_stream, :eap_tls_data, :eap_tls_stream, :tls_data, :dontsave
 
   def initialize(to_parse)
     initialize_variables
@@ -105,6 +105,11 @@ class ProtocolStack
         check_passed_type(RadiusStream, to_parse[:data].class)
         @radius_stream = to_parse[:data]
         parse_from_radius
+      when :radsec
+        # RADSEC Packet
+        check_passed_type(RadsecStream, to_parse[:data].class)
+        @radsec_stream = to_parse[:data]
+        parse_from_radsec
       when :eap
         # EAP Packets
         check_passed_type(EAPStream, to_parse[:data].class)
@@ -129,6 +134,7 @@ class ProtocolStack
   def to_h
     to_ret = {}
     to_ret[:radius] = @radius_data if @radius_data
+    to_ret[:radsec] = @radsec_data if @radsec_data
     to_ret[:eap] = @eap_data if @eap_data
     to_ret[:eaptls] = @eap_tls_data if @eap_tls_data
     to_ret[:tls] = @tls_data if @tls_data
@@ -242,6 +248,52 @@ class ProtocolStack
     parse_from_eap
   end
 
+  # Parse from RADSEC Layer upwards
+  def parse_from_radsec
+    raise ProtocolStackError.new "The RADSEC Stream can not be empty!" if @radsec_stream.nil?
+    raise ProtocolStackError.new "The RADSEC Stream is not an RadsecStream Object" unless @radsec_stream.is_a? RadsecStream
+    raise ProtocolStackError.new "The RadsecStream seems to be empty!" if @radsec_stream.packets.length == 0
+
+    @radsec_data[:information] = {}
+    @radsec_data[:information][:roundtrips] = @radsec_stream.packets.length
+    @radsec_data[:information][:time] = @radsec_stream.last_updated - @radsec_stream.time_created
+    @radsec_data[:information][:max_server_pkt_size] = 0
+    @radsec_data[:information][:max_client_pkt_size] = 0
+    @radsec_data[:information][:total_server_pkt_size] = 0
+    @radsec_data[:information][:total_client_pkt_size] = 0
+
+    lastpkt = @radsec_stream.packets.last
+
+    raise ProtocolStackError if lastpkt.nil?
+    raise ProtocolStackError unless lastpkt.is_a? RadiusPacket
+    @radsec_data[:information][:accept] = lastpkt.packettype == RadiusPacket::Type::ACCEPT
+    @radsec_data[:information].merge!(parse_packetsize(@radsec_stream.packets) {|x| x.raw_data.length })
+
+    @radsec_data[:attributes] = {}
+    firstpkt = @radsec_stream.packets.first
+
+    raise ProtocolStackError if firstpkt.nil?
+
+    username_a = firstpkt.attributes.select { |x| x[:type] == RadiusPacket::Attribute::USERNAME }
+    raise ProtocolStackError.new "The First Radius Packet did not not contain exactly one Username attribute" if username_a.length != 1
+    @radsec_data[:attributes][:username] = username_a.first[:data].pack('C*')
+
+    mac_a = firstpkt.attributes.select { |x| x[:type] == RadiusPacket::Attribute::CALLINGSTATIONID }
+    if mac_a.length != 1
+      logger.warn "Seen a Radsec Stream with not exactly one Calling Station ID Attribute"
+    end
+    if mac_a.length == 0
+      @radsec_data[:attributes][:mac] = "ff:ff:ff:ff:ff:ff"
+    else
+      @radsec_data[:attributes][:mac] = mac_a.first[:data].pack('C*')
+    end
+    normalize_mac!
+
+    logger.debug 'Radsec Data: ' + @radsec_data.to_s
+    @eap_stream = EAPStream.new(@radsec_stream)
+    parse_from_eap
+  end
+
   # Normalize the MAC Address saved in @radius_data[:attributes][:mac]
   def normalize_mac!
     raise ProtocolStackError.new "MAC Address is not available!" if @radius_data[:attributes][:mac].nil?
@@ -343,6 +395,8 @@ class ProtocolStack
   def initialize_variables
     @radius_data = {}
     @radius_stream = nil
+    @radsec_data = {}
+    @radsec_stream = nil
     @eap_data = {}
     @eap_stream = nil
     @eap_tls_data = {}
