@@ -11,6 +11,7 @@ variables:
 .beforescript: &beforescript
   - apt-get update
   - apt-get install -y libpcap-dev
+  - gem install bundler
   - bundle check || bundle install
 
 pages:
