@@ -62,17 +62,23 @@ class ElasticHelper
   def self.convert_data_to_elasticsearch(data)
 
     # Get Username and MAC-Address and remove it from the data
-    username = ""
+    username = nil
     if data[:radius] && data[:radius][:attributes] && data[:radius][:attributes][:username]
       logger.trace 'Username from RADIUS ' + data[:radius][:attributes][:username]
       username = data[:radius][:attributes][:username]
       data[:radius][:attributes].delete :username
+    end
+    if data[:radsec] && data[:radsec][:attributes] && data[:radsec][:attributes][:username]
+      logger.trace 'Username from Radsec ' + data[:radsec][:attributes][:username]
+      username = data[:radsec][:attributes][:username]
+      data[:radsec][:attributes].delete :username
     end
     if data[:eap] && data[:eap][:information] && data[:eap][:information][:eap_identity]
       logger.trace 'Username from EAP ' + data[:eap][:information][:eap_identity]
       username ||= data[:eap][:information][:eap_identity]
       data[:eap][:information].delete :eap_identity
     end
+    username ||= ""
 
     realm = username.split('@')[1]
 
@@ -81,6 +87,11 @@ class ElasticHelper
       logger.trace 'MAC from RADIUS ' + data[:radius][:attributes][:mac]
       mac = data[:radius][:attributes][:mac]
       data[:radius][:attributes].delete :mac
+    end
+    if data[:radsec] && data[:radsec][:attributes] && data[:radsec][:attributes][:mac]
+      logger.trace 'MAC from Radsec ' + data[:radsec][:attributes][:mac]
+      mac = data[:radsec][:attributes][:mac]
+      data[:radsec][:attributes].delete :mac
     end
 
     meta = {}
