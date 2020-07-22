@@ -102,7 +102,7 @@ Thread.start do
       end
 
       begin
-        RadsecStreamHelper.add_packet(rp, pkt[:request], pkt[:from], pkt[:to])
+        RadsecStreamHelper.add_packet(rp, pkt[:request], [pkt[:from], pkt[:from_sock]], [pkt[:to], pkt[:to_sock]])
       rescue => e
         puts "Error in Packetflow!"
         puts e.message
@@ -120,32 +120,49 @@ begin
   loop do
     bytes += socket.recv(1500)
 
-    while bytes.length > 3
+    while bytes.length > 11
+
+      # Check if the packet is a Request or a response
       i = 0
       request = bytes[0] == "\0"
       logger.trace "Request" if request
       logger.trace "Response" unless request
       i += 1
 
+      # Now we unpack the "From" length
       from_length = bytes[i, 2].unpack('n').first
       logger.trace "From Length: #{from_length}"
       i += 2
 
-      break if bytes.length < i + from_length + 2
+      break if bytes.length < i + from_length + 6
+      # The +6 contains of 2 Byes From length and 4 Bytes From SocketID
 
+      # And we fetch the actual "From"
       from = bytes[i, from_length]
       logger.trace "From: #{from}"
       i += from_length
 
+      # And we fetch the from socket id
+      from_sock = bytes[i, 4].unpack('N').first
+      i += 4
+
+      # Now we fetch the "To" length
       to_length = bytes[i, 2].unpack('n').first
       logger.trace "To Length: #{to_length}"
       i += 2
 
-      break if bytes.length < i + to_length
+      break if bytes.length < i + to_length + 4
+      # The +4 covers the To SocketID
 
+      # And we fetch the actual "To"
       to = bytes[i, to_length]
       logger.trace "To: #{to}"
       i += to_length
+
+      # And we fetch the To socket id
+      to_sock = bytes[i, 4].unpack('N').first
+      i += 4
+
 
       break if bytes.length < i+4
 
@@ -160,7 +177,7 @@ begin
 
       pktbuf.synchronize do
         logger.trace("Inserting Packet to pktbuf (from #{from} to #{to})")
-        pktbuf << {request: request, from: from, to: to, pkt: radius_pkt}
+        pktbuf << {request: request, from: from, from_sock: from_sock, to: to, to_sock: to_sock, pkt: radius_pkt}
         empty_cond.signal
       end
     end
