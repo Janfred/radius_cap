@@ -3,7 +3,7 @@ require 'singleton'
 class RadsecStream
   include SemanticLogger::Loggable
 
-  attr_reader :time_created, :last_updated, :current_state, :current_pktid, :client, :server, :packets
+  attr_reader :time_created, :last_updated, :current_state, :current_pktid, :client, :server, :packets, :username, :callingstationid
 
   @time_created
   @last_updated
@@ -25,16 +25,8 @@ class RadsecStream
     @packets = [pkt]
     @client = client
     @server = server
-    @username = nil
-    username_attrs = pkt.attributes.select{ |x| x[:type] == RadiusPacket::Attribute::USERNAME}
-    if username_attrs.length > 0
-      @username = username_attrs.first[:data]
-    end
-    @callingstationid = nil
-    callingstationid_attrs = pkt.attributes.select{ |x| x[:type] == RadiusPacket::Attribute::CALLINGSTATIONID}
-    if callingstationid_attrs.length > 0
-      @callingstationid = callingstationid_attrs.first[:data]
-    end
+    @username = pkt.username
+    @callingstationid = pkt.callingstationid
 
     logger.trace "Created RadsecStream for Username #{@username} MAC #{@callingstationid} from #{@client} to #{@server} and pktid #{@current_pktid}"
   end
@@ -81,7 +73,7 @@ class RadsecStreamHelper
 
   # Initialize the known stream and set timeout
   # @param timeout [Integer] number of seconds after a Radsec Stream is considered timed out. Defaults to 60
-  def initialize(timeout=60)
+  def initialize(timeout=10)
     logger.trace("Initialize RadsecStreamHelper with timeout of #{timeout} seconds")
     @known_streams = []
     @timeout = timeout
@@ -103,26 +95,23 @@ class RadsecStreamHelper
 
   def insert_request(pkt, client, server)
     logger.trace("Inserting packet from client")
-    if pkt.state.nil?
-      # This is probably a completely new request
-      logger.trace("Creating a new RadsecStream")
+    p = @known_streams.select { |x|
+      x.current_state == pkt.state &&
+          x.client == client &&
+          x.server == server &&
+          x.username == pkt.username &&
+          x.callingstationid == pkt.callingstationid
+    }
+    if p.empty?
+      logger.trace "Creating a new RadsecStream"
       @known_streams << RadsecStream.new(pkt, client, server)
-    else
-      p = @known_streams.select { |x|
-        x.current_state == pkt.state &&
-        x.client == client &&
-        x.server == server
-      }
-      if p.empty?
-        logger.warn "Could not find EAP State 0x#{pkt.state.pack('C*').unpack('H*').first}"
-        return
-      elsif p.length > 1
-        logger.warn "Found multiple EAP States for 0x#{pkt.state.pack('C*').unpack('H*').first}"
-      end
-      flow = p.first
-      logger.trace "Insert Packet in RadsecStream"
-      flow.add_request(pkt)
+      return
+    elsif p.length > 1
+      logger.warn "Found multiple EAP States for 0x#{pkt.state.pack('C*').unpack('H*').first}"
     end
+    flow = p.first
+    logger.trace "Insert Packet in RadsecStream"
+    flow.add_request(pkt)
   end
 
   def insert_response(pkt, server, client)
