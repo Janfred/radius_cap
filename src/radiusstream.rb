@@ -7,8 +7,9 @@ end
 class RadiusStream
   include SemanticLogger::Loggable
 
-
-  attr_reader :time_created,:last_updated, :current_pktid, :current_state, :udp_src_ip, :udp_dst_ip, :udp_src_port, :udp_dst_port, :packets
+  attr_reader :time_created,:last_updated, :current_pktid, :current_state
+  attr_reader :udp_src_ip, :udp_dst_ip, :udp_src_port, :udp_dst_port
+  attr_reader :packets, :username, :callingstationid
   # Timestamp of the Creation
   @time_created
   # Timestamp of the last update of this specific stream. Used for timeouts.
@@ -28,6 +29,9 @@ class RadiusStream
   @udp_dst_port
   # Indicates if the last package was sent by the server (true) or the client (false)
   @last_from_server
+
+  @username
+  @callingstationid
   # [Array<RadiusPacket>] Array of packets (RadiusPacket) in received order
   @packets
 
@@ -44,6 +48,8 @@ class RadiusStream
     @udp_src_port = pkt.udp[:src][:port]
     @udp_dst_port = pkt.udp[:dst][:port]
     @last_from_server = false
+    @username = pkt.username
+    @callingstationid = pkt.callingstationid
     @packets = [pkt]
   end
 
@@ -162,38 +168,28 @@ class RadiusStreamHelper
   # Private helper to insert a packet sent to the radius
   def insert_packet_to_radius(pkt)
     logger.trace("Try to insert Packet to RADIUS")
-    if pkt.state.nil?
+
+    p = @known_streams.select { |x|
+      x.current_state == pkt.state &&
+          x.udp_src_ip == pkt.udp[:src][:ip] &&
+          x.udp_src_port == pkt.udp[:src][:port] &&
+          x.udp_dst_ip == pkt.udp[:dst][:ip] &&
+          x.udp_dst_port == pkt.udp[:dst][:port] &&
+          x.username == pkt.username &&
+          x.callingstationid == pkt.callingstationid
+    }
+    if p.empty?
       # This is probably a completely new request
-      # TODO There are some realms (looking at you, ads.fraunhofer.de) which don't send a State attribute.
-      #  So this could actually be a packet for an ongoing communication. It can be determined by matching
-      #  the ip address, udp port and packet identifier (increased by one)
-      #  For now we just assume it is a new stream.
       logger.trace("Creating a new RadiusStream")
       @known_streams << RadiusStream.new(pkt)
-    else
-      # If a State exists this is an ongoing communication
-      p = @known_streams.select{ |x| x.current_state == pkt.state }
-      if p.empty?
-        # This is a state we haven't seen before.
-        # It is very likely in the first few seconds after starting the script.
-        # When it occurs afterwards it means that either a previous packet wasn't captured
-
-        # TODO This packet should be included in the debug capture
-        logger.warn "Could not find EAP State 0x#{pkt.state.pack('C*').unpack('H*').first}"
-        return
-      elsif p.length > 1
-        # If this case occurs, we maybe captured a repeated packet. It should not happen at all.
-        # Anyway, we can insert the packet in the flow.
-        # The RadiusPacket class will handle the case that this actually is a resent packet.
-
-        # TODO This packet should be included in the debug capture
-        logger.warn "Found multiple EAP States for 0x#{pkt.state.pack('C*').unpack('H*').first}"
-      end
-      flow = p.first
-      logger.trace("Insert Packet in RadiusStream")
-      flow.add_packet_to_radius(pkt)
+    elsif p.length > 1
+      logger.warn "Found multiple Streams for State #{pkt.state.pack('C*').unpack('H*')}" unless pkt.state.nil?
     end
-  end
+
+    flow = p.first
+    logger.trace("Insert Packet in RadiusStream")
+    flow.add_packet_to_radius(pkt)
+    end
 
   # Private helper to insert a packet sent from the radius
   # @param pkt [RadiusPacket] Packet to insert

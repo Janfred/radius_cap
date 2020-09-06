@@ -28,6 +28,7 @@ require_relative './src/tlsstream.rb'
 @config[:filewrite] = false if @config[:filewrite].nil?
 @config[:debug_level] ||= :warn
 @config[:elastic_filter] ||= []
+@config[:socket_files] ||= ['/tmp/radsecproxy.sock']
 
 SemanticLogger.default_level = @config[:debug_level]
 SemanticLogger.add_appender(file_name: 'development.log')
@@ -36,9 +37,12 @@ SemanticLogger.add_appender(io: STDOUT, formatter: :color) if @config[:debug]
 logger = SemanticLogger['radius_cap']
 logger.info("Requirements done. Loading radsecproxy_cap.rb functions")
 
-pktbuf = []
-pktbuf.extend(MonitorMixin)
-empty_cond = pktbuf.new_cond
+@localvars = {}
+@localvars[:logger] = logger
+@localvars[:pktbuf] = []
+@localvars[:pktbuf].extend(MonitorMixin)
+@localvars[:empty_cond] = @localvars[:pktbuf].new_cond
+
 
 ElasticHelper.initialize_elasticdata @config[:debug]
 
@@ -82,10 +86,10 @@ end
 logger.info("Start Packet parsing")
 Thread.start do
   loop do
-    pktbuf.synchronize do
-      empty_cond.wait_while { pktbuf.empty? }
+    @localvars[:pktbuf].synchronize do
+      @localvars[:empty_cond].wait_while { @localvars[:pktbuf].empty? }
 
-      pkt = pktbuf.shift
+      pkt = @localvars[:pktbuf].shift
 
       rp = nil
 
@@ -102,7 +106,7 @@ Thread.start do
       end
 
       begin
-        RadsecStreamHelper.add_packet(rp, pkt[:request], [pkt[:from], pkt[:from_sock]], [pkt[:to], pkt[:to_sock]])
+        RadsecStreamHelper.add_packet(rp, pkt[:request], [pkt[:from], pkt[:from_sock], pkt[:source]], [pkt[:to], pkt[:to_sock], pkt[:source]])
       rescue => e
         puts "Error in Packetflow!"
         puts e.message
@@ -112,10 +116,10 @@ Thread.start do
   end
 end
 
-socket = nil
-logger.info("Start Packet capture")
-begin
-  socket = UNIXSocket.new('/tmp/radsecproxy.sock')
+def socket_cap_start(path)
+  socket = UNIXSocket.new(path)
+  logger = @localvars[:logger]
+
   bytes = ""
   loop do
     bytes += socket.recv(1500)
@@ -175,25 +179,39 @@ begin
 
       bytes = bytes[i+radius_length .. -1]
 
-      pktbuf.synchronize do
+      @localvars[:pktbuf].synchronize do
         logger.trace("Inserting Packet to pktbuf (from #{from} to #{to})")
-        pktbuf << {request: request, from: from, from_sock: from_sock, to: to, to_sock: to_sock, pkt: radius_pkt}
-        empty_cond.signal
+        @localvars[:pktbuf] << {source: path, request: request, from: from, from_sock: from_sock, to: to, to_sock: to_sock, pkt: radius_pkt}
+        @localvars[:empty_cond].signal
       end
     end
   end
+end
+
+socket_threads = []
+logger.info("Start Packet capture")
+begin
+  @config[:socket_files].each do |path|
+    socket_threads << Thread.new do
+      socket_cap_start(path)
+    end
+  end
+  sleep
+
 rescue Interrupt
   logger.info("Capture Interrupt")
+  socket_threads.each do |thr|
+    thr.exit
+  end
 end
 
 logger.info("Terminating Capture")
-socket.close
 
 logger.info("Waiting for empty packet buffer")
 pktbufempty = false
 until pktbufempty do
-  pktbuf.synchronize do
-    pktbufempty = pktbuf.empty?
+  @localvars[:pktbuf].synchronize do
+    pktbufempty = @localvars[:pktbuf].empty?
   end
   sleep 1
 end

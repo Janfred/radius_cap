@@ -1,9 +1,15 @@
+
 require 'singleton'
+
+
+
 
 class RadsecStream
   include SemanticLogger::Loggable
 
-  attr_reader :time_created, :last_updated, :current_state, :current_pktid, :client, :server, :packets, :username, :callingstationid
+  attr_reader :time_created, :last_updated, :current_state, :current_pktid
+  attr_reader :client, :server
+  attr_reader :packets, :username, :callingstationid
 
   @time_created
   @last_updated
