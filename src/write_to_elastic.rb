@@ -99,10 +99,11 @@ class ElasticHelper
     # TODO THIS IS THE SCHEME AND CAPTURE VERSION.
     #   THIS SHOULD DEFINITELY BE CONFIGURABLE OR AT LEST SIT
     #   AT A MORE VISIBLE POINT OF THE CODE, SO IT CAN BE
-    #   CHANGED EASIYL IF THE VERSIONS NEED TO BE BUMPED
+    #   CHANGED EASILY IF THE VERSIONS NEED TO BE BUMPED
     meta[:scheme_ver] = 1
     meta[:capture_ver] = 1
-    meta[:realm] = realm
+    meta[:realm] = realm.downcase
+    meta[:realm_tld] = meta[:realm].split(".").last
     meta[:oui] = mac.split(':')[0,3].join ':'
     meta[:vendor] = MacVendor.by_oid(meta[:oui])
 
