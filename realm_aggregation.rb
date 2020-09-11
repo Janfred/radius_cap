@@ -15,6 +15,7 @@ realm_data["aggregations"]["realms"]["buckets"].each do |realm_bucket|
   realm_body = {}
   realm_body[:realm] = cur_realm
   realm_body[:tld] = cur_realm.split(".").last
+  realm_body[:clients] = realm_bucket["doc_count"]
 
   realmmatch = {match_phrase: { "meta.realm.keyword": cur_realm } }
   realm_query = { bool: { filter: { match_phrase: { "meta.realm.keyword": cur_realm } } } }
@@ -32,7 +33,7 @@ realm_data["aggregations"]["realms"]["buckets"].each do |realm_bucket|
   keyx_data = client.search index: 'tlshandshakes', body: { size: 0, aggs: { keyx: { terms: { field: "tls.tlsserverhello.cipherdata.keyx.keyword", size: 100 } } }, query: realm_query }
   keyx_data["aggregations"]["keyx"]["buckets"].each do |keyx_bucket|
     realm_body[:keyx][:all] << keyx_bucket["key"]
-    realm_body[:keyx][:seperate][keyx_bucket["key"]] = true
+    realm_body[:keyx][:seperate][keyx_bucket["key"].to_sym] = true
   end
 
   emsclientyes = { match_phrase: { "tls.tlsclienthello.extendedmastersecret": true } }
