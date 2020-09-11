@@ -26,9 +26,29 @@ realm_data["aggregations"]["realms"]["buckets"].each do |realm_bucket|
     next
   end
 
+  puts "  TLS Versions"
+  realm_body[:tls_version] = {}
+  realm_body[:tls_version][:all] = []
+  realm_body[:tls_version][:seperate] = {"TLSv1.0": false, "TLSv1.1": false, "TLSv1.2": false, "TLSv1.3": false}
+  realm_body[:client_version] = {}
+  realm_body[:client_version][:all] = []
+  realm_body[:client_version][:seperate] = {"TLSv1.0": false, "TLSv1.1": false, "TLSv1.2": false, "TLSv1.3": false}
+
+  version_data = client.search index: 'tlshandshakes', body: { size: 0, aggs: { version: { terms: { field: "tls.tlsserverhello.version", size: 100 } } }, query: realm_query }
+  version_data["aggregation"]["version"]["buckets"].each do |version_bucket|
+    realm_body[:tls_version][:all] << version_bucket["key"]
+    realm_body[:tls_version][:seperate][version_bucket["key"].to_sym] = true
+  end
+
+  cl_vers_data = client.search index: 'tlshandshakes', body: { size: 0, aggs: { version: { terms: { field: "tls.tlsclienthello.version", size: 100 } } }, query: realm_query }
+  cl_vers_data["aggregation"]["version"]["buckets"].each do |cl_vers_bucket|
+    realm_body[:client_version][:all] << cl_vers_bucket["key"]
+    realm_body[:client_version][:seperate][cl_vers_bucket["key"].to_sym] = true
+  end
+
   puts "  Seen Key Exchange Algorithms"
   realm_body[:keyx] = {}
-  realm_body[:keyx][:seperate] = {"RSA": false, "ECDHE": false, "DHE": false }
+  realm_body[:keyx][:seperate] = {RSA: false, ECDHE: false, DHE: false }
   realm_body[:keyx][:all] = []
   keyx_data = client.search index: 'tlshandshakes', body: { size: 0, aggs: { keyx: { terms: { field: "tls.tlsserverhello.cipherdata.keyx.keyword", size: 100 } } }, query: realm_query }
   keyx_data["aggregations"]["keyx"]["buckets"].each do |keyx_bucket|
