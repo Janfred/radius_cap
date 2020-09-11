@@ -6,8 +6,7 @@ require 'elasticsearch'
 
 client = Elasticsearch::Client.new log: false
 
-realm_data = client.search index: 'tlshandshakes', body: { size: 0, query: { aggs: { realms: { terms: { field: "meta.realm.keyword", size: 100000 }}}}}
-
+realm_data = client.search index: 'tlshandshakes', body: { size: 0, aggs: { realms: { terms: { field: "meta.realm.keyword", size: 100000 } } } }
 
 realm_data["aggregations"]["realms"]["buckets"].each do |realm_bucket|
   cur_realm = realm_bucket["key"]
