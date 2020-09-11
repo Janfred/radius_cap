@@ -35,13 +35,13 @@ realm_data["aggregations"]["realms"]["buckets"].each do |realm_bucket|
   realm_body[:client_version][:seperate] = {"TLSv1.0": false, "TLSv1.1": false, "TLSv1.2": false, "TLSv1.3": false}
 
   version_data = client.search index: 'tlshandshakes', body: { size: 0, aggs: { version: { terms: { field: "tls.tlsserverhello.version.keyword", size: 100 } } }, query: realm_query }
-  version_data["aggregation"]["version"]["buckets"].each do |version_bucket|
+  version_data["aggregations"]["version"]["buckets"].each do |version_bucket|
     realm_body[:tls_version][:all] << version_bucket["key"]
     realm_body[:tls_version][:seperate][version_bucket["key"].to_sym] = true
   end
 
   cl_vers_data = client.search index: 'tlshandshakes', body: { size: 0, aggs: { version: { terms: { field: "tls.tlsclienthello.version.keyword", size: 100 } } }, query: realm_query }
-  cl_vers_data["aggregation"]["version"]["buckets"].each do |cl_vers_bucket|
+  cl_vers_data["aggregations"]["version"]["buckets"].each do |cl_vers_bucket|
     realm_body[:client_version][:all] << cl_vers_bucket["key"]
     realm_body[:client_version][:seperate][cl_vers_bucket["key"].to_sym] = true
   end
