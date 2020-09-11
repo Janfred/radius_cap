@@ -51,6 +51,8 @@ class TLSServerHello
         "Unknown"
                        end
 
+    to_ret[:downgrade] = @downgrade || "None"
+
     to_ret[:all_extensions] = []
     to_ret[:extensionsorder] = ''
     @extensions.each do |exten|
@@ -231,6 +233,12 @@ class TLSServerHello
 
     @random = data[cur_ptr, 32]
     cur_ptr += 32
+
+    if @random[24, 8] == [0x44, 0x4F, 0x57, 0x4E, 0x47, 0x52, 0x44, 0x01]
+      @downgrade = "DOWNGRD1"
+    elsif @random[24, 8] == [0x44, 0x4F, 0x57, 0x4E, 0x47, 0x52, 0x44, 0x00]
+      @downgrade = "DOWNGRD0"
+    end
 
     # Session ID (optional)
     sessionid_len = data[cur_ptr]
