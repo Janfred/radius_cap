@@ -28,6 +28,7 @@ realm_data["aggregations"]["realms"]["buckets"].each do |realm_bucket|
 
   puts "  TLS Versions"
   realm_body[:tls_version] = {}
+  realm_body[:tls_version][:support] = "UNKNOWN"
   realm_body[:tls_version][:all] = []
   realm_body[:tls_version][:seperate] = {"TLSv1.0": false, "TLSv1.1": false, "TLSv1.2": false, "TLSv1.3": false}
   realm_body[:client_version] = {}
@@ -45,6 +46,35 @@ realm_data["aggregations"]["realms"]["buckets"].each do |realm_bucket|
     realm_body[:client_version][:all] << cl_vers_bucket["key"]
     realm_body[:client_version][:seperate][cl_vers_bucket["key"].to_sym] = true
   end
+
+  realm_body[:tls_version][:support] = if realm_body[:client_version][:seperate]["TLSv1.3".to_sym] || realm_body[:client_version][:seperate]["TLSv1.2".to_sym]
+                                         # In this case we have a up-to-date client, so we can definitely determine if the server version is up to date.
+                                         if realm_body[:tls_version][:seperate]["TLSv1.2".to_sym]
+                                           "Up to date"
+                                         elsif realm_body[:tls_version][:seperate]["TLSv1.1".to_sym]
+                                           "Outdated (max. TLSv1.1)"
+                                         elsif realm_body[:tls_version][:seperate]["TLSv1.0".to_sym]
+                                           "Outdated (max. TLSv1.0)"
+                                         else
+                                           "UNKNOWN"
+                                         end
+                                       elsif realm_body[:client_version][:seperate]["TLSv1.1".to_sym]
+                                         if realm_body[:tls_version][:seperate]["TLSv1.1".to_sym]
+                                           "Unsure (up to TLSv1.1)"
+                                         elsif realm_body[:tls_version][:seperate]["TLSv1.0".to_sym]
+                                           "Outdated (max. TLSv1.0)"
+                                         else
+                                           "UNKNOWN"
+                                         end
+                                       elsif realm_body[:client_version][:seperate]["TLSv1.0".to_sym]
+                                         if realm_body[:tls_version][:seperate]["TLSv1.0".to_sym]
+                                           "Unsure (up to TLSv1.0)"
+                                         else
+                                           "UNKNOWN"
+                                         end
+                                       else
+                                         "UNKNOWN"
+                                       end
 
   puts "  Seen Key Exchange Algorithms"
   realm_body[:keyx] = {}
