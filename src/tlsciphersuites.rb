@@ -71,7 +71,7 @@ class TLSCipherSuite
   def self.by_arr (val)
     p = KNOWN_CIPHERSUITES.select { |x| x[0] == val}
     $stderr.puts "Unknown Ciphersuite #{val}" if p.empty?
-    return {code: val, keyxchange: "UNKNOWN", auth: "UNKNOWN", encryption: "UNKNOWN", mode: "UNKNOWN", mac: "UNKNOWN", pfs: false, scsv: false, tlsv13: false, name: "UNKNOWN_0x#{val.pack("C*").unpack("H*")}"} if p.empty? || p.length != 1
+    return {code: val, keyxchange: "UNKNOWN", auth: "UNKNOWN", encryption: "UNKNOWN", mode: "UNKNOWN", mac: "UNKNOWN", pfs: false, scsv: false, tlsv13: false, name: "UNKNOWN_0x#{val.pack("C*").unpack("H*").first}"} if p.empty? || p.length != 1
     cipher_to_h(p.first)
   end
 
@@ -134,6 +134,13 @@ class TLSCipherSuite
     [ [0x00, 0x43], "DH",      "RSA",     "CAMELLIA128", "CBC",     "SHA",      false, false, false, "TLS_DH_RSA_WITH_CAMELLIA_128_CBC_SHA"],
     [ [0x00, 0x44], "DHE",     "DSS",     "CAMELLIA128", "CBC",     "SHA",      true,  false, false, "TLS_DHE_DSS_WITH_CAMELLIA_128_CBC_SHA"],
     [ [0x00, 0x45], "DHE",     "RSA",     "CAMELLIA128", "CBC",     "SHA",      true,  false, false, "TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA"],
+    [ [0x00, 0x60], "UNKNOWN", "UNKNOWN", "UNKNOWN",     "UNKNOWN", "UNKNOWN",  false, false, false, "PRIVATE_CONFLICT_0x00_0x60"],
+    [ [0x00, 0x61], "UNKNOWN", "UNKNOWN", "UNKNOWN",     "UNKNOWN", "UNKNOWN",  false, false, false, "PRIVATE_CONFLICT_0x00_0x61"],
+    [ [0x00, 0x62], "UNKNOWN", "UNKNOWN", "UNKNOWN",     "UNKNOWN", "UNKNOWN",  false, false, false, "PRIVATE_CONFLICT_0x00_0x62"],
+    [ [0x00, 0x63], "UNKNOWN", "UNKNOWN", "UNKNOWN",     "UNKNOWN", "UNKNOWN",  false, false, false, "PRIVATE_CONFLICT_0x00_0x63"],
+    [ [0x00, 0x64], "UNKNOWN", "UNKNOWN", "UNKNOWN",     "UNKNOWN", "UNKNOWN",  false, false, false, "PRIVATE_CONFLICT_0x00_0x64"],
+    [ [0x00, 0x65], "UNKNOWN", "UNKNOWN", "UNKNOWN",     "UNKNOWN", "UNKNOWN",  false, false, false, "PRIVATE_CONFLICT_0x00_0x64"],
+    [ [0x00, 0x66], "UNKNOWN", "UNKNOWN", "UNKNOWN",     "UNKNOWN", "UNKNOWN",  false, false, false, "PRIVATE_CONFLICT_0x00_0x65"],
     [ [0x00, 0x67], "DHE",     "RSA",     "AES128",      "CBC",     "SHA256",   true,  false, false, "TLS_DHE_RSA_WITH_AES_128_CBC_SHA256"],
     [ [0x00, 0x68], "DH",      "DSS",     "AES256",      "CBC",     "SHA256",   false, false, false, "TLS_DH_DSS_WITH_AES_256_CBC_SHA256"],
     [ [0x00, 0x69], "DH",      "RSA",     "AES256",      "CBC",     "SHA256",   false, false, false, "TLS_DH_RSA_WITH_AES_256_CBC_SHA256"],
@@ -162,8 +169,14 @@ class TLSCipherSuite
     [ [0x00, 0xA4], "DH",      "DSS",     "AES128",      "GCM",     "SHA256",   false, false, false, "TLS_DH_DSS_WITH_AES_128_GCM_SHA256"],
     [ [0x00, 0xA5], "DH",      "DSS",     "AES256",      "GCM",     "SHA384",   false, false, false, "TLS_DH_DSS_WITH_AES_256_GCM_SHA384"],
     [ [0x00, 0xBA], "RSA",     "RSA",     "CAMELLIA128", "CBC",     "SHA256",   false, false, false, "TLS_RSA_WITH_CAMELLIA_128_CBC_SHA256"],
+    [ [0x00, 0xBB], "DH",      "DSS",     "CAMELLIA128", "CBC",     "SHA256",   false, false, false, "TLS_DH_DSS_WITH_CAMELLIA_128_CBC_SHA256"],
+    [ [0x00, 0xBC], "DH",      "RSA",     "CAMELLIA128", "CBC",     "SHA256",   false, false, false, "TLS_DH_RSA_WITH_CAMELLIA_128_CBC_SHA256"],
+    [ [0x00, 0xBD], "DHE",     "DSS",     "CAMELLIA128", "CBC",     "SHA256",   true,  false, false, "TLS_DHE_DSS_WITH_CAMELLIA_128_CBC_SHA256"],
     [ [0x00, 0xBE], "DHE",     "RSA",     "CAMELLIA128", "CBC",     "SHA256",   true,  false, false, "TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA256"],
     [ [0x00, 0xC0], "RSA",     "RSA",     "CAMELLIA256", "CBC",     "SHA256",   false, false, false, "TLS_RSA_WITH_CAMELLIA_256_CBC_SHA256"],
+    [ [0x00, 0xC1], "DH",      "DSS",     "CAMELLIA256", "CBC",     "SHA256",   false, false, false, "TLS_DH_DSS_WITH_CAMELLIA_256_CBC_SHA256"],
+    [ [0x00, 0xC2], "DH",      "RSA",     "CAMELLIA256", "CBC",     "SHA256",   false, false, false, "TLS_DH_RSA_WITH_CAMELLIA_256_CBC_SHA256"],
+    [ [0x00, 0xC3], "DHE",     "DSS",     "CAMELLIA256", "CBC",     "SHA256",   true,  false, false, "TLS_DHE_DSS_WITH_CAMELLIA_256_CBC_SHA256"],
     [ [0x00, 0xC4], "DHE",     "RSA",     "CAMELLIA256", "CBC",     "SHA256",   true,  false, false, "TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA256"],
     [ [0x00, 0xFF], nil,       nil,       nil,           nil,       nil,        nil,   true,  false, "TLS_EMPTY_RENEGOTIATION_INFO_SCSV"],
     [ [0x13, 0x01], nil,       nil,       "AES128",      "GCM",     "SHA256",   false, false, true,  "TLS_AES_128_GCM_SHA256"],
