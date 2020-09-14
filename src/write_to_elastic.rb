@@ -80,7 +80,7 @@ class ElasticHelper
     end
     username ||= ""
 
-    username_parts = username.split('@')[1]
+    username_parts = username.split('@')
     realm = if username_parts.length == 1
               "NOREALM.NOTLD"
             elsif username_parts.length > 2
