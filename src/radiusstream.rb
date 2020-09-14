@@ -182,6 +182,7 @@ class RadiusStreamHelper
       # This is probably a completely new request
       logger.trace("Creating a new RadiusStream")
       @known_streams << RadiusStream.new(pkt)
+      return
     elsif p.length > 1
       logger.warn "Found multiple Streams for State #{pkt.state.pack('C*').unpack('H*')}" unless pkt.state.nil?
     end
