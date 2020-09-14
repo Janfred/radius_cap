@@ -80,7 +80,15 @@ class ElasticHelper
     end
     username ||= ""
 
-    realm = username.split('@')[1]
+    username_parts = username.split('@')[1]
+    realm = if username_parts.length == 1
+              "NOREALM.NOTLD"
+            elsif username_parts.length > 2
+              logger.warn "Found username with multiple realms: #{username} - Using the last one"
+              username_parts.last
+            else
+              username_parts.last
+            end
 
     mac = 'ff:ff:ff:ff:ff:ff'
     if data[:radius] && data[:radius][:attributes] && data[:radius][:attributes][:mac]
