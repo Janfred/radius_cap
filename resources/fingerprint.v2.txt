@@ -12,3 +12,4 @@ f96560be8e87ad852c6d2c322fd6efcb61dfa7de569ea5d5460d61a76ec90215|Android  |Andro
 fafb02cbcae5bc1701f4008c9431e06d65fb9fc47621e645cb2e55b68e688361|Windows  |Windows 8.1   |Windows 8.1
 5d7807a3aa08cd8f87d71e883c528c790b6b95be0cf51a682b5f0ed8432bdd8b|Window   |Windows 10    |Windows 10, unknown Patch level
 d8ef3c0e14f85730876ea5a46ecb626095f01079ac94bafad7f3b00bb0a1621b|Android  |Android ?     |Android, unknown version
+9e0b73b6f202572d33b6faf591ab11e3dd80b7fe9e521d3bbba647269ca6fc59|Android  |Android 9     |LineageOS 16.0 Android 9 Security Patch Level 2020-06-05

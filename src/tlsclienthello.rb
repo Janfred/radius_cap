@@ -28,6 +28,7 @@ module TLSTypes
   end
 
   module Alerts
+    CLOSE_NOTIFY            = 0x00
     HANDSHAKE_FAILURE       = 0x28
     NO_CERTIFICATE          = 0x29
     BAD_CERTIFICATE         = 0x2A
@@ -41,6 +42,7 @@ module TLSTypes
     DECODE_ERROR            = 0x32
     DECRYPT_ERROR           = 0x33
     PROTOCOL_VERSION        = 0x46
+    INTERNAL_ERROR          = 0x50
 
     # Get alert name by the given code
     # @param code [Byte] Code of the Alert
