@@ -9,6 +9,10 @@ class Fingerprint
   @@fingerprintdb = {}
   @@fingerprintdb_lastupdate = nil
 
+  def self.get_fp_db
+    @@fingerprintdb
+  end
+
   # Fetch assumed Operating system by given fingerprint
   # @param fp [String] Handshake Fingerprint (SHA2-Hash as downcase hex string)
   # @return [Hash] Assumed Operating System from given Fingerprint, or a Hash with os, os_version and detail set to "Not in FP-DB" if no match is found
