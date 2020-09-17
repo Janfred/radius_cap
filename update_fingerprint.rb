@@ -2,9 +2,11 @@
 require 'rubygems'
 require 'bundler/setup'
 require 'elasticsearch'
-require 'src/fingerprint'
+require './src/fingerprint'
 
 client = Elasticsearch::Client.new log: false
+
+Fingerprint.check_new_file
 
 fp_db = Fingerprint.get_fp_db
 
