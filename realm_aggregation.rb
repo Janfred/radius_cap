@@ -86,6 +86,13 @@ realm_data["aggregations"]["realms"]["buckets"].each do |realm_bucket|
     realm_body[:keyx][:seperate][keyx_bucket["key"].to_sym] = true
   end
 
+  realm_body[:encr] = {}
+  realm_body[:encr][:all] = []
+  encr_data = client.search index: 'tlshandshakes', body: { size: 0, aggs: { encr: { terms: { field: "tls.tlsserverhello.cipherdata.encry.keyword", size: 100 } } }, query: realm_query }
+  encr_data["aggregations"]["encry"]["buckets"].each do |encr_bucket|
+    realm_body[:encr][:all] << encr_bucket["key"]
+  end
+
   emsclientyes = { match_phrase: { "tls.tlsclienthello.extendedmastersecret": true } }
   emsclientno  = { match_phrase: { "tls.tlsclienthello.extendedmastersecret": false } }
   emsserveryes = { match_phrase: { "tls.tlsserverhello.extendedmastersecret": true } }
