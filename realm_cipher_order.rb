@@ -29,7 +29,7 @@ realm_data["aggregations"]["realms"]["buckets"].each do |realm_bucket|
 
 
   ciphersets = []
-  cipherset_data = client.search index: 'tlshandshakes', body: { size: 0, aggs: { cipherset: { terms: { field: "tls.tlsclienthello.cipherdata.cipherset.keyword" } } }, query: realm_query }
+  cipherset_data = client.search index: 'tlshandshakes', body: { size: 0, aggs: { cipherset: { terms: { field: "tls.tlsclienthello.cipherdata.cipherset.keyword", size: 1000 } } }, query: realm_query }
   cipherset_data["aggregations"]["cipherset"]["buckets"].each do |cipherset_bucket|
     ciphersets << cipherset_bucket["key"]
   end
@@ -39,7 +39,8 @@ realm_data["aggregations"]["realms"]["buckets"].each do |realm_bucket|
   no_client_preference = false
   preference_checkable = false
 
-  chosen_data = client.search index: 'tlshandshakes', body: { size: 0, aggs: { chosen: { composite: { sources: [ { cipherset: { terms: { field: "tls.tlsclienthello.cipherdata.cipherset.keyword" } } }, { cipher: { terms: { field: "tls.tlsserverhello.cipher.keyword" } } } ] } } }, query: realm_query }
+  chosen_data = client.search index: 'tlshandshakes', body: { size: 0, aggs: { chosen: { composite: { sources: [ { cipherset: { terms: { field: "tls.tlsclienthello.cipherdata.cipherset.keyword", size: 1000 } } }, { cipher: { terms: { field: "tls.tlsserverhello.cipher.keyword", size: 1000
+  } } } ] } } }, query: realm_query }
   chosen_data["aggregations"]["chosen"]["buckets"].each do |chosen_bucket|
     ciphersuite = chosen_bucket["key"]["cipherset"].split(' ')
     chosen = chosen_bucket["key"]["cipher"]
