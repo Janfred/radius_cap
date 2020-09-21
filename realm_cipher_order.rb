@@ -22,7 +22,13 @@ realm_data["aggregations"]["realms"]["buckets"].each do |realm_bucket|
     chosen_ciphers << cipher_bucket["key"]
   end
 
+  if chosen_ciphers.length < 2
+    puts " No Preference analysis possible, just one ciphersuite"
+    next
+  end
+
   client_preference = false
+  no_client_preference = false
   server_preference = false
   preference_list = []
 
@@ -32,27 +38,52 @@ realm_data["aggregations"]["realms"]["buckets"].each do |realm_bucket|
     ciphersets << cipherset_bucket["key"]
   end
 
+  cipher_orders = []
+  preference_checkable = false
+
   chosen_data = client.search index: 'tlshandshakes', body: { size: 0, aggs: { chosen: { composite: { sources: [ { cipherset: { terms: { field: "tls.tlsclienthello.cipherdata.cipherset.keyword" } } }, { cipher: { terms: { field: "tls.tlsserverhello.cipher.keyword" } } } ] } } }, query: realm_query }
   chosen_data["aggregations"]["chosen"]["buckets"].each do |chosen_bucket|
     ciphersuite = chosen_bucket["key"]["cipherset"].split(' ')
-    chosen = chosen_bucken["key"]["cipher"]
+    chosen = chosen_bucket["key"]["cipher"]
 
     chosen_index = ciphersuite.index chosen
 
     chosen_ciphers.each do |cs|
       next if chosen == cs
+
+
       cur_ind = ciphersuite.index cs
       next if cur_ind.nil?
+
+      cipher_orders << [chosen, cs]
+      preference_checkable = true
+
       if chosen_index < cur_ind
         # Possible Client Preference
         client_preference = true
       end
       if chosen_index > cur_ind
-        # Possible Server Preference
-        server_preference = true
+        # No Client preference
+        no_client_preference = true
       end
     end
   end
+
+  unless preference_checkable
+    puts " Preference not checkable."
+    next
+  end
+
+  server_preference = true
+  cipher_orders.uniq!
+  cipher_orders.each do |entry|
+    if cipher_orders.include? [entry[1],entry[0]]
+      server_preference = false
+      break
+    end
+  end
+
+  client_preference = client_preference & !no_client_preference
 
   puts " Client Preference: #{ client_preference }"
   puts " Server Preference: #{ server_preference }"
