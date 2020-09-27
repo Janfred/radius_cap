@@ -29,13 +29,13 @@ require_relative './src/tlsstream.rb'
 @config[:filewrite] = false if @config[:filewrite].nil?
 @config[:debug_level] ||= :warn
 @config[:elastic_filter] ||= []
+#@config[:socket_files] ||= ['/tmp/radsecproxy.sock']  # Not used in radius_cap.rb
 
 SemanticLogger.default_level = @config[:debug_level]
 SemanticLogger.add_appender(file_name: 'development.log')
 SemanticLogger.add_appender(io: STDOUT, formatter: :color) if @config[:debug]
 
 logger = SemanticLogger['radius_cap']
-
 logger.info("Requirements done. Loading radius_cap.rb functions")
 
 class EAPFragParseError < StandardError

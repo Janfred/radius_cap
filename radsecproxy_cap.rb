@@ -3,10 +3,11 @@
 require 'rubygems'
 require 'bundler/setup'
 
+# Require needed gems
 require 'socket'
+require 'irb'
 require 'monitor'
 require 'semantic_logger'
-require 'irb'
 
 # Require local files
 require_relative './src/radiuspacket.rb'
