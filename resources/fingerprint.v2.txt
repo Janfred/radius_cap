@@ -15,3 +15,4 @@ d8ef3c0e14f85730876ea5a46ecb626095f01079ac94bafad7f3b00bb0a1621b|Android  |Andro
 9e0b73b6f202572d33b6faf591ab11e3dd80b7fe9e521d3bbba647269ca6fc59|Android  |Android 9     |LineageOS 16.0 Android 9 Security Patch Level 2020-06-05
 e5c934f46099e967a10df0f0eaf60e5921f2a7f0ded97559639a8cd3779194cd|Android  |Android 4.0.4 |Android 4.0.4
 17550f82a03f39a90887683584bbaeb6dd00f74e80f8741248528295cacf5c6a|Android  |Android 4.1.2 |Android 4.1.2
+b7682cb06d0b5feb1375b7a54fc9b71eea63a5bcdb7ab663b367fb16dc7dc093|Android  |Android 10    |Android 10, unknown version
