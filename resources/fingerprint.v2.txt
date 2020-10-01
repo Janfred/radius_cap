@@ -1,5 +1,5 @@
 Fingerprint                                                     |OS Class |OS Version    |Detail
-063d93bff412ae151862393b7a83132e26ce47ef92bc01dad46e40480b153b6e|Linux    |Debian Testing|Debian Testing libssl 1.1.1d wpa_supplicant
+063d93bff412ae151862393b7a83132e26ce47ef92bc01dad46e40480b153b6e|Linux    |Debian 10+    |Debian 10/Testing libssl 1.1.1d-1.1.1g wpa_supplicant
 3ee8c8065913422d3d2c5c31f11f216ff3ebc2ed8485b7e57b88f12717d718c4|Windows  |Windows 8.1   |Windows 8.1
 72b8140931125ce5fd60cb76d42ffa076eca5e263f18d671242f5e60b38ca1c6|Android  |Android 5.1.1 |CyanogenOS 12.1 Android 5.1.1 Security Patch Level 2015-11-01
 75c9790da72d308206f2fc66d3b91324d00d0a09d4ad234e21d4f3ae29451efc|Android  |Android 9     |Android 9 Security Patch Level 2019-12-01
