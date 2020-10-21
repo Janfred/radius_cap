@@ -194,7 +194,13 @@ logger.info("Start Packet capture")
 begin
   @config[:socket_files].each do |path|
     socket_threads << Thread.new do
-      socket_cap_start(path)
+      begin
+        socket_cap_start(path)
+      rescue => e
+        puts "Error in Capture"
+        puts e.message
+        puts e.backtrace.join "\n"
+      end
     end
   end
   sleep
