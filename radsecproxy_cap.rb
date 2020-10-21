@@ -118,73 +118,99 @@ Thread.start do
 end
 
 def socket_cap_start(path)
-  socket = UNIXSocket.new(path)
   logger = @localvars[:logger]
-
-  bytes = ""
   loop do
-    bytes += socket.recv(1500)
+    logger.info "Trying to open Socket #{path}"
+    begin
+      socket = UNIXSocket.new(path)
+    rescue Errno::ECONNREFUSED
+      logger.warn "Socket #{path} could not be opened. Retrying in 5 sec"
+      sleep 5
+      next
+    end
 
-    while bytes.length > 11
+    bytes = ""
+    begin
+      loop do
+        newbytes = socket.recv(1500)
 
-      # Check if the packet is a Request or a response
-      i = 0
-      request = bytes[0] == "\0"
-      logger.trace "Request" if request
-      logger.trace "Response" unless request
-      i += 1
+        # This is a workaround.
+        # The socket does not recognize if the remote end is closed.
+        # If we haven't received anything, it is likely that the socket was closed.
+        # So we send out an empty string. This does not effect the socket owner, but
+        # it raises a Broken Pipe Error, if the socket isn't open any more.
+        # If we didn't receive anything, we wait for 0.1 seconds to reduce the load.
+        if newbytes == ""
+          socket.send "", 0
+          sleep 0.1
+          next
+        end
+        bytes += newbytes
 
-      # Now we unpack the "From" length
-      from_length = bytes[i, 2].unpack('n').first
-      logger.trace "From Length: #{from_length}"
-      i += 2
+        while bytes.length > 11
 
-      break if bytes.length < i + from_length + 6
-      # The +6 contains of 2 Byes From length and 4 Bytes From SocketID
+          # Check if the packet is a Request or a response
+          i = 0
+          request = bytes[0] == "\0"
+          logger.trace "Request" if request
+          logger.trace "Response" unless request
+          i += 1
 
-      # And we fetch the actual "From"
-      from = bytes[i, from_length]
-      logger.trace "From: #{from}"
-      i += from_length
+          # Now we unpack the "From" length
+          from_length = bytes[i, 2].unpack('n').first
+          logger.trace "From Length: #{from_length}"
+          i += 2
 
-      # And we fetch the from socket id
-      from_sock = bytes[i, 4].unpack('N').first
-      i += 4
+          break if bytes.length < i + from_length + 6
+          # The +6 contains of 2 Byes From length and 4 Bytes From SocketID
 
-      # Now we fetch the "To" length
-      to_length = bytes[i, 2].unpack('n').first
-      logger.trace "To Length: #{to_length}"
-      i += 2
+          # And we fetch the actual "From"
+          from = bytes[i, from_length]
+          logger.trace "From: #{from}"
+          i += from_length
 
-      break if bytes.length < i + to_length + 4
-      # The +4 covers the To SocketID
+          # And we fetch the from socket id
+          from_sock = bytes[i, 4].unpack('N').first
+          i += 4
 
-      # And we fetch the actual "To"
-      to = bytes[i, to_length]
-      logger.trace "To: #{to}"
-      i += to_length
+          # Now we fetch the "To" length
+          to_length = bytes[i, 2].unpack('n').first
+          logger.trace "To Length: #{to_length}"
+          i += 2
 
-      # And we fetch the To socket id
-      to_sock = bytes[i, 4].unpack('N').first
-      i += 4
+          break if bytes.length < i + to_length + 4
+          # The +4 covers the To SocketID
+
+          # And we fetch the actual "To"
+          to = bytes[i, to_length]
+          logger.trace "To: #{to}"
+          i += to_length
+
+          # And we fetch the To socket id
+          to_sock = bytes[i, 4].unpack('N').first
+          i += 4
 
 
-      break if bytes.length < i+4
+          break if bytes.length < i+4
 
-      radius_length = bytes[i+2,2].unpack('n').first
-      logger.trace "RADIUS Length: #{radius_length}"
+          radius_length = bytes[i+2,2].unpack('n').first
+          logger.trace "RADIUS Length: #{radius_length}"
 
-      break if bytes.length < i+radius_length
+          break if bytes.length < i+radius_length
 
-      radius_pkt = bytes[i, radius_length]
+          radius_pkt = bytes[i, radius_length]
 
-      bytes = bytes[i+radius_length .. -1]
+          bytes = bytes[i+radius_length .. -1]
 
-      @localvars[:pktbuf].synchronize do
-        logger.trace("Inserting Packet to pktbuf (from #{from} to #{to})")
-        @localvars[:pktbuf] << {source: path, request: request, from: from, from_sock: from_sock, to: to, to_sock: to_sock, pkt: radius_pkt}
-        @localvars[:empty_cond].signal
+          @localvars[:pktbuf].synchronize do
+            logger.trace("Inserting Packet to pktbuf (from #{from} to #{to})")
+            @localvars[:pktbuf] << {source: path, request: request, from: from, from_sock: from_sock, to: to, to_sock: to_sock, pkt: radius_pkt}
+            @localvars[:empty_cond].signal
+          end
+        end
       end
+    rescue Errno::EPIPE
+      logger.warn "Socket #{path} was closed (Pipe Error). Trying to reopen."
     end
   end
 end
