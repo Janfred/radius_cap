@@ -138,8 +138,11 @@ Thread.start do
         puts p.unpack("H*").first
         #binding.irb
       end
+
       begin
         RadiusStreamHelper.add_packet(rp)
+      rescue PacketFlowInsertionError => e
+        logger.warn 'PacketFlowInsertionError: ' + e.message
       rescue => e
         puts "Error in Packetflow!"
         puts e.message
