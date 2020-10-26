@@ -153,12 +153,12 @@ class RadiusPacket
       end
       if attribute[:type] == RadiusPacket::Attribute::USERNAME
         # There should be only one username
-        raise PacketMultipleState, 'multiple username attributes present (first: "'+@username+'", next: "'+attribute[:data]+'"' unless @username.nil?
+        raise PacketMultipleState, 'multiple username attributes present (first: "'+@username.pack('C*')+'", next: "'+attribute[:data].pack('C*')+'"' unless @username.nil?
         @username = attribute[:data]
       end
       if attribute[:type] == RadiusPacket::Attribute::CALLINGSTATIONID
         # There should be only one Calling Station ID
-        raise PacketMultipleState, 'multiple calling station id attributes present (first: "'+@callingstationid+'", next: "' + attribute[:data] +'"' unless @callingstationid.nil?
+        raise PacketMultipleState, 'multiple calling station id attributes present (first: "'+@callingstationid.pack('C*')+'", next: "' + attribute[:data].pack('C*') +'"' unless @callingstationid.nil?
         @callingstationid = attribute[:data]
       end
     end
