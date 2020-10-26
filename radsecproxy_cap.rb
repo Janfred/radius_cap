@@ -106,6 +106,8 @@ Thread.start do
         puts e.backtrace.join "\n"
       end
 
+      next if rp.nil?
+
       begin
         RadsecStreamHelper.add_packet(rp, pkt[:request], [pkt[:from], pkt[:from_sock], pkt[:source]], [pkt[:to], pkt[:to_sock], pkt[:source]])
       rescue PacketFlowInsertionError => e

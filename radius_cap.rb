@@ -139,6 +139,8 @@ Thread.start do
         #binding.irb
       end
 
+      next if rp.nil?
+
       begin
         RadiusStreamHelper.add_packet(rp)
       rescue PacketFlowInsertionError => e
