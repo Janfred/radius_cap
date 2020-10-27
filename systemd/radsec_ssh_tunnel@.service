@@ -1,0 +1,11 @@
+[Unit]
+Description=SSH opener for radsecproxy socket
+
+[Service]
+User=radiuscap
+ExecStartPre=rm -f /tmp/radsecproxy.%i.sock
+ExecStart=ssh -i -L /tmp/radsecproxy.%i.sock:/tmp/radsecproxy.sock -N %i
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
