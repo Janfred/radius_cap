@@ -132,10 +132,10 @@ Thread.start do
         $stderr.puts e.message
           #binding.irb
       rescue ProtocolViolationError => e
-        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt[:from_sock].inspect + ' To: ' + pkt[:to_sock].inspect
+        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt.ip_saddr + ' To: ' + pkt.ip_daddr
         next
       rescue PolicyViolationError => e
-        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt[:from_sock].inspect + ' To: ' + pkt[:to_sock].inspect
+        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt.ip_saddr + ' To: ' + pkt.ip_daddr
         next
       rescue => e
         # This is here for debugging.

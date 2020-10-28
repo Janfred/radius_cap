@@ -103,10 +103,10 @@ Thread.start do
         puts e.message
         puts e.backtrace.join "\n"
       rescue ProtocolViolationError => e
-        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt[:from_sock].inspect + ' To: ' + pkt[:to_sock].inspect
+        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt[:from].inspect + ' To: ' + pkt[:to].inspect
         next
       rescue PolicyViolationError => e
-        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt[:from_sock].inspect + ' To: ' + pkt[:to_sock].inspect
+        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt[:from].inspect + ' To: ' + pkt[:to].inspect
         next
       rescue => e
         puts "General error in Parsing!"
