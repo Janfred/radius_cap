@@ -177,9 +177,11 @@ class RadiusPacket
       end
       if attribute[:type] == RadiusPacket::Attribute::USERNAME
         @username ||= attribute[:data]
-        parts = @username.split('@')
-        @realm ||= 'NONE' if parts.length==1
-        @realm ||= parts.last
+        unless @username.nil?
+          parts = @username.pack('C*').split('@')
+          @realm ||= 'NONE' if parts.length==1
+          @realm ||= parts.last
+        end
       end
       if attribute[:type] == RadiusPacket::Attribute::CALLINGSTATIONID
         @callingstationid ||= attribute[:data]
