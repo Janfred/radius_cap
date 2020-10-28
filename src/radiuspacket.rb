@@ -10,6 +10,10 @@ end
 class PacketMultipleState < StandardError
 end
 
+class ProtocolViolationError < StandardError; end
+
+class PolicyViolationError < StandardError; end
+
 # A Radius Packet with all attributes and a reassembled EAP Message
 class RadiusPacket
   include SemanticLogger::Loggable
@@ -20,6 +24,18 @@ class RadiusPacket
     ACCEPT    =  2
     REJECT    =  3
     CHALLENGE = 11
+
+    # Get Attribute name by the given code
+    # @param code [Byte] Code of the Attribute
+    # @return [String] Name of the Attribute, or "UNKNOWN_ATTRIBUTE_<num>" if Attribute is unknown.
+    def Type::get_type_name_by_code(code)
+      return nil if code.nil?
+      Type.constants.each do |const|
+        next if Type.const_get(const) != code
+        return const.to_s
+      end
+      "UNKNOWN_TYPE_#{code}"
+    end
   end
 
   # All supported RADIUS attributes
@@ -134,9 +150,15 @@ class RadiusPacket
     @authenticator = @raw_data[4..19]
 
     @attributes = []
+    @attributes_by_type = {}
     @state = nil
     @username = nil
     @callingstationid = nil
+
+
+    @attributes_by_type[RadiusPacket::Attribute::USERNAME] ||= []
+    @attributes_by_type[RadiusPacket::Attribute::STATE] ||= []
+    @attributes_by_type[RadiusPacket::Attribute::CALLINGSTATIONID] ||= []
 
     cur_ptr = 20
     while cur_ptr < @length do
@@ -144,26 +166,70 @@ class RadiusPacket
       attribute[:type] = @raw_data[cur_ptr]
       attribute[:length] = @raw_data[cur_ptr+1]
       attribute[:data] = @raw_data[cur_ptr+2..cur_ptr+attribute[:length]-1]
-      attributes << attribute
+      @attributes << attribute
+      @attributes_by_type[attribute[:type]] ||= []
+      @attributes_by_type[attribute[:type]] << attribute
       cur_ptr += attribute[:length]
       if attribute[:type] == RadiusPacket::Attribute::STATE
-        # There should be only one state
-        raise PacketMultipleState, 'multiple state attributes present' unless @state.nil?
         @state = attribute[:data]
       end
       if attribute[:type] == RadiusPacket::Attribute::USERNAME
-        # There should be only one username
-        raise PacketMultipleState, 'multiple username attributes present (first: "'+@username.pack('C*')+'", next: "'+attribute[:data].pack('C*')+'"' unless @username.nil?
         @username = attribute[:data]
       end
       if attribute[:type] == RadiusPacket::Attribute::CALLINGSTATIONID
-        # There should be only one Calling Station ID
-        raise PacketMultipleState, 'multiple calling station id attributes present (first: "'+@callingstationid.pack('C*')+'", next: "' + attribute[:data].pack('C*') +'"' unless @callingstationid.nil?
         @callingstationid = attribute[:data]
       end
     end
 
+    check_radius_protocol
+    check_eduroam_service_policy
+
     parse_eap
+  end
+
+  # Check RADIUS Protocol violations
+  def check_radius_protocol
+
+
+    # Check Usernames. (0-1 in Request and accept, otherwise 0)
+    if @packettype == RadiusPacket::Type::ACCEPT || @packettype == RadiusPacket::Type::REQUEST
+      if @attributes_by_type[RadiusPacket::Attribute::USERNAME].length > 1
+        raise ProtocolViolationError.new "Found multiple USERNAME attributes in #{Type::get_type_name_by_code(@packettype)}"
+      end
+    else
+      if @attributes_by_type[RadiusPacket::Attribute::USERNAME].length > 0
+        raise ProtocolViolationError.new "Found USERNAME attribute in #{Type::get_type_name_by_code(@packettype)}"
+      end
+    end
+
+    # Check State variable. (0 for Rejects, 0-1 otherwise)
+    if @attributes_by_type[RadiusPacket::Attribute::STATE].length > 0 && @packettype == RadiusPacket::Type::REJECT
+      raise ProtocolViolationError.new "Found STATE attributes in #{Type::get_type_name_by_code(@packettype)}"
+    end
+    if @attributes_by_type[RadiusPacket::Attribute::STATE].length > 1
+      raise ProtocolViolationError.new "Found multiple STATE attributes in #{Type::get_type_name_by_code(@packettype)}"
+    end
+
+    # Check Calling-Station-ID (0-1 for Request, 0 otherwise)
+    if @packettype == RadiusPacket::Type::REQUEST
+      if @attributes_by_type[RadiusPacket::Attribute::CALLINGSTATIONID].length > 1
+        raise ProtocolViolationError.new "Found multiple CALLINGSTATIONID attributes in #{Type::get_type_name_by_code(@packettype)}"
+      end
+    else
+      if @attributes_by_type[RadiusPacket::Attribute::CALLINGSTATIONID].length > 0
+        raise ProtocolViolationError.new "Found CALLINGSTATIONID attribute in #{Type::get_type_name_by_code(@packettype)}"
+      end
+    end
+
+  end
+
+  # Check Eduroam service policy violations
+  def check_eduroam_service_policy
+    if @packettype == RadiusPacket::Type::REQUEST
+      if @attributes_by_type[RadiusPacket::Attribute::CALLINGSTATIONID].length < 1
+        raise PolicyViolationError.new "No CALLINGSTATIONID attribute in #{Type::get_type_name_by_code(@packettype)}"
+      end
+    end
   end
 
   # Reassembles the EAP messages by concatenating the contents of all EAP-Message attributes.

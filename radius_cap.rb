@@ -34,8 +34,10 @@ require_relative './src/tlsstream.rb'
 SemanticLogger.default_level = @config[:debug_level]
 SemanticLogger.add_appender(file_name: 'development.log')
 SemanticLogger.add_appender(io: STDOUT, formatter: :color) if @config[:debug]
+SemanticLogger.add_appender(file_name: 'policy_violation.log', filter: /PolicyViolation/)
 
 logger = SemanticLogger['radius_cap']
+policylogger = SemanticLogger['PolicyViolation']
 logger.info("Requirements done. Loading radius_cap.rb functions")
 
 class EAPFragParseError < StandardError
@@ -129,6 +131,12 @@ Thread.start do
         puts p.unpack("H*").first
         $stderr.puts e.message
           #binding.irb
+      rescue ProtocolViolationError => e
+        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt[:from_sock].inspect + ' To: ' + pkt[:to_sock].inspect
+        next
+      rescue PolicyViolationError => e
+        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt[:from_sock].inspect + ' To: ' + pkt[:to_sock].inspect
+        next
       rescue => e
         # This is here for debugging.
         # TODO: remove irb binding
@@ -137,6 +145,7 @@ Thread.start do
         puts e.backtrace.join "\n"
         puts p.unpack("H*").first
         #binding.irb
+        next
       end
 
       next if rp.nil?

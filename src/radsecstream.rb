@@ -113,7 +113,11 @@ class RadsecStreamHelper
       @known_streams << RadsecStream.new(pkt, client, server)
       return
     elsif p.length > 1
-      logger.warn "Found multiple EAP States for 0x#{pkt.state.pack('C*').unpack('H*').first}"
+      if pkt.state.nil?
+        logger.warn "Found multiple EAP States for nil state"
+      else
+        logger.warn "Found multiple EAP States for 0x#{pkt.state.pack('C*').unpack('H*').first}"
+      end
     end
     flow = p.first
     logger.trace "Insert Packet in RadsecStream"
