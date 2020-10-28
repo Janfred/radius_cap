@@ -117,34 +117,23 @@ Thread.start do
       begin
         # Parse Radius packets
         rp = RadiusPacket.new(pkt)
-          #puts rp.inspect
-          #binding.irb
+        rp.check_policies
       rescue PacketLengthNotValidError => e
-        ##################################################
-        # THIS IS A CASE THAT SHOULDN'T OCCUR.           #
-        # IT SHOULD BE CATCHED BY THE FRAGMENT STATEMENT #
-        ##################################################
-        # TODO: Remove irb binding
         puts "PacketLengthNotValidError!"
         puts e.message
         puts e.backtrace.join "\n"
         puts p.unpack("H*").first
         $stderr.puts e.message
-          #binding.irb
+        next
       rescue ProtocolViolationError => e
         policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt.ip_saddr + ' To: ' + pkt.ip_daddr
-        next
       rescue PolicyViolationError => e
         policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt.ip_saddr + ' To: ' + pkt.ip_daddr
-        next
       rescue => e
-        # This is here for debugging.
-        # TODO: remove irb binding
         puts "General error in Parsing!"
         puts e.message
         puts e.backtrace.join "\n"
         puts p.unpack("H*").first
-        #binding.irb
         next
       end
 

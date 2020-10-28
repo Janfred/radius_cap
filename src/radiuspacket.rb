@@ -115,6 +115,7 @@ class RadiusPacket
   attr_reader :state
   attr_reader :username
   attr_reader :callingstationid
+  attr_reader :realm
 
   def initialize(pkt)
     if pkt.is_a? PacketFu::Packet
@@ -154,6 +155,7 @@ class RadiusPacket
     @state = nil
     @username = nil
     @callingstationid = nil
+    @realm = nil
 
 
     @attributes_by_type[RadiusPacket::Attribute::USERNAME] ||= []
@@ -171,20 +173,25 @@ class RadiusPacket
       @attributes_by_type[attribute[:type]] << attribute
       cur_ptr += attribute[:length]
       if attribute[:type] == RadiusPacket::Attribute::STATE
-        @state = attribute[:data]
+        @state ||= attribute[:data]
       end
       if attribute[:type] == RadiusPacket::Attribute::USERNAME
-        @username = attribute[:data]
+        @username ||= attribute[:data]
+        parts = @username.split('@')
+        @realm ||= 'NONE' if parts.length==1
+        @realm ||= parts.last
       end
       if attribute[:type] == RadiusPacket::Attribute::CALLINGSTATIONID
-        @callingstationid = attribute[:data]
+        @callingstationid ||= attribute[:data]
       end
     end
 
+    parse_eap
+  end
+
+  def check_policies
     check_radius_protocol
     check_eduroam_service_policy
-
-    parse_eap
   end
 
   # Check RADIUS Protocol violations

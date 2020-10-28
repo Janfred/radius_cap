@@ -290,6 +290,7 @@ class ProtocolStack
     normalize_mac! @radsec_data
 
     logger.debug 'Radsec Data: ' + @radsec_data.to_s
+    # TODO Handle errors here so the log is not slammed
     @eap_stream = EAPStream.new(@radsec_stream)
     parse_from_eap
   end

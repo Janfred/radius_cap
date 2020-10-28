@@ -98,16 +98,16 @@ Thread.start do
 
       begin
         rp = RadiusPacket.new(pkt[:pkt].unpack('C*'))
+        rp.check_policies
       rescue PacketLengthNotValidError => e
         puts "PacketLengthNotValidError"
         puts e.message
         puts e.backtrace.join "\n"
+        next
       rescue ProtocolViolationError => e
-        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt[:from].inspect + ' To: ' + pkt[:to].inspect
-        next
+        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt[:from].inspect + ' To: ' + pkt[:to].inspect + ' Realm: ' + rp.realm
       rescue PolicyViolationError => e
-        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt[:from].inspect + ' To: ' + pkt[:to].inspect
-        next
+        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt[:from].inspect + ' To: ' + pkt[:to].inspect + ' Realm: ' + rp.realm
       rescue => e
         puts "General error in Parsing!"
         puts e.message
