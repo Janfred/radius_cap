@@ -291,7 +291,11 @@ class ProtocolStack
 
     logger.debug 'Radsec Data: ' + @radsec_data.to_s
     # TODO Handle errors here so the log is not slammed
-    @eap_stream = EAPStream.new(@radsec_stream)
+    begin
+      @eap_stream = EAPStream.new(@radsec_stream)
+    rescue EAPStreamError => e
+      logger.warn 'EAPStreamError: ' + e.message
+    end
     parse_from_eap
   end
 
