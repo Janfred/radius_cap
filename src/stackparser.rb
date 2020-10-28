@@ -293,10 +293,10 @@ class ProtocolStack
     # TODO Handle errors here so the log is not slammed
     begin
       @eap_stream = EAPStream.new(@radsec_stream)
+      parse_from_eap
     rescue EAPStreamError => e
       logger.warn 'EAPStreamError: ' + e.message
     end
-    parse_from_eap
   end
 
   # Normalize the MAC Address saved in @radius_data[:attributes][:mac]
