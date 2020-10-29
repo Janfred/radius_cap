@@ -105,9 +105,9 @@ Thread.start do
         puts e.backtrace.join "\n"
         next
       rescue ProtocolViolationError => e
-        policylogger.info e.class.to_s + ' ' + e.message + (pkt[:request]?'Request':'Response') + ' From: ' + pkt[:from].inspect + ' To: ' + pkt[:to].inspect + ' Realm: ' + (rp.realm || "")
+        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt[:from].inspect + ' To: ' + pkt[:to].inspect + ' Realm: ' + (rp.realm || "")
       rescue PolicyViolationError => e
-        policylogger.info e.class.to_s + ' ' + e.message + (pkt[:request]?'Request':'Response') + ' From: ' + pkt[:from].inspect + ' To: ' + pkt[:to].inspect + ' Realm: ' + (rp.realm || "")
+        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt[:from].inspect + ' To: ' + pkt[:to].inspect + ' Realm: ' + (rp.realm || "")
       rescue => e
         puts "General error in Parsing!"
         puts e.message
