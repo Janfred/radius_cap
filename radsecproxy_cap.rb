@@ -250,21 +250,22 @@ end
 
 # Statistic thread
 Thread.start do
-  logmsg = ""
-  @localvars[:statistics].synchronize do
-    logmsg  =  "Captured packets #{ @localvars[:statistics][:captured]   }"
-    logmsg += " Analyzed packets #{ @localvars[:statistics][:analyzed]   }"
-    logmsg += " Errored packets #{  @localvars[:statistics][:errored]    }"
-    logmsg += " Elastic inserts #{  @localvars[:statistics][:elasticins] }"
-    # TODO: number of radius streams, timed out radius streams, errored stream analysis
-
-    @localvars[:statistics][:captured]   = 0
-    @localvars[:statistics][:analyzed]   = 0
-    @localvars[:statistics][:errored]    = 0
-    @localvars[:statistics][:elasticins] = 0
+  loop do
+   logmsg = ""
+   @localvars[:statistics].synchronize do
+      logmsg  =  "Captured packets #{ @localvars[:statistics][:captured]   }"
+      logmsg += " Analyzed packets #{ @localvars[:statistics][:analyzed]   }"
+      logmsg += " Errored packets #{  @localvars[:statistics][:errored]    }"
+      logmsg += " Elastic inserts #{  @localvars[:statistics][:elasticins] }"
+      # TODO: number of radius streams, timed out radius streams, errored stream analysis
+      @localvars[:statistics][:captured]   = 0
+      @localvars[:statistics][:analyzed]   = 0
+      @localvars[:statistics][:errored]    = 0
+      @localvars[:statistics][:elasticins] = 0
+    end
+    statlogger.info logmsg
+    sleep 60
   end
-  statlogger.info logmsg
-  sleep 60
 end
 
 socket_threads = []
