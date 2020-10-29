@@ -119,10 +119,8 @@ Thread.start do
         next
       rescue ProtocolViolationError => e
         policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt[:from].inspect + ' To: ' + pkt[:to].inspect + ' Realm: ' + (rp.realm || "")
-        @localvars[:statistics].synchronize do @localvars[:statistics][:errored] += 1; end
       rescue PolicyViolationError => e
         policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt[:from].inspect + ' To: ' + pkt[:to].inspect + ' Realm: ' + (rp.realm || "")
-        @localvars[:statistics].synchronize do @localvars[:statistics][:errored] += 1; end
       rescue => e
         puts "General error in Parsing!"
         puts e.message
