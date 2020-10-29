@@ -233,8 +233,8 @@ class RadiusStreamHelper
     t = Time.now
     old = @known_streams.select{ |x| (t-x.last_updated) > @timeout }
     old.each do |o|
-      logger.info "Timing out 0x#{o.current_state.pack('C*').unpack('H*').first}" if o.current_state
-      logger.info 'Timing out state without state variable' unless o.current_state
+      logger.debug "Timing out 0x#{o.current_state.pack('C*').unpack('H*').first}" if o.current_state
+      logger.debug 'Timing out state without state variable' unless o.current_state
       @known_streams.delete o
     end
     @housekeeping_counter = 0
