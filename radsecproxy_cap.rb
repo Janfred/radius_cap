@@ -54,6 +54,7 @@ logger.info("Requirements done. Loading radsecproxy_cap.rb functions")
 @localvars[:statistics][:analyzed]   = 0
 @localvars[:statistics][:errored]    = 0
 @localvars[:statistics][:elasticins] = 0
+@localvars[:statistics][:elasticpkt] = 0
 
 
 ElasticHelper.initialize_elasticdata @config[:debug]
@@ -86,6 +87,7 @@ Thread.start do
         if filters.length == 0
           @localvars[:statistics].synchronize do
             @localvars[:statistics][:elasticins] +=1
+            @localvars[:statistics][:elasticpkt] += toins[:radsec][:information][:roundtrips]
           end
           ElasticHelper.insert_into_elastic(toins, @config[:debug], @config[:noelastic], @config[:filewrite])
         else
@@ -255,11 +257,13 @@ Thread.start do
       logmsg += " Analyzed packets #{ @localvars[:statistics][:analyzed]   }"
       logmsg += " Errored packets #{  @localvars[:statistics][:errored]    }"
       logmsg += " Elastic inserts #{  @localvars[:statistics][:elasticins] }"
+      logmsg += " Elastic packets #{  @localvars[:statistics][:elasticpkt] }"
       # TODO: number of radius streams, timed out radius streams, errored stream analysis
       @localvars[:statistics][:captured]   = 0
       @localvars[:statistics][:analyzed]   = 0
       @localvars[:statistics][:errored]    = 0
       @localvars[:statistics][:elasticins] = 0
+      @localvars[:statistics][:elasticpkt] = 0
     end
     statlogger.info logmsg
     sleep 60
