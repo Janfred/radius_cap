@@ -35,9 +35,11 @@ SemanticLogger.default_level = @config[:debug_level]
 SemanticLogger.add_appender(file_name: 'development.log')
 SemanticLogger.add_appender(io: STDOUT, formatter: :color) if @config[:debug]
 SemanticLogger.add_appender(file_name: 'policy_violation.log', filter: /PolicyViolation/)
+SemanticLogger.add_appender(file_name: 'statistics.log', filter: /Statistics/)
 
 logger = SemanticLogger['radius_cap']
 policylogger = SemanticLogger['PolicyViolation']
+statlogger = SemanticLogger['Statistics']
 logger.info("Requirements done. Loading radsecproxy_cap.rb functions")
 
 @localvars = {}
@@ -45,6 +47,13 @@ logger.info("Requirements done. Loading radsecproxy_cap.rb functions")
 @localvars[:pktbuf] = []
 @localvars[:pktbuf].extend(MonitorMixin)
 @localvars[:empty_cond] = @localvars[:pktbuf].new_cond
+
+@localvars[:statistics] = {}
+@localvars[:statistics].extend(MonitorMixin)
+@localvars[:statistics][:captured]   = 0
+@localvars[:statistics][:analyzed]   = 0
+@localvars[:statistics][:errored]    = 0
+@localvars[:statistics][:elasticins] = 0
 
 
 ElasticHelper.initialize_elasticdata @config[:debug]
@@ -75,6 +84,9 @@ Thread.start do
         }
 
         if filters.length == 0
+          @localvars[:statistics].synchronize do
+            @localvars[:statistics][:elasticins] +=1
+          end
           ElasticHelper.insert_into_elastic(toins, @config[:debug], @config[:noelastic], @config[:filewrite])
         else
           logger.debug 'Filtered out Elasticdata'
@@ -103,15 +115,19 @@ Thread.start do
         puts "PacketLengthNotValidError"
         puts e.message
         puts e.backtrace.join "\n"
+        @localvars[:statistics].synchronize do @localvars[:statistics][:errored] += 1; end
         next
       rescue ProtocolViolationError => e
         policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt[:from].inspect + ' To: ' + pkt[:to].inspect + ' Realm: ' + (rp.realm || "")
+        @localvars[:statistics].synchronize do @localvars[:statistics][:errored] += 1; end
       rescue PolicyViolationError => e
         policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt[:from].inspect + ' To: ' + pkt[:to].inspect + ' Realm: ' + (rp.realm || "")
+        @localvars[:statistics].synchronize do @localvars[:statistics][:errored] += 1; end
       rescue => e
         puts "General error in Parsing!"
         puts e.message
         puts e.backtrace.join "\n"
+        @localvars[:statistics].synchronize do @localvars[:statistics][:errored] += 1; end
         next
       end
 
@@ -119,12 +135,15 @@ Thread.start do
 
       begin
         RadsecStreamHelper.add_packet(rp, pkt[:request], [pkt[:from], pkt[:from_sock], pkt[:source]], [pkt[:to], pkt[:to_sock], pkt[:source]])
+        @localvars[:statistics].synchronize do @localvars[:statistics][:analyzed] += 1; end
       rescue PacketFlowInsertionError => e
         logger.warn 'PacketFlowInsertionError: ' + e.message
+        @localvars[:statistics].synchronize do @localvars[:statistics][:errored] += 1; end
       rescue => e
         puts "Error in Packetflow!"
         puts e.message
         puts e.backtrace.join "\n"
+        @localvars[:statistics].synchronize do @localvars[:statistics][:errored] += 1; end
       end
     end
   end
@@ -220,12 +239,32 @@ def socket_cap_start(path)
             @localvars[:pktbuf] << {source: path, request: request, from: from, from_sock: from_sock, to: to, to_sock: to_sock, pkt: radius_pkt}
             @localvars[:empty_cond].signal
           end
+          @localvars[:statistics].synchronize do @localvars[:statistics][:captured] += 1; end
         end
       end
     rescue Errno::EPIPE
       logger.warn "Socket #{path} was closed (Pipe Error). Trying to reopen."
     end
   end
+end
+
+# Statistic thread
+Thread.start do
+  logmsg = ""
+  @localvars[:statistics].synchronize do
+    logmsg  =  "Captured packets #{ @localvars[:statistics][:captured]   }"
+    logmsg += " Analyzed packets #{ @localvars[:statistics][:analyzed]   }"
+    logmsg += " Errored packets #{  @localvars[:statistics][:errored]    }"
+    logmsg += " Elastic inserts #{  @localvars[:statistics][:elasticins] }"
+    # TODO: number of radius streams, timed out radius streams, errored stream analysis
+
+    @localvars[:statistics][:captured]   = 0
+    @localvars[:statistics][:analyzed]   = 0
+    @localvars[:statistics][:errored]    = 0
+    @localvars[:statistics][:elasticins] = 0
+  end
+  statlogger.info logmsg
+  sleep 60
 end
 
 socket_threads = []
