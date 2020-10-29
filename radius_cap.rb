@@ -126,9 +126,9 @@ Thread.start do
         $stderr.puts e.message
         next
       rescue ProtocolViolationError => e
-        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt.ip_saddr + ' To: ' + pkt.ip_daddr
+        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt.ip_saddr + ' To: ' + pkt.ip_daddr + ' Realm: ' + (pkt.realm || "")
       rescue PolicyViolationError => e
-        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt.ip_saddr + ' To: ' + pkt.ip_daddr
+        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt.ip_saddr + ' To: ' + pkt.ip_daddr + ' Realm: ' + (pkt.realm || "")
       rescue => e
         puts "General error in Parsing!"
         puts e.message
