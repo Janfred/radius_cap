@@ -375,7 +375,7 @@ class TLSCertStoreHelper
   end
 
   def priv_add_known_intermediates
-    @additional_cert_store.add_path('known_certs')
+    @additional_cert_store.add_path('seen_certs')
   end
 
   def subj_to_filename(orig_name)
@@ -390,22 +390,55 @@ class TLSCertStoreHelper
     TLSCertStoreHelper.instance.priv_add_cert(cert, false)
   end
 
+  def get_subj_key_identifier(cert)
+    subject_key_identifier_exten = cert.extensions.select{|x| x.oid == "subjectKeyIdentifier"}
+    if subject_key_identifier_exten.length < 1
+      logger.warn "Found certificate without subjectKeyIdentifier. Using SHA-2 Hash of the certificate"
+      return Digest::SHA2.hexdigest(cert.to_der).upcase
+    elsif subject_key_identifier_exten.length == 1
+      return subject_key_identifier_exten.first.value.gsub /:/,''
+    else
+      logger.warn "Found multiple subjectKeyIdentifier Extensions in X.509 Cert for #{cert_name}"
+      return subject_key_identifier_exten.first.value.gsub /:/,''
+    end
+  end
+
   def priv_add_cert(cert, intermediate=false)
     raise StandardError unless cert.is_a? OpenSSL::X509::Certificate
     issuer = cert.issuer.to_s
     cert_serial = cert.serial
     cert_name = cert.subject.to_s
 
+    subject_key_identifier = get_subj_key_identifier(cert)
+
+    authority_key_identifier_exten = cert.extensions.select{|x| x.oid == "authorityKeyIdentifier"}
+    authority_key_identifier = ""
+    if authority_key_identifier_exten.length == 0
+      authority_key_identifier = "UNKNOWN"
+    elsif authority_key_identifier_exten.length == 1
+      authority_key_identifier = authority_key_identifier_exten.first.value
+    else
+      logger.warn "Found multiple authorityKeyIdentifier Extensions in X.509 Cert for #{cert_name}"
+      authority_key_identifier = authority_key_identifier_exten.first.value
+    end
+
+    match = authority_key_identifier.match /^keyid:(.*)$/
+    if match
+      authority_key_identifier = match[1].gsub /:/, ''
+    else
+      authority_key_identifier = "UNKNOWN"
+    end
+
     logger.trace "Issuer: #{issuer} | Serial: #{cert_serial} | Cert Name: #{cert_name}"
 
-    issuer_path = subj_to_filename(issuer)
-    cert_path = cert_serial.to_s + subj_to_filename(cert_name)
+    issuer_path = authority_key_identifier
+    cert_path = subject_key_identifier
 
-    unless File.directory? File.join('known_certs', issuer_path)
-      Dir.mkdir(File.join('known_certs', issuer_path))
+    unless File.directory? File.join('seen_certs', issuer_path)
+      Dir.mkdir(File.join('seen_certs', issuer_path))
     end
-    unless File.exists? File.join('known_certs', issuer_path, cert_path)
-      File.write File.join('known_certs', issuer_path, cert_path), cert.to_pem
+    unless File.exists? File.join('seen_certs', issuer_path, cert_path)
+      File.write File.join('seen_certs', issuer_path, cert_path), cert.to_pem
       @additional_cert_store.add_cert(cert) if intermediate
     end
   end
@@ -416,9 +449,9 @@ class TLSCertStoreHelper
 
   def priv_add_trust_anchor(cert)
     raise StandardError unless cert.is_a? OpenSSL::X509::Certificate
-    certname = subj_to_filename(cert.subject.to_s) + '.pem'
-    unless File.exists? File.join('known_certs', certname)
-      File.write(File.join('known_certs', certname), cert.to_pem)
+    certname = get_subj_key_identifier(cert) + '.pem'
+    unless File.exists? File.join('seen_certs', certname)
+      File.write(File.join('seen_certs', certname), cert.to_pem)
       @additional_cert_store.add_cert(cert)
     end
   end

@@ -13,3 +13,5 @@
 /production.log
 /known_certs/*
 !/known_certs/.gitkeep
+/seen_certs/*
+!/seen_certs/.gitkeep
