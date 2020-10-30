@@ -158,10 +158,12 @@ def socket_cap_start(path)
       next
     end
 
+    socket_working = false
     bytes = ""
     begin
       loop do
         newbytes = socket.recv(15000)
+        socket_working = true
 
         # This is a workaround.
         # The socket does not recognize if the remote end is closed.
@@ -241,6 +243,7 @@ def socket_cap_start(path)
       end
     rescue Errno::EPIPE
       logger.warn "Socket #{path} was closed (Pipe Error). Trying to reopen."
+      sleep 5 unless socket_working
     end
   end
 end
