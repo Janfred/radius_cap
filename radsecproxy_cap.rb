@@ -163,7 +163,6 @@ def socket_cap_start(path)
     begin
       loop do
         newbytes = socket.recv(15000)
-        socket_working = true
 
         # This is a workaround.
         # The socket does not recognize if the remote end is closed.
@@ -176,6 +175,8 @@ def socket_cap_start(path)
           sleep 0.1
           next
         end
+
+        socket_working = true
         bytes += newbytes
 
         while bytes.length > 11
