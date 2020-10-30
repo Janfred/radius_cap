@@ -60,7 +60,7 @@ logger.info("Requirements done. Loading radsecproxy_cap.rb functions")
 ElasticHelper.initialize_elasticdata @config[:debug]
 
 Thread.start do
-  Thread.current.name = "Elastic Writer #{Process.pid}"
+  Thread.current.name = "Elastic Writer"
   loop do
     begin
       ElasticHelper.elasticdata.synchronize do
@@ -103,7 +103,7 @@ end
 
 logger.info("Start Packet parsing")
 Thread.start do
-  Thread.current.name = "Packet Parser #{Process.pid}"
+  Thread.current.name = "Packet Parser"
   loop do
     @localvars[:pktbuf].synchronize do
       @localvars[:empty_cond].wait_while { @localvars[:pktbuf].empty? }
@@ -252,10 +252,10 @@ end
 
 # Statistic thread
 Thread.start do
-  Thread.current.name= "Statistic writer #{Process.pid}"
+  Thread.current.name= "Statistic writer"
   loop do
-   logmsg = ""
-   @localvars[:statistics].synchronize do
+    logmsg = ""
+    @localvars[:statistics].synchronize do
       logmsg  =  "Captured packets #{ @localvars[:statistics][:captured]   }"
       logmsg += " Analyzed packets #{ @localvars[:statistics][:analyzed]   }"
       logmsg += " Errored packets #{  @localvars[:statistics][:errored]    }"
@@ -268,6 +268,17 @@ Thread.start do
       @localvars[:statistics][:elasticins] = 0
       @localvars[:statistics][:elasticpkt] = 0
     end
+    stat = {}
+    ElasticHelper.elasticdata.synchronize do
+      stat[:elastic_length] = ElasticHelper.elasticdata.length
+    end
+    @localvars[:pktbuf].synchronize do
+      stat[:pktbuf_length] = @localvars[:pktbuf].length
+    end
+    
+    logmsg += " Elastic queue length #{ stat[:elastic_length] }"
+    logmsg += " Pktbuf queue length #{ stat[:pktbuf_length] }"
+
     statlogger.info logmsg
     sleep 60
   end
@@ -278,7 +289,7 @@ logger.info("Start Packet capture")
 begin
   @config[:socket_files].each do |path|
     socket_threads << Thread.new do
-      Thread.current.name = "SocketCap #{path} #{Process.pid}"
+      Thread.current.name = "SocketCap #{path}"
       begin
         socket_cap_start(path)
       rescue => e
