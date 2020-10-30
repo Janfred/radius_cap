@@ -81,7 +81,19 @@ class TLSRecord
         end
       when TLSTypes::RecordType::ALERT
         logger.info 'Seen TLS Record Alert'
-        records << TLSAlertRecord.new(version, length, data[cur_ptr + 5, length])
+        begin
+          records << TLSAlertRecord.new(version, length, data[cur_ptr + 5, length])
+        rescue TLSParseError => e
+          if change_cipher_spec_seen
+            # Once we have seen the change_cipher_spec the part of the ServerHello which can be analyzed is through
+            # So now we have no further need of throwing an error.
+            logger.info 'Rescued TLSParseError: ' + e.message
+          else
+            # If the change_cipher_spec has not yet been seen, the alert probably came before the Handshake.
+            # In this case we raise the error to let the next higher instance deal with it.
+            raise e
+          end
+        end
       when TLSTypes::RecordType::CHANGE_CIPHER_SPEC
         logger.trace 'Change Cipher Spec'
         records << TLSChangeCipherSpecRecord.new(version, length, data[cur_ptr + 5, length])
@@ -150,7 +162,7 @@ class TLSAlertRecord < TLSRecord
 
   def initialize(version, length, data)
     super
-    raise TLSParseError.new "The Alert must be exactly 2 Bytes long" if data.length != 2
+    raise TLSParseError.new "The Alert must be exactly 2 Bytes long. Actual length #{data.length}" if data.length != 2
     @alert_level = data[0]
     @alert_code = data[1]
   end
