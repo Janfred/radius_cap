@@ -9,6 +9,9 @@ require 'irb'
 require 'monitor'
 require 'semantic_logger'
 
+require 'singleton'
+require 'openssl'
+
 # Require local files
 require_relative './src/stat_handler.rb'
 require_relative './src/radiuspacket.rb'
