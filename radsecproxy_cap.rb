@@ -10,6 +10,7 @@ require 'monitor'
 require 'semantic_logger'
 
 # Require local files
+require_relative './src/stat_handler.rb'
 require_relative './src/radiuspacket.rb'
 require_relative './src/eappacket.rb'
 require_relative './src/tlsclienthello.rb'
@@ -35,11 +36,10 @@ SemanticLogger.default_level = @config[:debug_level]
 SemanticLogger.add_appender(file_name: 'development.log')
 SemanticLogger.add_appender(io: STDOUT, formatter: :color) if @config[:debug]
 SemanticLogger.add_appender(file_name: 'policy_violation.log', filter: /PolicyViolation/)
-SemanticLogger.add_appender(file_name: 'statistics.log', filter: /Statistics/)
+SemanticLogger.add_appender(file_name: 'statistics.log', filter: /StatHandler/)
 
 logger = SemanticLogger['radius_cap']
 policylogger = SemanticLogger['PolicyViolation']
-statlogger = SemanticLogger['Statistics']
 logger.info("Requirements done. Loading radsecproxy_cap.rb functions")
 
 @localvars = {}
@@ -47,14 +47,6 @@ logger.info("Requirements done. Loading radsecproxy_cap.rb functions")
 @localvars[:pktbuf] = []
 @localvars[:pktbuf].extend(MonitorMixin)
 @localvars[:empty_cond] = @localvars[:pktbuf].new_cond
-
-@localvars[:statistics] = {}
-@localvars[:statistics].extend(MonitorMixin)
-@localvars[:statistics][:captured]   = 0
-@localvars[:statistics][:analyzed]   = 0
-@localvars[:statistics][:errored]    = 0
-@localvars[:statistics][:elasticins] = 0
-@localvars[:statistics][:elasticpkt] = 0
 
 
 ElasticHelper.initialize_elasticdata @config[:debug]
@@ -86,13 +78,13 @@ Thread.start do
         }
 
         if filters.length == 0
-          @localvars[:statistics].synchronize do
-            @localvars[:statistics][:elasticins] +=1
-            @localvars[:statistics][:elasticpkt] += toins[:radsec][:information][:roundtrips]
-          end
+          StatHandler.increase(:elastic_writes)
+          StatHandler.increase(:packet_elastic_written, toins[:radsec][:information][:roundtrips])
           ElasticHelper.insert_into_elastic(toins, @config[:debug], @config[:noelastic], @config[:filewrite])
         else
           logger.debug 'Filtered out Elasticdata'
+          StatHandler.increase(:elastic_filters)
+          StatHandler.increase(:packet_elastic_filtered, toins[:radsec][:information][:roundtrips])
         end
       end
     rescue => e
@@ -119,7 +111,7 @@ Thread.start do
         puts "PacketLengthNotValidError"
         puts e.message
         puts e.backtrace.join "\n"
-        @localvars[:statistics].synchronize do @localvars[:statistics][:errored] += 1; end
+        StatHandler.increase :packet_errored
         next
       rescue ProtocolViolationError => e
         policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt[:from].inspect + ' To: ' + pkt[:to].inspect + ' Realm: ' + (rp.realm || "")
@@ -129,7 +121,7 @@ Thread.start do
         puts "General error in Parsing!"
         puts e.message
         puts e.backtrace.join "\n"
-        @localvars[:statistics].synchronize do @localvars[:statistics][:errored] += 1; end
+        StatHandler.increase :packet_errored
         next
       end
 
@@ -137,15 +129,15 @@ Thread.start do
 
       begin
         RadsecStreamHelper.add_packet(rp, pkt[:request], [pkt[:from], pkt[:from_sock], pkt[:source]], [pkt[:to], pkt[:to_sock], pkt[:source]])
-        @localvars[:statistics].synchronize do @localvars[:statistics][:analyzed] += 1; end
+        StatHandler.increase :packet_analyzed
       rescue PacketFlowInsertionError => e
         logger.warn 'PacketFlowInsertionError: ' + e.message
-        @localvars[:statistics].synchronize do @localvars[:statistics][:errored] += 1; end
+        StatHandler.increase :packet_errored
       rescue => e
         puts "Error in Packetflow!"
         puts e.message
         puts e.backtrace.join "\n"
-        @localvars[:statistics].synchronize do @localvars[:statistics][:errored] += 1; end
+        StatHandler.increase :packet_errored
       end
     end
   end
@@ -166,7 +158,7 @@ def socket_cap_start(path)
     bytes = ""
     begin
       loop do
-        newbytes = socket.recv(1500)
+        newbytes = socket.recv(15000)
 
         # This is a workaround.
         # The socket does not recognize if the remote end is closed.
@@ -241,7 +233,7 @@ def socket_cap_start(path)
             @localvars[:pktbuf] << {source: path, request: request, from: from, from_sock: from_sock, to: to, to_sock: to_sock, pkt: radius_pkt}
             @localvars[:empty_cond].signal
           end
-          @localvars[:statistics].synchronize do @localvars[:statistics][:captured] += 1; end
+          StatHandler.increase :packet_captured
         end
       end
     rescue Errno::EPIPE
@@ -254,20 +246,8 @@ end
 Thread.start do
   Thread.current.name= "Statistic writer"
   loop do
-    logmsg = ""
-    @localvars[:statistics].synchronize do
-      logmsg  =  "Captured packets #{ @localvars[:statistics][:captured]   }"
-      logmsg += " Analyzed packets #{ @localvars[:statistics][:analyzed]   }"
-      logmsg += " Errored packets #{  @localvars[:statistics][:errored]    }"
-      logmsg += " Elastic inserts #{  @localvars[:statistics][:elasticins] }"
-      logmsg += " Elastic packets #{  @localvars[:statistics][:elasticpkt] }"
-      # TODO: number of radius streams, timed out radius streams, errored stream analysis
-      @localvars[:statistics][:captured]   = 0
-      @localvars[:statistics][:analyzed]   = 0
-      @localvars[:statistics][:errored]    = 0
-      @localvars[:statistics][:elasticins] = 0
-      @localvars[:statistics][:elasticpkt] = 0
-    end
+    StatHandler.log_stat
+
     stat = {}
     ElasticHelper.elasticdata.synchronize do
       stat[:elastic_length] = ElasticHelper.elasticdata.length
@@ -275,11 +255,14 @@ Thread.start do
     @localvars[:pktbuf].synchronize do
       stat[:pktbuf_length] = @localvars[:pktbuf].length
     end
-    
-    logmsg += " Elastic queue length #{ stat[:elastic_length] }"
-    logmsg += " Pktbuf queue length #{ stat[:pktbuf_length] }"
+    RadsecStreamHelper.instance.known_streams.length
 
-    statlogger.info logmsg
+    logmsg = ""
+    logmsg +=  "Elastic queue length #{ stat[:elastic_length] }"
+    logmsg += " Pktbuf queue length #{ stat[:pktbuf_length] }"
+    logmsg += " Known streams length #{RadsecStreamHelper.instance.known_streams.length}"
+
+    StatHandler.log_additional logmsg
     sleep 60
   end
 end
