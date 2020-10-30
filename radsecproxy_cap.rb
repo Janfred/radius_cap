@@ -60,7 +60,7 @@ logger.info("Requirements done. Loading radsecproxy_cap.rb functions")
 ElasticHelper.initialize_elasticdata @config[:debug]
 
 Thread.start do
-  Thread.current.name = "Elastic Writer"
+  Thread.current.name = "Elastic Writer #{Process.pid}"
   loop do
     begin
       ElasticHelper.elasticdata.synchronize do
@@ -103,7 +103,7 @@ end
 
 logger.info("Start Packet parsing")
 Thread.start do
-  Thread.current.name = "Packet Parser"
+  Thread.current.name = "Packet Parser #{Process.pid}"
   loop do
     @localvars[:pktbuf].synchronize do
       @localvars[:empty_cond].wait_while { @localvars[:pktbuf].empty? }
@@ -252,7 +252,7 @@ end
 
 # Statistic thread
 Thread.start do
-  Thread.current.name= "Statistic writer"
+  Thread.current.name= "Statistic writer #{Process.pid}"
   loop do
    logmsg = ""
    @localvars[:statistics].synchronize do
@@ -278,7 +278,7 @@ logger.info("Start Packet capture")
 begin
   @config[:socket_files].each do |path|
     socket_threads << Thread.new do
-      Thread.current.name = "SocketCap #{path}"
+      Thread.current.name = "SocketCap #{path} #{Process.pid}"
       begin
         socket_cap_start(path)
       rescue => e
