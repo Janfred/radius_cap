@@ -13,6 +13,7 @@ require 'singleton'
 require 'openssl'
 
 # Require local files
+require_relative './src/blackboard.rb'
 require_relative './src/stat_handler.rb'
 require_relative './src/radiuspacket.rb'
 require_relative './src/eappacket.rb'
@@ -45,255 +46,35 @@ logger = SemanticLogger['radius_cap']
 policylogger = SemanticLogger['PolicyViolation']
 logger.info("Requirements done. Loading radsecproxy_cap.rb functions")
 
-@localvars = {}
-@localvars[:logger] = logger
-@localvars[:pktbuf] = []
-@localvars[:pktbuf].extend(MonitorMixin)
-@localvars[:empty_cond] = @localvars[:pktbuf].new_cond
+BlackBoard.logger = logger
+BlackBoard.pktbuf = []
+BlackBoard.pktbuf.extend(MonitorMixin)
+BlackBoard.pktbuf_empty = BlackBoard.pktbuf.new_cond
+BlackBoard.policy_logger = policylogger
 
 
-ElasticHelper.initialize_elasticdata @config[:debug]
+require_relative './inc/elastic_write.rb'
 
-Thread.start do
-  Thread.current.name = "Elastic Writer"
-  loop do
-    begin
-      ElasticHelper.elasticdata.synchronize do
-        ElasticHelper.waitcond.wait_while { ElasticHelper.elasticdata.empty? }
-        toins = ElasticHelper.elasticdata.shift
-
-        logger.trace 'To insert: ' + toins.to_s
-
-        username = nil
-        mac = nil
-        if toins[:radsec] && toins[:radsec][:attributes] && toins[:radsec][:attributes][:username]
-          username = toins[:radsec][:attributes][:username]
-          logger.trace 'Username from RADSEC ' + username
-        end
-        if toins[:radsec] && toins[:radsec][:attributes] && toins[:radsec][:attributes][:mac]
-          mac = toins[:radsec][:attributes][:mac]
-          logger.trace 'MAC from RADSEC ' + mac
-        end
-
-        filters = @config[:elastic_filter].select { |x|
-          (x[:username].nil? || username.nil? || x[:username] == username) &&
-              (x[:mac].nil? || mac.nil? || x[:mac] == mac)
-        }
-
-        if filters.length == 0
-          StatHandler.increase(:elastic_writes)
-          StatHandler.increase(:packet_elastic_written, toins[:radsec][:information][:roundtrips])
-          ElasticHelper.insert_into_elastic(toins, @config[:debug], @config[:noelastic], @config[:filewrite])
-        else
-          logger.debug 'Filtered out Elasticdata'
-          StatHandler.increase(:elastic_filters)
-          StatHandler.increase(:packet_elastic_filtered, toins[:radsec][:information][:roundtrips])
-        end
-      end
-    rescue => e
-      logger.error("Error in Elastic Write", exception: e)
-    end
-  end
-end
 
 logger.info("Start Packet parsing")
-Thread.start do
-  Thread.current.name = "Packet Parser"
-  loop do
-    @localvars[:pktbuf].synchronize do
-      @localvars[:empty_cond].wait_while { @localvars[:pktbuf].empty? }
 
-      pkt = @localvars[:pktbuf].shift
+require_relative './inc/packet_match.rb'
 
-      rp = nil
+require_relative './inc/stat.rb'
 
-      begin
-        rp = RadiusPacket.new(pkt[:pkt].unpack('C*'))
-        rp.check_policies
-      rescue PacketLengthNotValidError => e
-        puts "PacketLengthNotValidError"
-        puts e.message
-        puts e.backtrace.join "\n"
-        StatHandler.increase :packet_errored
-        next
-      rescue ProtocolViolationError => e
-        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt[:from].inspect + ' To: ' + pkt[:to].inspect + ' Realm: ' + (rp.realm || "")
-      rescue PolicyViolationError => e
-        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt[:from].inspect + ' To: ' + pkt[:to].inspect + ' Realm: ' + (rp.realm || "")
-      rescue => e
-        puts "General error in Parsing!"
-        puts e.message
-        puts e.backtrace.join "\n"
-        StatHandler.increase :packet_errored
-        next
-      end
+require_relative './inc/sock_read.rb'
 
-      next if rp.nil?
-
-      begin
-        RadsecStreamHelper.add_packet(rp, pkt[:request], [pkt[:from], pkt[:from_sock], pkt[:source]], [pkt[:to], pkt[:to_sock], pkt[:source]])
-        StatHandler.increase :packet_analyzed
-      rescue PacketFlowInsertionError => e
-        logger.warn 'PacketFlowInsertionError: ' + e.message
-        StatHandler.increase :packet_errored
-      rescue => e
-        puts "Error in Packetflow!"
-        puts e.message
-        puts e.backtrace.join "\n"
-        StatHandler.increase :packet_errored
-      end
-    end
-  end
-end
-
-def socket_cap_start(path)
-  logger = @localvars[:logger]
-  loop do
-    logger.info "Trying to open Socket #{path}"
-    begin
-      socket = UNIXSocket.new(path)
-    rescue Errno::ECONNREFUSED
-      logger.warn "Socket #{path} could not be opened. Retrying in 5 sec"
-      sleep 5
-      next
-    end
-
-    socket_working = false
-    bytes = ""
-    begin
-      loop do
-        newbytes = socket.recv(15000)
-
-        # This is a workaround.
-        # The socket does not recognize if the remote end is closed.
-        # If we haven't received anything, it is likely that the socket was closed.
-        # So we send out an empty string. This does not effect the socket owner, but
-        # it raises a Broken Pipe Error, if the socket isn't open any more.
-        # If we didn't receive anything, we wait for 0.1 seconds to reduce the load.
-        if newbytes == ""
-          socket.send "", 0
-          sleep 0.1
-          next
-        end
-
-        socket_working = true
-        bytes += newbytes
-
-        while bytes.length > 11
-
-          # Check if the packet is a Request or a response
-          i = 0
-          request = bytes[0] == "\0"
-          logger.trace "Request" if request
-          logger.trace "Response" unless request
-          i += 1
-
-          # Now we unpack the "From" length
-          from_length = bytes[i, 2].unpack('n').first
-          logger.trace "From Length: #{from_length}"
-          i += 2
-
-          break if bytes.length < i + from_length + 6
-          # The +6 contains of 2 Byes From length and 4 Bytes From SocketID
-
-          # And we fetch the actual "From"
-          from = bytes[i, from_length]
-          logger.trace "From: #{from}"
-          i += from_length
-
-          # And we fetch the from socket id
-          from_sock = bytes[i, 4].unpack('N').first
-          i += 4
-
-          # Now we fetch the "To" length
-          to_length = bytes[i, 2].unpack('n').first
-          logger.trace "To Length: #{to_length}"
-          i += 2
-
-          break if bytes.length < i + to_length + 4
-          # The +4 covers the To SocketID
-
-          # And we fetch the actual "To"
-          to = bytes[i, to_length]
-          logger.trace "To: #{to}"
-          i += to_length
-
-          # And we fetch the To socket id
-          to_sock = bytes[i, 4].unpack('N').first
-          i += 4
-
-
-          break if bytes.length < i+4
-
-          radius_length = bytes[i+2,2].unpack('n').first
-          logger.trace "RADIUS Length: #{radius_length}"
-
-          break if bytes.length < i+radius_length
-
-          radius_pkt = bytes[i, radius_length]
-
-          bytes = bytes[i+radius_length .. -1]
-
-          @localvars[:pktbuf].synchronize do
-            logger.trace("Inserting Packet to pktbuf (from #{from} to #{to})")
-            @localvars[:pktbuf] << {source: path, request: request, from: from, from_sock: from_sock, to: to, to_sock: to_sock, pkt: radius_pkt}
-            @localvars[:empty_cond].signal
-          end
-          StatHandler.increase :packet_captured
-        end
-      end
-    rescue Errno::EPIPE
-      logger.warn "Socket #{path} was closed (Pipe Error). Trying to reopen."
-      sleep 5 unless socket_working
-    end
-  end
-end
-
-# Statistic thread
-Thread.start do
-  Thread.current.name= "Statistic writer"
-  loop do
-    StatHandler.log_stat
-
-    stat = {}
-    ElasticHelper.elasticdata.synchronize do
-      stat[:elastic_length] = ElasticHelper.elasticdata.length
-    end
-    @localvars[:pktbuf].synchronize do
-      stat[:pktbuf_length] = @localvars[:pktbuf].length
-    end
-    RadsecStreamHelper.instance.known_streams.length
-
-    logmsg = ""
-    logmsg +=  "Elastic queue length #{ stat[:elastic_length] }"
-    logmsg += " Pktbuf queue length #{ stat[:pktbuf_length] }"
-    logmsg += " Known streams length #{RadsecStreamHelper.instance.known_streams.length}"
-
-    StatHandler.log_additional logmsg
-    sleep 60
-  end
-end
-
-socket_threads = []
+BlackBoard.sock_threads = []
 logger.info("Start Packet capture")
 begin
   @config[:socket_files].each do |path|
-    socket_threads << Thread.new do
-      Thread.current.name = "SocketCap #{path}"
-      begin
-        socket_cap_start(path)
-      rescue => e
-        puts "Error in Capture"
-        puts e.message
-        puts e.backtrace.join "\n"
-      end
-    end
+    sock_read(path)
   end
   sleep
 
 rescue Interrupt
-  logger.info("Capture Interrupt")
-  socket_threads.each do |thr|
+  logger.info("Capture Interrupt. Aborting capture")
+  BlackBoard.sock_threads.each do |thr|
     thr.exit
   end
 end
@@ -303,14 +84,17 @@ logger.info("Terminating Capture")
 logger.info("Waiting for empty packet buffer")
 pktbufempty = false
 until pktbufempty do
-  @localvars[:pktbuf].synchronize do
-    pktbufempty = @localvars[:pktbuf].empty?
+  BlackBoard.pktbuf.synchronize do
+    pktbufempty = BlackBoard.pktbuf.empty?
   end
   sleep 1
 end
 
 logger.info("Packet buffer is empty.")
+# We should leave the parser thread a short time to finish the parsing, before we look for an empty elastic queue
+sleep 0.5
 logger.info("Waiting for empty elastic buffer")
+
 
 elasticempty = false
 until elasticempty do

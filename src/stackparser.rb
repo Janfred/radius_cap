@@ -23,6 +23,7 @@ class StackParser
     @priv_stack_data.extend(MonitorMixin)
     @priv_waitcond = @priv_stack_data.new_cond
     @parsethread = Thread.start do
+      Thread.current.name = "Parser"
       parser
     end
   end
