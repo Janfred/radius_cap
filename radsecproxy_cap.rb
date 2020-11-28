@@ -1,32 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'rubygems'
-require 'bundler/setup'
-
-# Require needed gems
-require 'socket'
-require 'irb'
-require 'monitor'
-require 'semantic_logger'
-
-require 'singleton'
-require 'openssl'
-
-# Require local files
-require_relative './src/blackboard.rb'
-require_relative './src/stat_handler.rb'
-require_relative './src/radiuspacket.rb'
-require_relative './src/eappacket.rb'
-require_relative './src/tlsclienthello.rb'
-require_relative './src/tlsserverhello.rb'
-require_relative './localconfig.rb'
-require_relative './src/write_to_elastic.rb'
-require_relative './src/macvendor.rb'
-require_relative './src/radiusstream.rb'
-require_relative './src/radsecstream.rb'
-require_relative './src/eapstream.rb'
-require_relative './src/stackparser.rb'
-require_relative './src/tlsstream.rb'
+require_relative './includes'
 
 @config[:debug] = false if @config[:debug].nil?
 @config[:eap_timeout] ||= 60
@@ -45,6 +19,10 @@ SemanticLogger.add_appender(file_name: 'statistics.log', filter: /StatHandler/)
 logger = SemanticLogger['radius_cap']
 policylogger = SemanticLogger['PolicyViolation']
 logger.info("Requirements done. Loading radsecproxy_cap.rb functions")
+
+
+
+
 
 BlackBoard.logger = logger
 BlackBoard.pktbuf = []

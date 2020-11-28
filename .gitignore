@@ -11,6 +11,8 @@
 !/debugcapture/.gitkeep
 /development.log
 /production.log
+/policy_violation.log
+/statistics.log
 /known_certs/*
 !/known_certs/.gitkeep
 /seen_certs/*

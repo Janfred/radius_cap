@@ -121,6 +121,11 @@ class ProtocolStack
         check_passed_type(EAPTLSStream, to_parse[:data].class)
         @eap_tls_stream = to_parse[:data]
         parse_from_eaptls
+      when :eap_pwd
+        # EAP-PWD Packets
+        check_passed_type(EAPPWDStream, to_parse[:data].class)
+        @eap_pwd_stream = to_parse[:data]
+        parse_from_eappwd
       else
         # Something weird here.
         logger.warn "Seen unknown type #{to_parse[:type]}. Doing nothing."
@@ -139,6 +144,7 @@ class ProtocolStack
     to_ret[:eap] = @eap_data if @eap_data
     to_ret[:eaptls] = @eap_tls_data if @eap_tls_data
     to_ret[:tls] = @tls_data if @tls_data
+    to_ret[:eappwd] = @eap_pwd_data if @eap_pwd_data
 
     to_ret
   end
@@ -350,6 +356,9 @@ class ProtocolStack
 
     when EAPPacket::Type::EAPPWD
       logger.info 'Found EAP-PWD Communication'
+      @eap_pwd_stream = EAPPWDStream.new(@eap_stream.eap_payload_packets)
+      parse_from_eappwd
+
     when EAPPacket::Type::MD5CHALLENGE
       logger.info 'Found MD5CHALLENGE Communication'
     when EAPPacket::Type::MSEAP
@@ -397,6 +406,15 @@ class ProtocolStack
     logger.debug 'TLS Data: ' + @tls_data.to_s
   end
 
+  def parse_from_eappwd
+    raise ProtocolStackError.new 'The EAP-PWD Stream must not be empty' if @eap_pwd_stream.nil?
+    raise ProtocolStackError.new 'The EAP-PWD Stream is not an EAPPWDStream Object' unless @eap_pwd_stream.is_a? EAPPWDStream
+
+    @pwd_stream = PWDStream.new @eap_pwd_stream.packets
+    @eap_pwd_data = @pwd_stream.data
+    logger.debug 'EAP-PWD Data: ' + @eap_pwd_data.to_s
+  end
+
   # Initialize all class variables
   def initialize_variables
     @radius_data = {}
@@ -408,6 +426,8 @@ class ProtocolStack
     @eap_tls_data = {}
     @eap_tls_stream = nil
     @tls_data = {}
+    @eap_pwd_stream = nil
+    @eap_pwd_data = {}
     @dontsave = false
   end
 end

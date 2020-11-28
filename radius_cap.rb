@@ -1,31 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'rubygems'
-require 'bundler/setup'
-
-# Require needed gems
-require 'packetfu'
-require 'irb'
-require 'monitor'
-require 'semantic_logger'
-
-require 'singleton'
-require 'openssl'
-
-# Require local files
-require_relative './src/stat_handler.rb'
-require_relative './src/radiuspacket.rb'
-require_relative './src/eappacket.rb'
-require_relative './src/tlsclienthello.rb'
-require_relative './src/tlsserverhello.rb'
-require_relative './localconfig.rb'
-require_relative './src/write_to_elastic.rb'
-require_relative './src/macvendor.rb'
-require_relative './src/radiusstream.rb'
-require_relative './src/radsecstream.rb'
-require_relative './src/eapstream.rb'
-require_relative './src/stackparser.rb'
-require_relative './src/tlsstream.rb'
+require_relative './includes'
 
 @config[:debug] = false if @config[:debug].nil?
 @config[:eap_timeout] ||= 60
@@ -39,6 +14,7 @@ SemanticLogger.default_level = @config[:debug_level]
 SemanticLogger.add_appender(file_name: 'development.log')
 SemanticLogger.add_appender(io: STDOUT, formatter: :color) if @config[:debug]
 SemanticLogger.add_appender(file_name: 'policy_violation.log', filter: /PolicyViolation/)
+SemanticLogger.add_appender(file_name: 'statistics.log', filter: /StatHandler/)
 
 logger = SemanticLogger['radius_cap']
 policylogger = SemanticLogger['PolicyViolation']
@@ -46,12 +22,13 @@ logger.info("Requirements done. Loading radius_cap.rb functions")
 
 class EAPFragParseError < StandardError
 end
-
 include PacketFu
 
-pktbuf = []
-pktbuf.extend(MonitorMixin)
-empty_cond = pktbuf.new_cond
+BlackBoard.logger = logger
+BlackBoard.pktbuf = []
+BlackBoard.pktbuf.extend(MonitorMixin)
+BlackBoard.pktbuf_empty = BlackBoard.pktbuf.new_cond
+BlackBoard.policy_logger = policylogger
 
 ElasticHelper.initialize_elasticdata @config[:debug]
 
@@ -95,9 +72,9 @@ end
 logger.info("Start Packet parsing thread")
 Thread.start do
   loop do
-    pktbuf.synchronize do
-      empty_cond.wait_while { pktbuf.empty? }
-      p = pktbuf.shift
+    BlackBoard.pktbuf.synchronize do
+      BlackBoard.pktbuf_empty.wait_while { BlackBoard.pktbuf.empty? }
+      p = BlackBoard.pktbuf.shift
       pkt = Packet.parse p
       # Skip all packets other then ip
       next unless pkt.is_ip?
@@ -163,15 +140,16 @@ end
 
 logger.info("Start Packet capture")
 iface = PacketFu::Utils.default_int
+iface = "br-radtest"
 cap = Capture.new(:iface => iface, :start => true, :filter => 'port 1812')
 begin
   cap.stream.each do |p|
 #    pcap_id += 1
 #    puts "Packet #{pcap_id}"
     logger.trace("Packet captured.")
-    pktbuf.synchronize do
-      pktbuf.push p
-      empty_cond.signal
+    BlackBoard.pktbuf.synchronize do
+      BlackBoard.pktbuf.push p
+      BlackBoard.pktbuf_empty.signal
     end
   end
 rescue Interrupt
@@ -184,8 +162,8 @@ logger.info("Waiting for empty packet buffer")
 
 pktbufempty = false
 until pktbufempty do
-  pktbuf.synchronize do
-    pktbufempty = pktbuf.empty?
+  BlackBoard.pktbuf.synchronize do
+    pktbufempty = BlackBoard.pktbuf.empty?
   end
   sleep 1
 end

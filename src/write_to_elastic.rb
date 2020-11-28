@@ -109,7 +109,7 @@ class ElasticHelper
     #   AT A MORE VISIBLE POINT OF THE CODE, SO IT CAN BE
     #   CHANGED EASILY IF THE VERSIONS NEED TO BE BUMPED
     meta[:scheme_ver] = 1
-    meta[:capture_ver] = 2
+    meta[:capture_ver] = 3
     meta[:realm] = realm.downcase
     meta[:realm_tld] = meta[:realm].split(".").last
     meta[:oui] = mac.split(':')[0,3].join ':'
