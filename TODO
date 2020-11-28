@@ -4,7 +4,17 @@
 
 General:
 TLSv1.3
+  * Client-seitig:
+    + Erkennung funktioniert.
+    * Extension KEY_SHARE wird noch nicht geparsed
+    * Retry nach falschem KeyX (z.B. falsche Kurve)
+  * Server-seitig:
+    + Erkennung funktioniert.
+    * Extension KEY_SHARE wird noch nicht geparsed
+    * Erkennung NAK funktioniert nicht. (Noch keine Test-Daten)
+
 TLS-Alerts
+TLS DOWNGRD
 
 Future Ideas:
 EAP-PWD
