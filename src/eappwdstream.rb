@@ -159,7 +159,8 @@ class PWDStream
   # @todo This Method is also currently just a stub, it needs to be extended. But for now I think this is a good start.
   def initialize(packets)
     # EAP-PWD is a strictly 6 Message protocol.
-    raise StandardError unless packets.length == 6
+    #raise StandardError unless packets.length == 6
+    raise StandardError if packets.length < 2
     # First we have 2 EAP-pwd-ID Messages
     raise StandardError unless packets[0][:type] == EAPPWDFragment::PWDEXCHTypes::ID
     server_id_pkt = PWDPackets::ID.new(packets[0][:data])
