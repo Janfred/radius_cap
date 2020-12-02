@@ -112,7 +112,7 @@ class EAPStream
       # If the client answers with the same EAP Type we have a successful agreement
       # on the EAP type. We're done here.
       @eap_type = @initial_eap_type
-      @first_eap_payload = 1
+      @first_eap_payload = cur_ptr - 1
       logger.trace "The first EAP Payload is in packet #{@first_eap_payload}"
       return nil
     end
