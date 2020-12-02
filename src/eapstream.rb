@@ -26,38 +26,45 @@ class EAPStream
   attr_reader :eap_packets, :eap_type, :initial_eap_type, :wanted_eap_types, :first_eap_payload, :eap_identity
 
   # Initialize the EAP Stream. Parses the EAP Type and matches the EAP fragmentation (not the EAP-TLS Fragmentation!)
-  # @param pktstream [RadiusStream,RadsecStream] Packet Stream
+  # @param pktstream [RadiusStream,RadsecStream,Array] Packet Stream
   # @raise [EAPStreamError] if the EAP Stream was invalid in any way.
   # @todo I should read the EAP RFC. I suspect that the EAP Communication is always {Response, Request}+,Response,[Success|Failure] but I'm not sure about that
   def initialize(pktstream)
-    logger.trace("Initialize new EAP Stream. Packet Stream length: #{pktstream.packets.length}")
     @eap_packets = []
     @eap_type = nil
     @wanted_eap_types = []
     @initial_eap_type = nil
     @first_eap_payload = nil
     @eap_identity = ""
-    # Here the EAP Stream is parsed based on the RADIUS Packets.
-    pktstream.packets.each do |radius_packet|
-      eap_msg = []
-      radius_packet.attributes.each do |attr|
-        next unless attr[:type] == RadiusPacket::Attribute::EAPMESSAGE
-        eap_msg += attr[:data]
-      end
-      if eap_msg == []
-        case radius_packet.packettype
-        when RadiusPacket::Type::ACCEPT,
-            RadiusPacket::Type::REJECT
-          logger.trace 'Seen empty EAP Message with a Accept or Reject type'
-          next
-        else
-          logger.error 'Seen a RADIUS Packet without an EAP Content and it was not a final Message'
-          raise EAPStreamError.new 'Ongoing RADIUS Packet without EAP Content captured'
+    if pktstream.is_a?(RadiusStream) || pktstream.is_a?(RadsecStream)
+      logger.trace("Initialize new EAP Stream. Packet Stream length: #{pktstream.packets.length}")
+      # Here the EAP Stream is parsed based on the RADIUS Packets.
+      pktstream.packets.each do |radius_packet|
+        eap_msg = []
+        radius_packet.attributes.each do |attr|
+          next unless attr[:type] == RadiusPacket::Attribute::EAPMESSAGE
+          eap_msg += attr[:data]
         end
-      end
-      logger.trace 'EAP Content: ' + eap_msg.pack('C*').unpack('H*').first
+        if eap_msg == []
+          case radius_packet.packettype
+          when RadiusPacket::Type::ACCEPT,
+              RadiusPacket::Type::REJECT
+            logger.trace 'Seen empty EAP Message with a Accept or Reject type'
+            next
+          else
+            logger.error 'Seen a RADIUS Packet without an EAP Content and it was not a final Message'
+            raise EAPStreamError.new 'Ongoing RADIUS Packet without EAP Content captured'
+          end
+        end
+        logger.trace 'EAP Content: ' + eap_msg.pack('C*').unpack('H*').first
 
-      @eap_packets << EAPPacket.new(eap_msg)
+        @eap_packets << EAPPacket.new(eap_msg)
+      end
+    elsif pktstream.is_a? Array
+      logger.trace("Initialize new EAP Stream. Packet Stream length: #{pktstream.length}")
+      pktstream.each do |pkt|
+        @eap_packets << EAPPacket.new(pkt)
+      end
     end
 
     if @eap_packets.length < 2
@@ -208,7 +215,9 @@ class EAPTLSStream
       cur_pkt_data = []
       indicated_length = 0
       begin
+        logger.trace "Parsing packet #{cur_pkt}"
         raise EAPStreamError.new "EAP Communication ended unexpectedly" if eapstream[cur_pkt].nil?
+        logger.trace "EAP Type of the packet: #{eapstream[cur_pkt].type}"
         raise EAPStreamError.new "The EAP Type of the current packet does not match the EAP Type of the other EAP Packets" if eapstream[cur_pkt].type != current_eaptype
         frag = EAPTLSFragment.new(eapstream[cur_pkt].type_data)
 

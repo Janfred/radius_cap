@@ -273,9 +273,14 @@ class ProtocolStack
 
     logger.debug 'Radius Data: ' + @radius_data.to_s
 
-    # Now we can parse the EAP Content of the Packets
-    @eap_stream = EAPStream.new(@radius_stream)
-    parse_from_eap
+    begin
+      # Now we can parse the EAP Content of the Packets
+      @eap_stream = EAPStream.new(@radius_stream)
+      parse_from_eap
+    rescue EAPStreamError => e
+      logger.warn 'EAPStreamError: ' + e.message
+      @dontsave = true
+    end
   end
 
   # Parse from RADSEC Layer upwards
@@ -326,6 +331,7 @@ class ProtocolStack
       parse_from_eap
     rescue EAPStreamError => e
       logger.warn 'EAPStreamError: ' + e.message
+      @dontsave = true
     end
   end
 
