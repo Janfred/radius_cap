@@ -148,7 +148,7 @@ class ProtocolStack
 
     if @eap_data && @eap_data[:information] && %w(TTLS TLS PEAP).include?(@eap_data[:information][:actual_eaptype])
       if @tls_data.nil? || @tls_data == {}
-        write_debug_capture_log
+        write_debug_capture_log("_EMPTY")
       end
     end
 
@@ -158,7 +158,7 @@ class ProtocolStack
   private
 
   # Write the complete RADIUS Stream to a pcap File
-  def write_debug_capture_log
+  def write_debug_capture_log(msg = nil)
     if @radius_stream && @radius_stream.is_a?(RadiusStream)
       pcapng_file = PacketFu::PcapNG::File.new
       packets = []
@@ -183,9 +183,9 @@ class ProtocolStack
       end
       eap_type_info = ""
       if @eap_data && @eap_data[:information] && @eap_data[:information][:actual_eaptype]
-        eap_type_info = "_" + @eap_data[:information][:actual_eaptype] + "_"
+        eap_type_info = "_" + @eap_data[:information][:actual_eaptype]
       end
-      debug_file_name = File.join('debugcapture', 'debug_'+ DateTime.now.strftime('%s') + eap_type_info + '.txt')
+      debug_file_name = File.join('debugcapture', 'debug_'+ DateTime.now.strftime('%s') + eap_type_info  + msg + '.txt')
       logger.info "Saving debug capture to #{debug_file_name}"
       File.write(debug_file_name, lines.join("\n"))
     end
