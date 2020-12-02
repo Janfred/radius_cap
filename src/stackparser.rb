@@ -146,6 +146,12 @@ class ProtocolStack
     to_ret[:tls] = @tls_data if @tls_data
     to_ret[:eappwd] = @eap_pwd_data if @eap_pwd_data
 
+    if @eap && @eap[:information] && %w(TTLS TLS PEAP).include?(@eap[:information][:actual_eaptype])
+      if @tls_data.nil? || @tls_data == {}
+        write_debug_capture_log
+      end
+    end
+
     to_ret
   end
 
@@ -165,6 +171,22 @@ class ProtocolStack
       pcap_file_name = File.join('debugcapture', 'debug_' + DateTime.now.strftime('%s') + '.pcap')
       logger.info "Saving debug capture to #{pcap_file_name}"
       pcapng_file.array_to_file(array: packets, file: pcap_file_name)
+    end
+    if @radsec_stream && @radsec_stream.is_a?(RadsecStream)
+      lines = []
+      @radsec_stream.packets.each do |pkt|
+        lines << if pkt.eap.nil?
+                   ""
+                 else
+                   pkt.eap.pack('C*').unpack('H*')
+                 end
+      end
+      eap_type_info = ""
+      if @eap_data && @eap_data[:actual_eaptype]
+        eap_type_info = "_" + @eap_data[:actual_eaptype] + "_"
+      end
+      debug_file_name = File.join('debugcapture', 'debug_'+ DateTime.now.strftime('%s') + eap_type_info + '.txt')
+      File.write(debug_file_name, lines.join("\n"))
     end
   end
 
