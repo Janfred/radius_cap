@@ -146,7 +146,7 @@ class ProtocolStack
     to_ret[:tls] = @tls_data if @tls_data
     to_ret[:eappwd] = @eap_pwd_data if @eap_pwd_data
 
-    if @eap && @eap[:information] && %w(TTLS TLS PEAP).include?(@eap[:information][:actual_eaptype])
+    if @eap_data && @eap_data[:information] && %w(TTLS TLS PEAP).include?(@eap_data[:information][:actual_eaptype])
       if @tls_data.nil? || @tls_data == {}
         write_debug_capture_log
       end
@@ -186,6 +186,7 @@ class ProtocolStack
         eap_type_info = "_" + @eap_data[:information][:actual_eaptype] + "_"
       end
       debug_file_name = File.join('debugcapture', 'debug_'+ DateTime.now.strftime('%s') + eap_type_info + '.txt')
+      logger.info "Saving debug capture to #{debug_file_name}"
       File.write(debug_file_name, lines.join("\n"))
     end
   end
