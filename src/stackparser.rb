@@ -185,6 +185,7 @@ class ProtocolStack
       if @eap_data && @eap_data[:information] && @eap_data[:information][:actual_eaptype]
         eap_type_info = "_" + @eap_data[:information][:actual_eaptype]
       end
+      msg ||= ""
       debug_file_name = File.join('debugcapture', 'debug_'+ DateTime.now.strftime('%s') + eap_type_info  + msg + '.txt')
       logger.info "Saving debug capture to #{debug_file_name}"
       File.write(debug_file_name, lines.join("\n"))
