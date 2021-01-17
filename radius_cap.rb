@@ -140,7 +140,6 @@ end
 
 logger.info("Start Packet capture")
 iface = PacketFu::Utils.default_int
-iface = "br-radtest"
 cap = Capture.new(:iface => iface, :start => true, :filter => 'port 1812')
 begin
   cap.stream.each do |p|

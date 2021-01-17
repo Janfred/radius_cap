@@ -1,7 +1,8 @@
 # Statistic thread
 Thread.start do
   Thread.current.name= "Statistic writer"
-  loop do
+  scheduler = Rufus::Scheduler.new
+  scheduler.cron '* * * * *' do
     StatHandler.log_stat
 
     stat = {}
@@ -19,6 +20,5 @@ Thread.start do
     logmsg += " Known streams length #{RadsecStreamHelper.instance.known_streams.length}"
 
     StatHandler.log_additional logmsg
-    sleep 60
   end
 end

@@ -43,11 +43,15 @@ class ElasticHelper
     nil
   end
 
+  def self.check_exists(elastic_id)
+    self.instance.check_exists elastic_id
+  end
+
   # Checks if elastic_id exists in Elasticsearch.
   # First it checks the locally saved ids, if the id is not found it looks up the ID in the Elastic database
   # @param elastic_id [String] ID of the elastic data
   # @return [Boolean] if the elastic_id is already known.
-  def check_exists(elastic_id)
+  def priv_check_exists(elastic_id)
     return true if @priv_known_ids.contains? elastic_id
     @priv_known_ids << elastic_id
     data = @priv_client.search index: 'tlshandshakes', body: { query: { match: { "_id": elastic_id } } }
