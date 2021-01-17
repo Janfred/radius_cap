@@ -11,3 +11,6 @@ gem 'yard'
 
 # For Logging
 gem 'semantic_logger'
+
+# For scheduling the diagnostic output
+gem 'rufus-scheduler'

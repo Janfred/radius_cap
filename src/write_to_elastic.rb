@@ -21,6 +21,8 @@ class ElasticHelper
   # @private
   @priv_client = nil
 
+  @priv_known_ids = []
+
   # Initializes the Connection to Elasticsearch and loads MacVendor Database
   # @param debug [Boolean] If set to true the Client connection will not be established. Defaults to false.
   # @return nil
@@ -39,6 +41,18 @@ class ElasticHelper
     @priv_client = Elasticsearch::Client.new log: false unless debug
     MacVendor.init_data
     nil
+  end
+
+  # Checks if elastic_id exists in Elasticsearch.
+  # First it checks the locally saved ids, if the id is not found it looks up the ID in the Elastic database
+  # @param elastic_id [String] ID of the elastic data
+  # @return [Boolean] if the elastic_id is already known.
+  def check_exists(elastic_id)
+    return true if @priv_known_ids.contains? elastic_id
+    @priv_known_ids << elastic_id
+    data = @priv_client.search index: 'tlshandshakes', body: { query: { match: { "_id": elastic_id } } }
+    # Return result of elasticsearch
+    data["hits"]["hits"].length > 0
   end
 
   # Get current elasticdata
@@ -130,7 +144,13 @@ class ElasticHelper
   # @return nil
   def self.insert_into_elastic(raw_data, debug=false, no_direct_elastic=false, output_to_file=false)
     to_ins = ElasticHelper.convert_data_to_elasticsearch(raw_data)
+    elastic_exists = check_exists to_ins[:id]
     ElasticHelper.client.index index: 'tlshandshakes', type: 'tlshandshake', id: to_ins[:id], body: to_ins[:data] unless no_direct_elastic
+    if(elastic_exists)
+      StatHandler.increase(:elastic_update)
+    else
+      StatHandler.increase(:elastic_new)
+    end
     puts to_ins if debug
     File.write(File.join('data', to_ins[:id]),to_ins[:data].to_s) if output_to_file
     nil

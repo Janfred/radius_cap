@@ -1,12 +1,31 @@
+require 'json'
+
 class StatHandler
   include SemanticLogger::Loggable
   include Singleton
 
   def initialize
+    @stat_history=[]
+    @stat_history.extend(MonitorMixin)
     @statistics={}
     @statistics.extend(MonitorMixin)
     @statistics.synchronize do
       null_stat
+    end
+    @stat_server_thr = start_stat_server
+  end
+
+  def start_stat_server
+    Thread.start do
+      server = TCPServer.new '127.0.0.1', 89800
+      loop do
+        Thread.start(server.accept) do |client|
+          @stat_history.synchronize do
+            client.write (@stat_history.length >= 15 ? @stat_history[-15,15] : @stat_history).to_json
+            client.close
+          end
+        end
+      end
     end
   end
 
@@ -38,6 +57,7 @@ class StatHandler
 
   def priv_log_stat
     logmsg = ""
+    cur_stat = {}
     @statistics.synchronize do
       logmsg +=  "Pkt Capture: #{@statistics[:packet_captured]}"
       logmsg += " Pkt Analyze: #{@statistics[:packet_analyzed]}"
@@ -52,10 +72,21 @@ class StatHandler
       logmsg += " Elastic writes: #{@statistics[:elastic_writes]}"
       logmsg += " Elsatic filter: #{@statistics[:elastic_filters]}"
 
+      [:packet_captured, :packet_analyzed, :packet_errored, :packet_elastic_written, :packet_elastic_filtered,
+       :packet_timed_out, :streams_analyzed, :streams_timed_out, :elastic_writes, :elastic_filters].each do |i|
+        cur_stat[i] = @statistics[i]
+      end
       null_stat
+      @stat_history.synchronize do
+        @stat_history << cur_stat
+        if @stat_history.length > 60
+          @stat_history.shift @stat_history.length-60
+        end
+      end
     end
     logger.info logmsg
   end
+
   def self.log_stat
     StatHandler.instance.priv_log_stat
   end

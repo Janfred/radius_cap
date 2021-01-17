@@ -9,6 +9,7 @@ require 'singleton'
 require 'openssl'
 require 'socket'
 require 'packetfu'
+require 'rufus-scheduler'
 
 # Require local files
 require_relative './src/stat_handler.rb'

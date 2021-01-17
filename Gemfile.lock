@@ -10,14 +10,24 @@ GEM
     elasticsearch-transport (7.6.0)
       faraday (~> 1)
       multi_json
+    et-orbi (1.2.4)
+      tzinfo
     faraday (1.0.1)
       multipart-post (>= 1.2, < 3)
+    fugit (1.4.2)
+      et-orbi (~> 1.1, >= 1.1.8)
+      raabro (~> 1.4)
     multi_json (1.14.1)
     multipart-post (2.1.1)
     packetfu (1.1.13)
       pcaprub
     pcaprub (0.13.0)
+    raabro (1.4.0)
+    rufus-scheduler (3.7.0)
+      fugit (~> 1.1, >= 1.1.6)
     semantic_logger (4.6.1)
+      concurrent-ruby (~> 1.0)
+    tzinfo (2.0.4)
       concurrent-ruby (~> 1.0)
     yard (0.9.24)
 
@@ -27,6 +37,7 @@ PLATFORMS
 DEPENDENCIES
   elasticsearch
   packetfu
+  rufus-scheduler
   semantic_logger
   yard
 
