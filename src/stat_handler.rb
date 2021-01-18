@@ -9,6 +9,20 @@ class StatHandler
     @stat_history.extend(MonitorMixin)
     @statistics={}
     @statistics.extend(MonitorMixin)
+    @stat_items = [
+      :packet_captured,
+      :packet_analyzed,
+      :packet_errored,
+      :packet_elastic_filtered,
+      :packet_elastic_written,
+      :packet_timed_out,
+      :elastic_writes,
+      :elastic_new,
+      :elastic_filters,
+      :elastic_update,
+      :streams_timed_out,
+      :streams_analyzed,
+    ]
     @statistics.synchronize do
       null_stat
     end
@@ -31,21 +45,9 @@ class StatHandler
 
   def null_stat
 
-    @statistics[:packet_captured] = 0
-    @statistics[:packet_analyzed] = 0
-    @statistics[:packet_errored] = 0
-    @statistics[:packet_elastic_written] = 0
-    @statistics[:packet_elastic_filtered] = 0
-    @statistics[:packet_timed_out] = 0
-
-    @statistics[:elastic_writes] = 0
-    @statistics[:elastic_filters] = 0
-
-    @statistics[:streams_timed_out] = 0
-    @statistics[:streams_analyzed] = 0
-
-    @statistics[:elastic_update] = 0
-    @statistics[:elastic_new] = 0
+    @stat_items.each do |item|
+      @statistics[item] = 0
+    end
 
   end
 
@@ -75,8 +77,7 @@ class StatHandler
       logmsg += " Elastic writes: #{@statistics[:elastic_writes]}"
       logmsg += " Elsatic filter: #{@statistics[:elastic_filters]}"
 
-      [:packet_captured, :packet_analyzed, :packet_errored, :packet_elastic_written, :packet_elastic_filtered,
-       :packet_timed_out, :streams_analyzed, :streams_timed_out, :elastic_writes, :elastic_filters].each do |i|
+      @stat_items.each do |i|
         cur_stat[i] = @statistics[i]
       end
       null_stat
