@@ -44,7 +44,7 @@ class ElasticHelper
   end
 
   def self.check_exists(elastic_id)
-    self.instance.check_exists elastic_id
+    self.instance.priv_check_exists elastic_id
   end
 
   # Checks if elastic_id exists in Elasticsearch.
@@ -148,7 +148,7 @@ class ElasticHelper
   # @return nil
   def self.insert_into_elastic(raw_data, debug=false, no_direct_elastic=false, output_to_file=false)
     to_ins = ElasticHelper.convert_data_to_elasticsearch(raw_data)
-    elastic_exists = check_exists to_ins[:id]
+    elastic_exists = ElasticHelper.check_exists to_ins[:id]
     ElasticHelper.client.index index: 'tlshandshakes', type: 'tlshandshake', id: to_ins[:id], body: to_ins[:data] unless no_direct_elastic
     if(elastic_exists)
       StatHandler.increase(:elastic_update)
