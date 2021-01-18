@@ -38,9 +38,9 @@ Thread.start do
       StatHandler.increase :packet_errored
       next
     rescue ProtocolViolationError => e
-      BlackBoard.policy_logger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt.ip_saddr + ' To: ' + pkt.ip_daddr + ' Realm: ' + (pkt.realm || "")
+      BlackBoard.policy_logger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt.ip_saddr+':'+pkt.udp_sport.to_s + ' To: ' + pkt.ip_daddr+':'+pkt.udp_dport.to_s + ' Realm: ' + (rp.realm || "")
     rescue PolicyViolationError => e
-      BlackBoard.policy_logger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt.ip_saddr + ' To: ' + pkt.ip_daddr + ' Realm: ' + (pkt.realm || "")
+      BlackBoard.policy_logger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt.ip_saddr+':'+pkt.udp_sport.to_s + ' To: ' + pkt.ip_daddr+':'+pkt.udp_dport.to_s + ' Realm: ' + (rp.realm || "")
     rescue => e
       puts "General error in Parsing!"
       puts e.message
