@@ -17,7 +17,7 @@ class StatHandler
 
   def start_stat_server
     Thread.start do
-      server = TCPServer.new '127.0.0.1', 89800
+      server = TCPServer.new '127.0.0.1', 6898
       loop do
         Thread.start(server.accept) do |client|
           @stat_history.synchronize do
