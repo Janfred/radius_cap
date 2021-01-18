@@ -52,7 +52,7 @@ class ElasticHelper
   # @param elastic_id [String] ID of the elastic data
   # @return [Boolean] if the elastic_id is already known.
   def priv_check_exists(elastic_id)
-    return true if @priv_known_ids.contains? elastic_id
+    return true if @priv_known_ids.include? elastic_id
     @priv_known_ids << elastic_id
     data = @priv_client.search index: 'tlshandshakes', body: { query: { match: { "_id": elastic_id } } }
     # Return result of elasticsearch
