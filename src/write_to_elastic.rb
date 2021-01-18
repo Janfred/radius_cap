@@ -58,6 +58,9 @@ class ElasticHelper
   def priv_check_exists(elastic_id)
     return true if @priv_known_ids.include? elastic_id
     @priv_known_ids << elastic_id
+    # This is for debugging purposes (if the elastic write is disabled)
+    return false if @priv_client.nil?
+    # Now we look up the id
     data = @priv_client.search index: 'tlshandshakes', body: { query: { match: { "_id": elastic_id } } }
     # Return result of elasticsearch
     data["hits"]["hits"].length > 0
