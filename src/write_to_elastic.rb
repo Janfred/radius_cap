@@ -21,7 +21,11 @@ class ElasticHelper
   # @private
   @priv_client = nil
 
-  @priv_known_ids = []
+  @priv_known_ids
+
+  def initialize
+    @priv_known_ids = []
+  end
 
   # Initializes the Connection to Elasticsearch and loads MacVendor Database
   # @param debug [Boolean] If set to true the Client connection will not be established. Defaults to false.
