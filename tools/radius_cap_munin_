@@ -27,7 +27,7 @@ end
 if ARGV.include? "config"
   exit 1 if data.length == 0
   puts "graph_title radsecproxy_cap #{stat}"
-  puts "graph_category radius_cap"
+  puts "graph_category radiuscap"
   data[0].keys.each do |key|
     next unless key.match /^#{stat}/
     puts "#{key}.label #{key}"
