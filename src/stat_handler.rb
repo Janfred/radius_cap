@@ -44,6 +44,9 @@ class StatHandler
     @statistics[:streams_timed_out] = 0
     @statistics[:streams_analyzed] = 0
 
+    @statistics[:elastic_update] = 0
+    @statistics[:elastic_new] = 0
+
   end
 
   def priv_increase(field,num)
