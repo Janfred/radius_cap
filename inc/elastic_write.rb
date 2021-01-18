@@ -50,7 +50,7 @@ Thread.start do
         StatHandler.increase(:packet_elastic_written, roundtrips)
         ElasticHelper.insert_into_elastic(toins, @config[:debug], @config[:noelastic], @config[:filewrite])
       else
-        logger.debug 'Filtered out Elasticdata'
+        BlackBoard.logger.debug 'Filtered out Elasticdata'
         StatHandler.increase(:elastic_filters)
         StatHandler.increase(:packet_elastic_filtered, roundtrips)
       end
