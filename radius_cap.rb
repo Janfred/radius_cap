@@ -30,108 +30,13 @@ BlackBoard.pktbuf.extend(MonitorMixin)
 BlackBoard.pktbuf_empty = BlackBoard.pktbuf.new_cond
 BlackBoard.policy_logger = policylogger
 
-ElasticHelper.initialize_elasticdata @config[:debug]
-
-Thread.start do
-  loop do
-    begin
-      ElasticHelper.elasticdata.synchronize do
-        ElasticHelper.waitcond.wait_while { ElasticHelper.elasticdata.empty? }
-        toins = ElasticHelper.elasticdata.shift
-
-        logger.trace 'To insert: ' + toins.to_s
-
-        username = nil
-        mac = nil
-        if toins[:radius] && toins[:radius][:attributes] && toins[:radius][:attributes][:username]
-          username = toins[:radius][:attributes][:username]
-          logger.trace 'Username from RADIUS ' + username
-        end
-        if toins[:radius] && toins[:radius][:attributes] && toins[:radius][:attributes][:mac]
-          mac = toins[:radius][:attributes][:mac]
-          logger.trace 'MAC from RADIUS ' + mac
-        end
-
-        filters = @config[:elastic_filter].select { |x|
-          (x[:username].nil? || username.nil? || x[:username] == username) &&
-              (x[:mac].nil? || mac.nil? || x[:mac] == mac)
-        }
-
-        if filters.length == 0
-          ElasticHelper.insert_into_elastic(toins, @config[:debug], @config[:noelastic], @config[:filewrite])
-        else
-          logger.debug 'Filtered out the Elasticdata'
-        end
-      end
-    rescue => e
-      logger.error("Error in Elastic Write", exception: e)
-    end
-  end
-end
+require_relative './inc/elastic_write.rb'
 
 logger.info("Start Packet parsing thread")
-Thread.start do
-  loop do
-    BlackBoard.pktbuf.synchronize do
-      BlackBoard.pktbuf_empty.wait_while { BlackBoard.pktbuf.empty? }
-      p = BlackBoard.pktbuf.shift
-      pkt = Packet.parse p
-      # Skip all packets other then ip
-      next unless pkt.is_ip?
-      # Skip all fragmented ip packets
-      next if pkt.ip_frag & 0x2000 != 0
-      # only look on copied packets
-      next if ([pkt.ip_daddr, pkt.ip_saddr] & @config[:ipaddrs]).empty?
-      # Skip packets with ignored ip addresses
-      next unless ([pkt.ip_daddr, pkt.ip_saddr] & @config[:ignoreips]).empty?
-      # Skip non-udp packets
-      next unless pkt.is_udp?
-      # Skip packets for other port then radius
-      next unless [pkt.udp_sport, pkt.udp_dport].include? 1812
 
-      # Print out debug info, just for now to monitor progress
-      packet_info = [pkt.ip_saddr, pkt.ip_daddr, pkt.size, pkt.proto.last]
-      #puts "%-15s -> %-15s %-4d %s" % packet_info
+require_relative './inc/pcap_match.rb'
 
-      rp = nil
-
-      begin
-        # Parse Radius packets
-        rp = RadiusPacket.new(pkt)
-        rp.check_policies
-      rescue PacketLengthNotValidError => e
-        puts "PacketLengthNotValidError!"
-        puts e.message
-        puts e.backtrace.join "\n"
-        puts p.unpack("H*").first
-        $stderr.puts e.message
-        next
-      rescue ProtocolViolationError => e
-        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt.ip_saddr + ' To: ' + pkt.ip_daddr + ' Realm: ' + (pkt.realm || "")
-      rescue PolicyViolationError => e
-        policylogger.info e.class.to_s + ' ' + e.message + ' From: ' + pkt.ip_saddr + ' To: ' + pkt.ip_daddr + ' Realm: ' + (pkt.realm || "")
-      rescue => e
-        puts "General error in Parsing!"
-        puts e.message
-        puts e.backtrace.join "\n"
-        puts p.unpack("H*").first
-        next
-      end
-
-      next if rp.nil?
-
-      begin
-        RadiusStreamHelper.add_packet(rp)
-      rescue PacketFlowInsertionError => e
-        logger.warn 'PacketFlowInsertionError: ' + e.message
-      rescue => e
-        puts "Error in Packetflow!"
-        puts e.message
-        puts e.backtrace.join "\n"
-      end
-    end
-  end
-end
+require_relative './inc/stat_pcap.rb'
 
 #pcap_file = PacketFu::PcapNG::File.new
 #pcap_array = pcap_file.file_to_array(filename: './debugcapture2.pcapng')
@@ -168,6 +73,8 @@ until pktbufempty do
 end
 
 logger.info("Packet buffer is empty.")
+# We should leave the parser thread a short time to finish the parsing, before we look for an empty elastic queue
+sleep 0.5
 logger.info("Waiting for empty elastic buffer")
 
 elasticempty = false

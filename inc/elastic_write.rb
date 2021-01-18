@@ -24,20 +24,35 @@ Thread.start do
         mac = toins[:radsec][:attributes][:mac]
         BlackBoard.logger.trace 'MAC from RADSEC ' + mac
       end
+      if toins[:radius] && toins[:radius][:attributes] && toins[:radius][:attributes][:username]
+        username = toins[:radius][:attributes][:username]
+        BlackBoard.logger.trace 'Username from RADIUS ' + username
+      end
+      if toins[:radius] && toins[:radius][:attributes] && toins[:radius][:attributes][:mac]
+        mac = toins[:radius][:attributes][:mac]
+        BlackBoard.logger.trace 'MAC from RADIUS ' + mac
+      end
 
       filters = @config[:elastic_filter].select { |x|
         (x[:username].nil? || username.nil? || x[:username] == username) &&
             (x[:mac].nil? || mac.nil? || x[:mac] == mac)
       }
 
+      roundtrips = 0
+      if toins[:radsec] && toins[:radsec][:information] && toins[:radsec][:information][:roundtrips]
+        roundtrips = toins[:radsec][:information][:roundtrips]
+      end
+      if toins[:radius] && toins[:radius][:information] && toins[:radius][:information][:roundtrips]
+        roundtrips = toins[:radius][:information][:roundtrips]
+      end
       if filters.length == 0
         StatHandler.increase(:elastic_writes)
-        StatHandler.increase(:packet_elastic_written, toins[:radsec][:information][:roundtrips])
+        StatHandler.increase(:packet_elastic_written, roundtrips)
         ElasticHelper.insert_into_elastic(toins, @config[:debug], @config[:noelastic], @config[:filewrite])
       else
         logger.debug 'Filtered out Elasticdata'
         StatHandler.increase(:elastic_filters)
-        StatHandler.increase(:packet_elastic_filtered, toins[:radsec][:information][:roundtrips])
+        StatHandler.increase(:packet_elastic_filtered, roundtrips)
       end
 
     rescue => e

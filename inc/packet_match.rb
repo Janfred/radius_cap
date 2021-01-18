@@ -1,5 +1,5 @@
 Thread.start do
-  Thread.current.name = "Packet Matcher"
+  Thread.current.name = "Packet Matcher (RADSEC)"
   loop do
     pkt = nil
     BlackBoard.pktbuf.synchronize do
@@ -11,6 +11,7 @@ Thread.start do
     rp = nil
 
     begin
+      # Parse Radius packets
       rp = RadiusPacket.new(pkt[:pkt].unpack('C*'))
       rp.check_policies
     rescue PacketLengthNotValidError => e
@@ -27,6 +28,7 @@ Thread.start do
       puts "General error in Parsing!"
       puts e.message
       puts e.backtrace.join "\n"
+      puts p.unpack("H*").first
       StatHandler.increase :packet_errored
       next
     end

@@ -30,15 +30,13 @@ BlackBoard.pktbuf.extend(MonitorMixin)
 BlackBoard.pktbuf_empty = BlackBoard.pktbuf.new_cond
 BlackBoard.policy_logger = policylogger
 
-
 require_relative './inc/elastic_write.rb'
-
 
 logger.info("Start Packet parsing")
 
 require_relative './inc/packet_match.rb'
 
-require_relative './inc/stat.rb'
+require_relative './inc/stat_radsec.rb'
 
 require_relative './inc/sock_read.rb'
 
@@ -60,6 +58,7 @@ end
 logger.info("Terminating Capture")
 
 logger.info("Waiting for empty packet buffer")
+
 pktbufempty = false
 until pktbufempty do
   BlackBoard.pktbuf.synchronize do
@@ -72,7 +71,6 @@ logger.info("Packet buffer is empty.")
 # We should leave the parser thread a short time to finish the parsing, before we look for an empty elastic queue
 sleep 0.5
 logger.info("Waiting for empty elastic buffer")
-
 
 elasticempty = false
 until elasticempty do
