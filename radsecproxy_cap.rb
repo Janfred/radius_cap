@@ -81,4 +81,7 @@ until elasticempty do
 end
 
 logger.info("Elastic buffer is empty.")
+logger.info("Saving stat")
+StatHandler.write_temp_stat
+
 logger.info("Terminating.")

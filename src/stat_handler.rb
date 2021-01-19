@@ -39,7 +39,10 @@ class StatHandler
     @stat_server_thr = start_stat_server
   end
 
-  def write_temp_stat
+  def self.write_temp_stat
+    StatHandler.instance.priv_write_temp_stat
+  end
+  def priv_write_temp_stat
     File.write('stat_tmp', @stat_history.to_json)
   end
 
