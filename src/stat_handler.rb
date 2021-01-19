@@ -1,4 +1,5 @@
 require 'json'
+require 'time'
 
 class StatHandler
   include SemanticLogger::Loggable
@@ -29,7 +30,17 @@ class StatHandler
     @statistics.synchronize do
       null_stat
     end
+    if File.exists?('stat_tmp')
+      data = JSON.parse(File.read('stat_tmp'))
+      thres = Time.now - 60
+      data.shift while data.length > 0 && Time.parse(data[0]["timestamp"]) < thres
+      @stat_history += data
+    end
     @stat_server_thr = start_stat_server
+  end
+
+  def write_temp_stat
+    File.write('stat_tmp', @stat_history.to_json)
   end
 
   def start_stat_server
@@ -83,6 +94,7 @@ class StatHandler
       @stat_items.each do |i|
         cur_stat[i] = @statistics[i]
       end
+      cur_stat["timestamp"] << Time.now.strftime('%Y-%m-%dT%H:%M')
       null_stat
       @stat_history.synchronize do
         @stat_history << cur_stat
