@@ -51,6 +51,7 @@ begin
 #    pcap_id += 1
 #    puts "Packet #{pcap_id}"
     logger.trace("Packet captured.")
+    StatHandler.increase :packet_captured
     BlackBoard.pktbuf.synchronize do
       BlackBoard.pktbuf.push p
       BlackBoard.pktbuf_empty.signal

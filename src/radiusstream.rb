@@ -235,6 +235,8 @@ class RadiusStreamHelper
     old.each do |o|
       logger.debug "Timing out 0x#{o.current_state.pack('C*').unpack('H*').first}" if o.current_state
       logger.debug 'Timing out state without state variable' unless o.current_state
+      StatHandler.increase :streams_timed_out
+      StatHandler.increase :packet_timed_out, o.packets.length
       @known_streams.delete o
     end
     @housekeeping_counter = 0

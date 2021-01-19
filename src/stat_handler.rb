@@ -22,6 +22,9 @@ class StatHandler
       :elastic_update,
       :streams_timed_out,
       :streams_analyzed,
+      :streams_errored,
+      :streams_written,
+      :streams_skipped,
     ]
     @statistics.synchronize do
       null_stat

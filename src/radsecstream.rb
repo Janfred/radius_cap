@@ -182,6 +182,7 @@ class RadsecStreamHelper
   def priv_notify_flow_done(pktflow)
     @known_streams.delete(pktflow)
     StackParser.insert_into_parser(:radsec, pktflow)
+    StatHandler.increase :streams_analyzed
   end
 
 end

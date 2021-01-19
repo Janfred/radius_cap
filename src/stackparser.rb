@@ -56,17 +56,21 @@ class StackParser
         result = ProtocolStack.new to_parse
 
         # If the DontSave flag is set, we just skip this.
-        next if result.dontsave
+        if result.dontsave
+          StatHandler.increase :streams_skipped
+        end
 
         to_insert_in_elastic = result.to_h
         logger.debug 'Complete Data: ' + to_insert_in_elastic.to_s
 
+        StatHandler.increase :streams_written
         ElasticHelper.elasticdata.synchronize do
           ElasticHelper.elasticdata.push to_insert_in_elastic
           ElasticHelper.waitcond.signal
         end
       rescue => e
         logger.error("Error in parsing", exception: e)
+        StatHandler.increase :streams_errored
       end
     end
   end
@@ -132,6 +136,7 @@ class ProtocolStack
       end
     rescue => e
       write_debug_capture_log
+      StatHandler.increase :streams_errored
       raise e
     end
   end
