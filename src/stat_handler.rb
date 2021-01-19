@@ -97,7 +97,7 @@ class StatHandler
       @stat_items.each do |i|
         cur_stat[i] = @statistics[i]
       end
-      cur_stat["timestamp"] << Time.now.strftime('%Y-%m-%dT%H:%M')
+      cur_stat["timestamp"] = Time.now.strftime('%Y-%m-%dT%H:%M')
       null_stat
       @stat_history.synchronize do
         @stat_history << cur_stat
