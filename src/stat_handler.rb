@@ -83,6 +83,7 @@ class StatHandler
 
   def priv_increase(field,num)
     @statistics.synchronize do
+      @statistics[field] ||= 0
       @statistics[field] += num
     end
   end
