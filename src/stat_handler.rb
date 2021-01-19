@@ -32,7 +32,7 @@ class StatHandler
     end
     if File.exists?('stat_tmp')
       data = JSON.parse(File.read('stat_tmp'))
-      thres = Time.now - 60
+      thres = Time.now - 3600
       data.shift while data.length > 0 && Time.parse(data[0]["timestamp"]) < thres
       data.each do |d|
         @stat_history << d
