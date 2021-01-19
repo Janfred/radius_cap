@@ -34,7 +34,9 @@ class StatHandler
       data = JSON.parse(File.read('stat_tmp'))
       thres = Time.now - 60
       data.shift while data.length > 0 && Time.parse(data[0]["timestamp"]) < thres
-      @stat_history += data
+      data.each do |d|
+        @stat_history << d
+      end
     end
     @stat_server_thr = start_stat_server
   end
