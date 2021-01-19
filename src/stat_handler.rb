@@ -43,6 +43,9 @@ class StatHandler
 
   def priv_add_stat_item(symb)
     @stat_items << symb
+    @statistics.synchronize do
+      @statistics[symb] ||= 0
+    end
   end
 
   def self.add_stat_item(symb)
