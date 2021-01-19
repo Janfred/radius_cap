@@ -1,8 +1,8 @@
-def sock_read(path)
+def sock_read(path,label)
   BlackBoard.sock_threads << Thread.new do
     Thread.current.name = "SocketCap #{path}"
     begin
-      socket_cap_start(path)
+      socket_cap_start(path,label)
     rescue => e
       puts "Error in Capture"
       puts e.message
@@ -11,8 +11,30 @@ def sock_read(path)
   end
 end
 
-def socket_cap_start(path)
+def watchdog(stat_item,thr)
+  loop do
+    sleep 40
+    last_values = StatHandler.get_values stat_item
+    next if last_values.length < 2
+    if last_values[-2,2].reduce(0, :+) == 0
+      BlackBoard.logger.warn "Sending Error to read thread for #{stat_item}"
+      thr.raise(SocketRestartError)
+    end
+  end
+end
+
+class SocketRestartError < StandardError; end
+
+def socket_cap_start(path,label)
   logger = BlackBoard.logger
+  stat_item = "packet_cap_#{label}".to_sym
+  StatHandler.add_stat_item stat_item
+
+  # Starting Watchdog
+  mythread = Thread.current
+  Thread.current[:watchdog] = Thread.new { watchdog(stat_item, mythread) }
+  socket_working = false
+  socket = nil
   loop do
     logger.info "Trying to open Socket #{path}"
     begin
@@ -105,11 +127,17 @@ def socket_cap_start(path)
             BlackBoard.pktbuf_empty.signal
           end
           StatHandler.increase :packet_captured
+          StatHandler.increase stat_item
         end
       end
-    rescue Errno::EPIPE
-      logger.warn "Socket #{path} was closed (Pipe Error). Trying to reopen."
-      sleep 5 unless socket_working
+    end
+  rescue Errno::EPIPE
+    logger.warn "Socket #{path} was closed (Pipe Error). Trying to reopen."
+    sleep 5 unless socket_working
+  rescue SocketRestartError
+    logger.warn "Socket #{path} will be restarted due to watchdog signal"
+    unless socket.nil?
+      socket.close unless socket.closed?
     end
   end
 end

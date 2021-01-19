@@ -41,6 +41,14 @@ class StatHandler
     @stat_server_thr = start_stat_server
   end
 
+  def priv_add_stat_item(symb)
+    @stat_items << symb
+  end
+
+  def self.add_stat_item(symb)
+    StatHandler.instance.priv_add_stat_item(symb)
+  end
+
   def self.write_temp_stat
     StatHandler.instance.priv_write_temp_stat
   end
@@ -64,7 +72,7 @@ class StatHandler
 
   def null_stat
 
-    @stat_items.each do |item|
+    @statistics.keys.each do |item|
       @statistics[item] = 0
     end
 
@@ -77,6 +85,21 @@ class StatHandler
   end
   def self.increase(field,num=1)
     StatHandler.instance.priv_increase(field,num)
+  end
+
+  def priv_get_values(field)
+    to_ret = []
+    @stat_history.synchronize do
+      @stat_history.each do |s|
+        to_ret << s[field]
+      end
+    end
+    @statistics.synchronize do
+      to_ret << @statistics[field]
+    end
+  end
+  def self.get_values(field)
+    StatHandler.instance.priv_get_values(field)
   end
 
   def priv_log_stat

@@ -8,7 +8,7 @@ require_relative './includes'
 @config[:filewrite] = false if @config[:filewrite].nil?
 @config[:debug_level] ||= :warn
 @config[:elastic_filter] ||= []
-@config[:socket_files] ||= ['/tmp/radsecproxy.sock']
+@config[:socket_files] ||= [{path: '/tmp/radsecproxy.sock', label: 'radsecproxy'}]
 
 SemanticLogger.default_level = @config[:debug_level]
 SemanticLogger.add_appender(file_name: 'development.log')
@@ -44,13 +44,14 @@ BlackBoard.sock_threads = []
 logger.info("Start Packet capture")
 begin
   @config[:socket_files].each do |path|
-    sock_read(path)
+    sock_read(path[:path], path[:label])
   end
   sleep
 
 rescue Interrupt
   logger.info("Capture Interrupt. Aborting capture")
   BlackBoard.sock_threads.each do |thr|
+    thr[:watchdog].exit
     thr.exit
   end
 end
