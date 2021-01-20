@@ -75,7 +75,7 @@ class StatHandler
 
   def null_stat
 
-    @statistics.keys.each do |item|
+    (@stat_items | @statistics.keys).each do |item|
       @statistics[item] = 0
     end
 
