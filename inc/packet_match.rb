@@ -47,5 +47,10 @@ Thread.start do
       puts e.backtrace.join "\n"
       StatHandler.increase :packet_errored
     end
+  rescue => e
+    $stderr.puts "ERROR IN PACKET MATCHER"
+    $stderr.puts e.class.to_s + " -> " + e.message
+    $stderr.puts e.backtrace.join "\n"
+    BlackBoard.logger.error 'Packet Matcher errored.', e
   end
 end
