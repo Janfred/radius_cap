@@ -18,8 +18,8 @@ pages:
   before_script:
     - *beforescript
   script:
-    - bundle exec yardoc "*.rb"
-    - bundle exec yard stats --list-undoc "*.rb"
+    - bundle exec yardoc "*.rb" "src/**/*.rb" "inc/**/*.rb"
+    - bundle exec yard stats --list-undoc "*.rb" "src/**/*.rb" "inc/**/*.rb"
     - mv doc/ public/
   artifacts:
     paths:
