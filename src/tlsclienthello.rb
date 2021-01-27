@@ -11,37 +11,66 @@ module TLSTypes
   # Supported TLS Record Types.
   # @todo Currently this is only the Handshake record. In future it might be a good Idea to also support other types.
   module RecordType
+    # TLS ChangeCipherSpec Record
     CHANGE_CIPHER_SPEC = 0x14
+    # TLS Alert Record
     ALERT              = 0x15
+    # TLS Handshake Record
     HANDSHAKE          = 0x16
+    # TLS ApplicationData Record
     APPLICATION_DATA   = 0x17
   end
   # Supported Handshake Types
   module HandshakeType
+    # TLS Handshake ClientHello
     CLIENTHELLO         =  1
+    # TLS Handshake ServerHello
     SERVERHELLO         =  2
+    # TLS Handshake Certificate
     CERTIFICATE         = 11
+    # TLS Handshake ServerKeyExchange
+    # Used in DHE/ECDHE
     SERVERKEYEXCHANGE   = 12
+    # TLS Handshake CertificateRequest
+    # Used for requesting a Certificate (sent e.g. by the Server for requesting a Client Certificate)
     CERTIFICATE_REQUEST = 13
+    # TLS Handshake ServerHelloDone
     SERVERHELLODONE     = 14
+    # TLS Handshake CertificateStatus
+    # Used in OCSP-Stapling responses
     CERTIFICATESTATUS   = 22
   end
 
   module Alerts
+    # TLS Alert Close Notify
     CLOSE_NOTIFY            = 0x00
+    # TLS Alert Handshake Failure
     HANDSHAKE_FAILURE       = 0x28
+    # TLS Alert No Certificate
     NO_CERTIFICATE          = 0x29
+    # TLS Alert Bad Certificate
     BAD_CERTIFICATE         = 0x2A
+    # TLS Alert Unsupported Certificate
     UNSUPPORTED_CERTIFICATE = 0x2B
+    # TLS Alert Certificate Revoked
     CERTIFICATE_REVOKED     = 0x2C
+    # TLS Alert Certificate Expired
     CERTIFICATE_EXPIRED     = 0x2D
+    # TLS Alert Certificate Unknown
     CERTIFICATE_UNKNOWN     = 0x2E
+    # TLS Alert Illegal Parameter
     ILLEGAL_PARAMETER       = 0x2F
+    # TLS Alert Unknown CA
     UNKNOWN_CA              = 0x30
+    # TLS Alert Access Denied
     ACCESS_DENIED           = 0x31
+    # TLS Alert Decode Error
     DECODE_ERROR            = 0x32
+    # TLS Alert Decrypt Error
     DECRYPT_ERROR           = 0x33
+    # TLS Alert Protocol Version
     PROTOCOL_VERSION        = 0x46
+    # TLS Alert Internal Error
     INTERNAL_ERROR          = 0x50
 
     # Get alert name by the given code
@@ -57,20 +86,59 @@ module TLSTypes
   end
 
   # Supported TLS Extensions
+  # https://www.iana.org/assignments/tls-extensiontype-values/tls-extensiontype-values.xhtml#tls-extensiontype-values-1
   module Extensions
+    # TLS Extension Server Name
+    # Also known as Server Name Indication (SNI)
+    # Defined in RFC6066
     SERVER_NAME             =     0
+    # TLS Extension Status Request
+    # Used for OCSP
+    # Defined in RFC6066
     STATUS_REQUEST          =     5
+    # TLS Extension Supported Groups
+    # Previous known as Elliptic Curves
+    # Indicates support for specific elliptic curves for ECDHE exchange
+    # and specific FiniteField DH Groups
+    # Defined in RFC8422/RFC7919
     SUPPORTED_GROUPS        =    10
+    # TLS Extension EC Point Formats
+    # Defined in RFC8422
     EC_POINT_FORMATS        =    11
+    # TLS Extension SignatureAlgorithms
+    # Used in TLS>=v1.2 for used Signature Algorithms for DH Parameters
+    # Defined in RFC8446
     SIGNATURE_ALGORITHMS    =    13
+    # TLS Extension Heartbeat
+    # Defined in RFC6520
     HEARTBEAT               =    15
+    # TLS Extension Signed Certificate Timestamp
+    # Defined in RFC6962
     SIGNED_CERT_TIMESTAMP   =    18
+    # TLS Extension Encrypt then HMAC
+    # Defined in RFC7366
     ENCRYPT_THEN_HMAC       =    22
+    # TLS Extension Extended Master Secret
+    # Defined in RFC 7627
     EXTENDED_MASTER_SECRET  =    23
+    # TLS Extension Session Ticket
+    # Defined in RFC5077/RFC8447
     SESSION_TICKET          =    35
+    # TLS Extension Supported Versions
+    # Used to indicate TLSv1.3 while maintaining the TLSv1.2 Handshake format
+    # Defined in RFC8446
     SUPPORTED_VERSIONS      =    43
+    # TLS Extension PSK Key Exchange Modes
+    # Defined in RFC8446
     PSK_KEY_EXCHANGE_MODES  =    45
+    # TLS Extension KeyShare
+    # Used in TLSv1.3 to share (EC)DH Parameters in the Client-/Server-Hello Messages
+    # Defined in RFC8446
     KEY_SHARE               =    51
+    # TLS Extension Renegotiation Info
+    # Indicates Support for Secure Renegotiation
+    # May be used in ServerHello Extensions even if not included in the ClientHello extensions, if the client indicated support via SCSV
+    # Defined in RFC5746
     RENEGOTIATION_INFO      = 65281
 
     # Get the extension name by the given code
@@ -84,14 +152,17 @@ module TLSTypes
       "UNKNOWN_EXTENSION_#{code}"
     end
   end
+
   # Container for all Extensions constants
   module ExtenData
     # Constants for Server Name Indication. Currently only HOST_NAME.
     module ServerName
+      # SNI HostName
       HOST_NAME = 0
     end
     # Constants for Status Request. Currently only OCSP is specified
     module StatusRequest
+      # StatusRequest OCSP
       OCSP = 1
     end
   end

@@ -356,6 +356,7 @@ class TLSServerHello
   end
 end
 
+# Class for Storing the seen TLS Certs
 class TLSCertStoreHelper
   include Singleton
   include SemanticLogger::Loggable
@@ -374,10 +375,16 @@ class TLSCertStoreHelper
     priv_add_known_intermediates
   end
 
+  # Add the seen_certs to the additional cert store
   def priv_add_known_intermediates
     @additional_cert_store.add_path('seen_certs')
   end
 
+  # Convert original subject name to a posix compatible file name.
+  # Replaces slashes with Paragraph, everything else with underscore
+  # @param orig_name [String] original subject
+  # @return [String] an escaped file name
+  # @private
   def subj_to_filename(orig_name)
     to_return = orig_name
     to_return.gsub!(/\//,'§')
@@ -386,23 +393,35 @@ class TLSCertStoreHelper
     to_return
   end
 
+  # Save a server certicicate to the certificate store
+  # @param cert [OpenSSL::X509::Certificate] certificate to save
   def self.save_server_cert(cert)
     TLSCertStoreHelper.instance.priv_add_cert(cert, false)
   end
 
+  # Get the subject key identifier fo the certificate.
+  # If the certificate contains multiple SubjectKeyIdentifier attributes the first one is returned,
+  # if none is given the SHA2-Hash of the entire certificate (DER encoded) is returned.
+  # @param cert [OpenSSL::X509::Certificate] certificate
+  # @return [String] SubjectKeyIdentifier
+  # @private
   def get_subj_key_identifier(cert)
     subject_key_identifier_exten = cert.extensions.select{|x| x.oid == "subjectKeyIdentifier"}
     if subject_key_identifier_exten.length < 1
       logger.warn "Found certificate without subjectKeyIdentifier. Using SHA-2 Hash of the certificate"
       return Digest::SHA2.hexdigest(cert.to_der).upcase
     elsif subject_key_identifier_exten.length == 1
-      return subject_key_identifier_exten.first.value.gsub /:/,''
+      return subject_key_identifier_exten.first.value.gsub(/:/,'')
     else
-      logger.warn "Found multiple subjectKeyIdentifier Extensions in X.509 Cert for #{cert_name}"
-      return subject_key_identifier_exten.first.value.gsub /:/,''
+      logger.warn "Found multiple subjectKeyIdentifier Extensions in X.509 Cert for #{cert.subject.to_s}"
+      return subject_key_identifier_exten.first.value.gsub(/:/,'')
     end
   end
 
+  # Private Function to add a cert to certificate store.
+  # If this is an intermediate certificate, it is also stored in the additional cert store for future reference
+  # @param cert [OpenSSL::X509::Certificate] certificate to save
+  # @param intermediate [Boolean]
   def priv_add_cert(cert, intermediate=false)
     raise StandardError unless cert.is_a? OpenSSL::X509::Certificate
     issuer = cert.issuer.to_s
@@ -443,10 +462,15 @@ class TLSCertStoreHelper
     end
   end
 
+  # Add a possible Trust anchor to the Cert store
+  # @param cert [OpenSSL::X509::Certificate] Certificate to add
   def self.add_trust_anchor(cert)
     TLSCertStoreHelper.instance.priv_add_trust_anchor(cert)
   end
 
+  # Private helper function to add trust anchor
+  # @param cert [OpenSSL::X509::Certificate] Certificate to add
+  # @private
   def priv_add_trust_anchor(cert)
     raise StandardError unless cert.is_a? OpenSSL::X509::Certificate
     certname = get_subj_key_identifier(cert) + '.pem'
@@ -456,16 +480,27 @@ class TLSCertStoreHelper
     end
   end
 
+  # Add an intermediate certificate to the cert store
+  # @param cert [OpenSSL::X509::Certificate] certificate to add
   def self.add_known_intermediate(cert)
     TLSCertStoreHelper.instance.priv_add_cert(cert, true)
   end
 
+  # Check if a given certificate may be a trust ancor (based on same Issuer and Subject)
+  # @param cert [OpenSSL::X509::Certificate] Certificate to check
+  # @return [Boolean] if the given Cert may be a trust anchor
   def self.check_trust_anchor(cert)
     raise StandardError unless cert.is_a? OpenSSL::X509::Certificate
     logger.trace "Checking #{cert.issuer.to_s} against #{cert.subject.to_s}"
     return cert.issuer.eql? cert.subject
   end
 
+  # Check a given Cert with a given Certificate Chain against the public trust store
+  # @param cert [OpenSSL::X509::Certificate] Certificate to check
+  # @param chain [Array<OpenSSL::X509::Certificate] Chain of Certificates as Array of Certificates
+  # @return [Hash]
+  #    * :valid [Boolean] if the certificate is trusted
+  #    * :chain [Array] Certificate Chain
   def self.check_public_trust(cert, chain)
     certstore = TLSCertStoreHelper.instance.trusted_cert_store
     raise StandardError unless certstore.is_a? OpenSSL::X509::Store
@@ -475,6 +510,12 @@ class TLSCertStoreHelper
 
     to_return
   end
+  # Check a given Cert with a given certificate chain against the additional trust store
+  # @param cert [OpenSSL::X509::Certificate] Certificate to check
+  # @param chain [Array<OpenSSL::X509::Certificate] Chain of Certificates as Array of Certificates
+  # @return [Hash]
+  #    * :valid [Boolean] if the certificate is trusted
+  #    * :chain [Array] Certificate Chain
   def self.check_additional_trust(cert, chain)
     certstore = TLSCertStoreHelper.instance.additional_cert_store
     raise StandardError unless certstore.is_a? OpenSSL::X509::Store

@@ -1,10 +1,12 @@
 require 'json'
 require 'time'
 
+# Class for handling statistics
 class StatHandler
   include SemanticLogger::Loggable
   include Singleton
 
+  # Create new instance of the StatHandler class
   def initialize
     @stat_history=[]
     @stat_history.extend(MonitorMixin)
@@ -41,6 +43,9 @@ class StatHandler
     @stat_server_thr = start_stat_server
   end
 
+  # Private function for adding stat
+  # @param symb [Symbol]
+  # @private
   def priv_add_stat_item(symb)
     @stat_items << symb
     @statistics.synchronize do
@@ -48,17 +53,23 @@ class StatHandler
     end
   end
 
+  # Add a statistic item
+  # @param symb [Symbol] Statistics Symbol to add to statistics
   def self.add_stat_item(symb)
     StatHandler.instance.priv_add_stat_item(symb)
   end
 
+  # Write Statistics Temp File (e.g. before a shutdown)
   def self.write_temp_stat
     StatHandler.instance.priv_write_temp_stat
   end
+  # Private function for stat temp file
   def priv_write_temp_stat
     File.write('stat_tmp', @stat_history.to_json)
   end
 
+  # Start a TCP Statistic Server for Munin Statistics
+  # @todo currently fixed on port 6898, should be configurable
   def start_stat_server
     Thread.start do
       server = TCPServer.new '127.0.0.1', 6898
@@ -73,6 +84,7 @@ class StatHandler
     end
   end
 
+  # Reset the value of all statistic symbols to 0
   def null_stat
 
     (@stat_items | @statistics.keys).each do |item|
@@ -81,16 +93,22 @@ class StatHandler
 
   end
 
+  # Private function for increasing a vield value
   def priv_increase(field,num)
     @statistics.synchronize do
       @statistics[field] ||= 0
       @statistics[field] += num
     end
   end
+
+  # Increase a given statistic field by a given value
+  # @param field [Symbol] Statistics field to increase
+  # @param num [Integer] value by which field will be increased, defaults to 1
   def self.increase(field,num=1)
     StatHandler.instance.priv_increase(field,num)
   end
 
+  # Private function for getting field values
   def priv_get_values(field)
     to_ret = []
     @stat_history.synchronize do
@@ -102,10 +120,15 @@ class StatHandler
       to_ret << @statistics[field]
     end
   end
+
+  # Get values for a given field for the last 60 minutes
+  # @param field [Symbol] Statistics field to query
+  # @return [Array<Integer>] last 60 values as int array, values may be nil
   def self.get_values(field)
     StatHandler.instance.priv_get_values(field)
   end
 
+  # Private function for logging the current statistics
   def priv_log_stat
     logmsg = ""
     cur_stat = {}
@@ -138,12 +161,18 @@ class StatHandler
     logger.info logmsg
   end
 
+  # Log current statistic values and save current stat to history
   def self.log_stat
     StatHandler.instance.priv_log_stat
   end
+
+  # Private function to log additional statistic data
   def priv_log_additional(logmsg)
     logger.info logmsg
   end
+
+  # Log a message to the statistics logger
+  # @param logmsg [String] Logmessage to log to statistics logger
   def self.log_additional(logmsg)
     StatHandler.instance.priv_log_additional logmsg
   end

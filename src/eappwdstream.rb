@@ -1,21 +1,31 @@
 
+# Class for EAPPWD Fragments
 class EAPPWDFragment
   include SemanticLogger::Loggable
 
+  # Module for EAP-PWD Fragment Flags
   module Flags
     # Indicates, that the EAP Payload contains the Length of the EAP Payload
     LENGTHINCLUDED = 0x80
     # Indicates, that this EAP Packet is fragmented and that more fragments follow
     MOREFRAGMENTS  = 0x40
-    # Mask for PWD-Exch
+    # Mask for PWD-Exch (see [PWDEXCHTypes])
     PWDEXCHBITS    = 0x3F
   end
+  # Module for EAP-PWD Exchange Types (encoded in Flag byte)
   module PWDEXCHTypes
+    # Reserved Type
     RESERVED = 0x00
+    # EAP-PWD ID Type
     ID       = 0x01
+    # EAP-PWD Commit Type
     COMMIT   = 0x02
+    # EAP-PWD Confirm Type
     CONFIRM  = 0x03
 
+    # Get the name of a given PWDEXCHType by the given code
+    # @param code [Integer] PWDEXCHType as int
+    # @return [String] the constant name of the given Type, UNKNOWN_PWDEXCH_<num> if unknown
     def PWDEXCHTypes::get_name_by_code(code)
       PWDEXCHTypes.constants.each do |const|
         next if PWDEXCHTypes.const_get(const) != code
@@ -32,6 +42,8 @@ class EAPPWDFragment
   @payload
   @exch_type
 
+  # Create new Instance of the class
+  # @param data [Array<Byte>] EAP-PWD Fragment as Byte-Array
   def initialize(data)
     if data.length == 0
       @payload = []
@@ -60,14 +72,20 @@ class EAPPWDFragment
     @indicated_length = @payload.length if @indicated_length.nil?
   end
 
+  # Check if LENGTH_INCLUDED flag is set
+  # @return [Boolean] if LENGTH_INCLUDED flag is set
   def length_included?
     @length_included
   end
 
+  # Check if MORE_FRAGMENTS flag is set
+  # @return [Boolean] if MORE_FRAGMENTS flag is set
   def more_fragments?
     @more_fragments
   end
 
+  # Check if current fragment is an acknowledgement fragment
+  # @return [Boolean] if current fragment is an acknowledgement fragment
   def is_acknowledgement?
     @payload.length == 0 && !@more_fragments && !@length_included && @exch_type.nil?
   end
@@ -81,6 +99,8 @@ class EAPPWDStream
   attr_reader :packets
   @packets
 
+  # Create new Instance of the class
+  # @param eapstream [Array<EAPPacket>] EAP Stream as Array of EAPPacket
   def initialize(eapstream)
     raise EAPStreamError.new "The EAP Stream is to short to be an actually EAP-PWD Communication" if eapstream.length < 2
 

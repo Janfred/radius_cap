@@ -10,9 +10,13 @@ class EAPPacket
 
   # Constants for EAP Codes
   module Code
+    # EAP REQUEST
     REQUEST  = 1
+    # EAP RESPONSE
     RESPONSE = 2
+    # EAP SUCCESS
     SUCCESS  = 3
+    # EAP FAILURE
     FAILURE  = 4
   end
   # Constants for EAP Types
