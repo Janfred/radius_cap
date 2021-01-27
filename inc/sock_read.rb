@@ -1,3 +1,7 @@
+
+# start Socket read thread
+# @param path [String] Path to the UNIX Socket
+# @param label [String] label to use in statistics
 def sock_read(path,label)
   BlackBoard.sock_threads << Thread.new do
     Thread.current.name = "SocketCap #{path}"
@@ -11,6 +15,14 @@ def sock_read(path,label)
   end
 end
 
+# Watch over the capture for a given stream.
+# If within the last 2 Minutes the statistic sums up to 0 captures, the given thread
+# will receive a SocketRestartError.
+# @todo For release this time span should be configurable.
+#   Currently with the DFN there should not be a case where for 2 minutes neither of the
+#   Radsecproxies receives any packets.
+# @param stat_item [Symbol] statistic symbol to analyse
+# @param thr [Thread] monitored Capture thread
 def watchdog(stat_item,thr)
   loop do
     sleep 40
@@ -23,8 +35,12 @@ def watchdog(stat_item,thr)
   end
 end
 
+# Error to be thrown into a thread if it needs to reopen the Socket
 class SocketRestartError < StandardError; end
 
+# Start the Capture from a given socket
+# @param path [String] Path to the UNIX Socket to capture
+# @param label [String] label to use in statistics
 def socket_cap_start(path,label)
   logger = BlackBoard.logger
   stat_item = "packet_cap_#{label}".to_sym

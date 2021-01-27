@@ -304,7 +304,9 @@ class TLSCipherSuite
   ]
 end
 
+# TLS Signature Schemes
 class TLSSignatureScheme
+  # List of all known Signature Schemes
   KNOWN_SIGNATURESCHEMES = [
     # SigScheme     Name
     [ [0x01, 0x01], "MD5 RSA"],
@@ -335,23 +337,33 @@ class TLSSignatureScheme
     [ [0x08, 0x0B], "rsa_pss_pss_sha512"],
   ]
 
+  # Get a SignatureScheme by a hex string
+  # @param val [String] Hex-String of the SignatureScheme in format "0xXXXX"
+  # @return [Hash] SignatureScheme Hash value
   def self.by_hexstr (val)
     ar = [val[2, 4]].pack("H*").unpack("C*")
     by_arr(ar)
   end
 
+  # Get a SignatureScheme by an array of two bytes
+  # @param val [Array<Byte>] SignatureScheme value as array of two bytes
+  # @return [Hash] SignatureScheme Hash value
   def self.by_arr (val)
     p = KNOWN_SIGNATURESCHEMES.select { |x| x[0] == val}
     return {code: val, name: "UNKNOWN_0x#{val.pack("C*").unpack("H*").first}"} if p.empty? || p.length != 1
     sigscheme_to_h(p.first)
   end
 
+  # Converts a given entry from the SignatureScheme array to a hash
+  # @param val [Array] Row from KNOWN_SIGNATURESCHEMES array
+  # @return [Hash] corresponding SignatureScheme Hash value
   def self.sigscheme_to_h(val)
     {code: val[0], name: val[1]}
   end
 end
-
+# TLS Supported Groups
 class TLSSupportedGroups
+  # List of all known Supported Groups
   KNOWN_SUPPORTEDGROUPS = [
     # Group         name
     [ [0x00, 0x01], "sect163k1"],
@@ -391,25 +403,42 @@ class TLSSupportedGroups
     [ [0x01, 0x04], "ffdhe8192"],
   ]
 
+  # Get a SupportedGroup by a hex string
+  # @param val [String] Hex-String of the SupportedGroup in format "0xXXXX"
+  # @return [Hash] SupportedGroup Hash value
   def self.by_hexstr (val)
     ar = [val[2, 4]].pack("H*").unpack("C*")
     by_arr(ar)
   end
 
+  # Get a SupportedGroup by an array of two bytes
+  # @param val [Array<Byte>] SupportedGroup value as array of two bytes
+  # @return [Hash] SupportedGroup Hash value
   def self.by_arr (val)
     p = KNOWN_SUPPORTEDGROUPS.select { |x| x[0] == val }
     return {code: val, name: "UNKNOWN_#{val.pack("C*").unpack("H*").first}"} if p.empty? || p.length != 1
     group_to_h(p.first)
   end
 
+  # Converts a given entry from the SupportedGroups Array to a hash
+  # @param val [Array] Row from KNOWN_SUPPORTEDGROUPS array
+  # @return [Hash] corresponding SupportedGroup Hash value
   def self.group_to_h(val)
     {code: val[0], name: val[1]}
   end
 end
 
+# TLS Server Key Exchange
 class TLSServerKeyExchange
+  # Handling Class for ECDHE Key Exchange
   class ECDHE
+    # Constant for NAMED_CURVE
     NAMED_CURVE = 0x03
+
+    # Initialize a new instance and parse the given TLS Server Key Exchange.
+    # Also parses the TLS Signature Scheme if TLS Version is >=v1.2 (in TLSv1.0/v1.1 this is not used)
+    # @param data [Array<Byte>] Payload as Byte-Array
+    # @param version [Array<Byte>] TLS Version of the ServerHello.
     def initialize(data, version)
       @curve_type = data[0]
       if @curve_type == TLSServerKeyExchange::ECDHE::NAMED_CURVE
@@ -443,6 +472,9 @@ class TLSServerKeyExchange
         $stderr.puts "Unknown Curve type #{@curve_type}"
       end
     end
+
+    # Convert ECDHE Exchange details to hash
+    # @return [Hash] Hash of the parsed details, may be empty if no details were found.
     def to_h
       if @curve_sig_algo && @curve_name
         {sig_scheme: @curve_sig_algo[:name], curve_name: @curve_name[:name]}
@@ -452,13 +484,21 @@ class TLSServerKeyExchange
     end
   end
 
+  # Handling Class for DHE Key Exchange
+  # @todo this is just a stub
   class DHE
     def initialize(data, version)
     end
+    # Convert DHE Exchange details to hash
+    # @return [Hash]
+    # @todo This is currently just a stub and won't return anything
     def to_h
     end
   end
 
+  # Parse Key Exchange
+  # @return [TLSServerKeyExchange::ECDHE] parsed EDCHE Key Exchange
+  # @todo DHE is not yet supported
   def self.parse(data, cipher, version)
     if TLSCipherSuite.by_arr(cipher)[:keyxchange] == "ECDHE"
       return TLSServerKeyExchange::ECDHE.new(data, version)

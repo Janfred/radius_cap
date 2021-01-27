@@ -41,6 +41,7 @@ module TLSTypes
     CERTIFICATESTATUS   = 22
   end
 
+  # TLS Alert Types
   module Alerts
     # TLS Alert Close Notify
     CLOSE_NOTIFY            = 0x00
@@ -354,6 +355,8 @@ class TLSClientHello
     to_ret
   end
 
+  # Inspect the current Client Hello
+  # @return [String] description of the Client Hello
   def inspect
     str  = "#<#{self.class.name}:"
     #str += " v1.2" if @innververs == 0x0303

@@ -47,6 +47,9 @@ class ElasticHelper
     nil
   end
 
+  # Check if a data with the given id already exists in Elasticsearch
+  # @param elastic_id [String] id of the data item in waiting
+  # @return [Boolean] if the id already is taken by an item in Elasticsearch
   def self.check_exists(elastic_id)
     self.instance.priv_check_exists elastic_id
   end

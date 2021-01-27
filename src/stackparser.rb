@@ -78,6 +78,7 @@ class StackParser
   private :parser
 end
 
+# Error to be thrown if the ProtocolStack parser encounters an error
 class ProtocolStackError < StandardError
 end
 

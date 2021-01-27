@@ -3,7 +3,7 @@ require 'singleton'
 
 
 
-
+# Class for handling Streams of Radsec Packets
 class RadsecStream
   include SemanticLogger::Loggable
 
@@ -65,6 +65,7 @@ class RadsecStream
   end
 end
 
+# Helper Class for inserting Data into the Radsec Streams
 class RadsecStreamHelper
   include Singleton
   include SemanticLogger::Loggable
@@ -99,6 +100,10 @@ class RadsecStreamHelper
     housekeeping
   end
 
+  # Insert a request in a PacketFlow
+  # @param pkt [RadiusPacket] Packet to insert
+  # @param client sending client of the request
+  # @param server receiving server of the request
   def insert_request(pkt, client, server)
     logger.trace("Inserting packet from client")
     p = @known_streams.select { |x|
@@ -124,6 +129,10 @@ class RadsecStreamHelper
     flow.add_request(pkt)
   end
 
+  # Insert a response in a PacketFlow
+  # @param pkt [RadiusPacket] Packet to insert
+  # @param server sending server of the response
+  # @param client receiving client of the response
   def insert_response(pkt, server, client)
     logger.trace("Inserting packet from server")
     p = @known_streams.select { |x|

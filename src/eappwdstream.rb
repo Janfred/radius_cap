@@ -158,7 +158,9 @@ class EAPPWDStream
   end
 end
 
+# EAP PWD Packet module
 module PWDPackets
+  # EAP-PWD ID Packet
   class ID
     attr_reader :group, :random_func, :prf, :token, :prep, :identity
     def initialize(data)
@@ -172,6 +174,7 @@ module PWDPackets
   end
 end
 
+# Parser Class for an EAP-PWD Stream
 class PWDStream
   include SemanticLogger::Loggable
   attr_reader :data

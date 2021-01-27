@@ -1,9 +1,11 @@
 
 require 'singleton'
 
+# Error to be thrown if a Packet can not be inserted into a PacketFlow
 class PacketFlowInsertionError < StandardError
 end
 
+# Class for handling Streams of Radius Packets
 class RadiusStream
   include SemanticLogger::Loggable
 

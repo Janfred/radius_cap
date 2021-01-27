@@ -10,8 +10,13 @@ end
 class PacketMultipleState < StandardError
 end
 
+# Error to be thrown if the RADIUS Packet violates the RFC.
+# E.g. multiple State Attributes or a State Attribute in an Accept/Reject.
 class ProtocolViolationError < StandardError; end
 
+# Error to be thrown if the RADIUS Packet violates the eduroam Policy
+# Currently checks against v2.8 from 2012-07-26
+# https://www.eduroam.org/wp-content/uploads/2016/05/GN3-12-192_eduroam-policy-service-definition_ver28_26072012.pdf
 class PolicyViolationError < StandardError; end
 
 # A Radius Packet with all attributes and a reassembled EAP Message
@@ -20,9 +25,13 @@ class RadiusPacket
 
   # All supported RADIUS Types
   module Type
+    # Access-Request (Sent by client)
     REQUEST   =  1
+    # Access-Accept (Sent by server, final answer)
     ACCEPT    =  2
+    # Access-Reject (Sent by server, final answer)
     REJECT    =  3
+    # Access-Challenge (Sent by server if not final answer)
     CHALLENGE = 11
 
     # Get Attribute name by the given code
@@ -40,54 +49,117 @@ class RadiusPacket
 
   # All supported RADIUS attributes
   module Attribute
+    # RADIUS Attribute Username
     USERNAME             =   1
+    # RADIUS Attribute User Password
     USERPASSWORD         =   2
+    # RADIUS Attribute NAS IP-Address
     NASIPADDRESS         =   4
+    # RADIUS Attribute NAS Port
     NASPORT              =   5
+    # RADIUS Attribute Service type
     SERVICETYPE          =   6
+    # RADIUS Attribute Framed Protocol
     FRAMEDPROTOCOL       =   7
+    # RADIUS Attribute Framed IP-Address
     FRAMEDIPADDRESS      =   8
+    # RADIUS Attribute Framed IP Netmask
     FRAMEDIPNETMASK      =   9
+    # RADIUS Attribute Framed Routing
     FRAMEDROUTING        =  10
+    # RADIUS Attribute Framed MTU
     FRAMEDMTU            =  12
+    # RADIUS Attribute Framed Compression
     FRAMEDCOMPRESSION    =  13
+    # RADIUS Attribute Login IP Host
     LOGINIPHOST          =  14
+    # RADIUS Attribute Replymessage
     REPLYMESSAGE         =  18
+    # RADIUS Attribute Remote access service
     REMOTEACCESSSERVICE  =  22
+    # RADIUS Attribute State
+    # Used for Mapping Requests to previous Challenges
     STATE                =  24
+    # RADIUS Attribute Vendor specific
+    # Used for sending Cryptographic information for WPA2-Enterprise
     VENDORSPECIFIC       =  26
+    # RADIUS Attribute Session Timeout
     SESSIONTIMEOUT       =  27
+    # RADIUS Attribute Called Station ID
+    # Used to send the MAC Address of the Access Point the client connects to
     CALLEDSTATIONID      =  30
+    # RADIUS Attribute Calling Station ID
+    # Used to send the MAC Address of the Client. Mandatory for Eduroam
     CALLINGSTATIONID     =  31
+    # RADIUS Attribute NAS Identifier
     NASIDENTIFIER        =  32
+    # RADIUS Attribute ProxyState
+    # Used by software like RADSECPROXY to save relaying state
     PROXYSTATE           =  33
+    # RADIUS Attribute Acct Session ID
+    # Used for Accounting
     ACCTSESSIONID        =  44
+    # RADIUS Attribute Acct MultiSession ID
+    # Used for Accounting
     ACCTMULTISESSIONID   =  50
+    # RADIUS Attribute Event Timestamp
     EVENTTIMESTAMP       =  55
+    # RADIUS Attribute NAS Port-Type
     NASPORTTYPE          =  61
+    # RADIUS Attribute Tunnel Type
+    # Used for Dynamic VLAN Assignment
     TUNNELTYPE           =  64
+    # RADIUS Attribute Tunnel Medium Type
+    # Used for Dynamic VLAN Assignment
     TUNNELMEDIUMTYPE     =  65
+    # RADIUS Attribute Tunnel client endpoint
     TUNNELCLIENTENDPOINT =  66
+    # RADIUS Attribute Connect Info
+    # Used to encode WLAN Information (e.g. Bitrate, Band)
     CONNECTINFO          =  77
+    # RADIUS Attribute Configuration Token
     CONFIGURATIONTOKEN   =  78
+    # RADIUS Attribute EAP Message
+    # Used to send EAP-Messages
     EAPMESSAGE           =  79
+    # RADIUS Attribute Message Authenticator
+    # Used to check integrity of the RADIUS packet
     MESSAGEAUTHENTICATOR =  80
+    # RADIUS Attribute Tunnel Private Group ID
+    # Used for Dynamic VLAN Assignment
     TUNNELPRIVATEGROUPID =  81
+    # RADIUS Attribute NAS Port ID
     NASPORTID            =  87
+    # RADIUS Attribute Chargeable User Identity (CUI)
     CUI                  =  89
+    # RADIUS Attribute NAS IPv6-Address
     NASIPV6ADDRESS       =  95
+    # RADIUS Attribute Framed Interface ID
     FRAMEDINTERFACEID    =  96
+    # RADIUS Attribute Framed IPv6 Prefix
     FRAMEDIPV6PREFIX     =  97
+    # RADIUS Attribute EAP Key name
     EAPKEYNAME           = 102
+    # RADIUS Attribute Operator Name
+    # Used to generate the Chargeable User Identity
     OPERATORNAME         = 126
+    # RADIUS Attribute Location Information
     LOCATIONINFORMATION  = 127
+    # RADIUS Attribute Location Data
     LOCATIONDATA         = 128
+    # RADIUS Attribute Location Capable
     LOCATIONCAPABLE      = 131
+    # RADIUS Attribute Mobility Domain ID
     MOBILITYDOMAINID     = 177
+    # RADIUS Attribute WLAN Pairwise Cipher
     WLANPAIRWISECIPHER   = 186
+    # RADIUS Attribute WLAN Group Cipher
     WLANGROUPCIPHER      = 187
+    # RADIUS Attribute WLAN AKM Suite
     WLANAKMSUITE         = 188
+    # RADIUS Attribute WLAN Group Management Cipher
     WLANGROUPMGMTCIPHER  = 189
+    # RADIUS Attribute WLAN RF Band
     WLANRFBAND           = 190
 
     # Get Attribute name by the given code
@@ -191,12 +263,16 @@ class RadiusPacket
     parse_eap
   end
 
+  # Check RADIUS Packet against RFC and eduroam service Policy
+  # @raise [ProtocolViolationError] if the Packet violates the RFC
+  # @raise [PolicyViolationError] if the Packet violates the eduroam service policy
   def check_policies
     check_radius_protocol
     check_eduroam_service_policy
   end
 
   # Check RADIUS Protocol violations
+  # @raise [ProtocolViolationError] if violations are found
   def check_radius_protocol
 
 
@@ -233,6 +309,7 @@ class RadiusPacket
   end
 
   # Check Eduroam service policy violations
+  # @raise [PolicyViolationError] if a policy violation is found
   def check_eduroam_service_policy
     if @packettype == RadiusPacket::Type::REQUEST
       if @attributes_by_type[RadiusPacket::Attribute::CALLINGSTATIONID].length < 1
@@ -250,6 +327,8 @@ class RadiusPacket
     end
   end
 
+  # Inspect the RADIUS Packet
+  # @return [String] description of the RADIUS Packet
   def inspect
     str  = "#<#{self.class.name}: "
     str += case @packettype
@@ -328,6 +407,8 @@ class RadiusPacket
     str + ">"
   end
 
+  # Deeper inspect of the RADIUS Packet
+  # @return [String] description of the Packet
   def deep_inspect
     str  = "#<#{self.class.name}: "
     str += case @packettype

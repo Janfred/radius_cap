@@ -20,6 +20,8 @@ logger = SemanticLogger['radius_cap']
 policylogger = SemanticLogger['PolicyViolation']
 logger.info("Requirements done. Loading radius_cap.rb functions")
 
+# Error to be thrown if the EAP Packet fragmentation causes an error
+# @todo this definition should be moved to an appropriate place
 class EAPFragParseError < StandardError
 end
 include PacketFu

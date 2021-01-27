@@ -9,6 +9,7 @@ class Fingerprint
   @@fingerprintdb = {}
   @@fingerprintdb_lastupdate = nil
 
+  # Get the current fingerprint Database
   def self.get_fp_db
     @@fingerprintdb
   end

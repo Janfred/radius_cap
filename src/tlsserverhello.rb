@@ -119,6 +119,8 @@ class TLSServerHello
   end
 
 
+  # Inspect the current Server Hello
+  # @return [String] descritpion of the current ServerHello
   def inspect
     str  = "#<#{self.class.name}:"
     #str += " v1.2" if @innververs == 0x0303

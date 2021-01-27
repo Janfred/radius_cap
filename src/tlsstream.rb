@@ -38,6 +38,7 @@ class TLSStream
   end
 end
 
+# Generic TLS Record
 class TLSRecord
 
   include SemanticLogger::Loggable
@@ -216,11 +217,15 @@ class TLSAlertRecord < TLSRecord
   end
 end
 
+# TLS ChangeCipherSpec Record
 class TLSChangeCipherSpecRecord < TLSRecord
 end
 
+# TLS ApplicationData Record
 class TLSApplicationDataRecord < TLSRecord
 end
 
+# TLS Parse Error
+# Is thrown on any error in parsing the TLS data.
 class TLSParseError < StandardError
 end
