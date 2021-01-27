@@ -49,20 +49,33 @@ class TLSRecord
   @data
   @record_type
 
+  # Create new instance of this class
+  # @param version [Array<Byte>]  Version of the Record as 2-Byte array
+  # @param length [Integer] Length of the TLS Record
+  # @param data [Array<Byte>] TLS Record Payload as Byte-Array. Must be length Bytes long.
   def initialize(version, length, data)
     @version = version
     raise TLSParseError.new "TLS Indicated Length (#{length}) did not match actual length (#{data.length})" if length != data.length
     @data = data
   end
 
+  # Set a custom Record Type
+  # @param type [Integer] from [TLSTypes::TLSRecord]
   def set_custom_record_type(type)
     @record_type = type
   end
 
+  # Get the custom record type
+  # @return [Integer] custom record type from [TLSTypes::TLSRecord]
   def get_custom_record_type
     @record_type
   end
 
+  # Parse a TLS Record.
+  # If ChangeCipherSpec has already been seen, the TLS Records are not parsed (because they are encrypted)
+  # @param [Object] data TLS Message as Array of Bytes
+  # @param [Boolean] change_cipher_spec_seen if ChangeCipherSpec Record has already been seen
+  # @return [Array<TLSRecord>] TLSRecords
   def self.parse(data,change_cipher_spec_seen = false)
     logger.trace "Parse TLS Record set with length #{data.length}"
     cur_ptr = 0
@@ -113,6 +126,7 @@ class TLSRecord
   end
 end
 
+# Class for TLS Handshake Records
 class TLSHandshakeRecord < TLSRecord
   attr_reader :handshake_type
   @handshake_type
@@ -135,6 +149,12 @@ class TLSHandshakeRecord < TLSRecord
     raise TLSParseError.new "The Indicated length did not match the actual length" if @data.length - 4 != @handshake_length
   end
 
+  # Parse TLS Handshakes
+  # @param [Array<Byte>] version TLS Record Version as 2-Byte Array
+  # @param [Integer] length Length of the data
+  # @param [Array<Byte>] data payload as Byte-Array. Must be length Bytes long.
+  # @return [Array<TLSHandshakeRecord>] Array of TLSHandshakeRecords parsed from the payload
+  # @raise TLSParseError if the data length does not match the expected length.
   def self.parse_handshakes(version, length, data)
     cur_ptr = 0
     to_return = []
@@ -156,6 +176,7 @@ class TLSHandshakeRecord < TLSRecord
   end
 end
 
+# TLS Alert Record
 class TLSAlertRecord < TLSRecord
   attr_reader :alert_level
   attr_reader :alert_code
@@ -167,11 +188,16 @@ class TLSAlertRecord < TLSRecord
     @alert_code = data[1]
   end
 
+  # Inspect the current alert
+  # return [String] description of the TLS Alert
   def ispect_alert
     "Level #{@alert_level} (#{level_string}): #{code_string} (#{@alert_code})"
   end
 
   private
+  # Convert current TLS Alert level to a string
+  # @return [String] TLS Alert level as string
+  # @private
   def level_string
     case @alert_level
     when 2
@@ -183,6 +209,8 @@ class TLSAlertRecord < TLSRecord
     end
   end
 
+  # Get the alert name from the alert code
+  # @return [String] alert name from code
   def code_string
     TLSTypes::Alerts.get_altert_name_by_code(@alert_code)
   end
