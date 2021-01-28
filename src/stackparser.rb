@@ -285,7 +285,7 @@ class ProtocolStack
       @eap_stream = EAPStream.new(@radius_stream)
       parse_from_eap
     rescue EAPStreamError => e
-      logger.warn 'EAPStreamError: ' + e.message
+      logger.debug 'EAPStreamError: ' + e.message
       @dontsave = true
     end
   end
@@ -337,7 +337,7 @@ class ProtocolStack
       @eap_stream = EAPStream.new(@radsec_stream)
       parse_from_eap
     rescue EAPStreamError => e
-      logger.warn 'EAPStreamError: ' + e.message
+      logger.debug 'EAPStreamError: ' + e.message
       @dontsave = true
     end
   end
@@ -391,7 +391,7 @@ class ProtocolStack
       parse_from_eaptls
 
     when EAPPacket::Type::EAPPWD
-      logger.info 'Found EAP-PWD Communication'
+      logger.debug 'Found EAP-PWD Communication'
       @eap_pwd_stream = EAPPWDStream.new(@eap_stream.eap_payload_packets)
       parse_from_eappwd
 

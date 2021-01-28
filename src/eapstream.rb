@@ -70,7 +70,7 @@ class EAPStream
 
     if @eap_packets.length < 2
       StatHandler.increase :eaperror_communcation_too_short
-      logger.warn 'The EAP Stream was less then 2 messages long. This won\'t be a valid EAP communication'
+      logger.debug 'The EAP Stream was less then 2 messages long. This won\'t be a valid EAP communication'
       raise EAPStreamError.new 'The Communication is too short (less then 2 messages long)'
     end
 
