@@ -58,6 +58,7 @@ class StackParser
         # If the DontSave flag is set, we just skip this.
         if result.dontsave
           StatHandler.increase :streams_skipped
+          next
         end
 
         to_insert_in_elastic = result.to_h
