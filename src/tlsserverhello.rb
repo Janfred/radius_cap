@@ -188,7 +188,7 @@ class TLSServerHello
           # If the ChangeCipherSpec is before we capture the ServerHelloDone
           # it probably is a Session Resumption.
           # We save that before we break.
-          logger.info "Seen a probable Session Resumption"
+          logger.debug "Seen a probable Session Resumption"
           @additional[:resumption] = true
           break
         end
