@@ -36,6 +36,8 @@ module TLSTypes
     CERTIFICATE_REQUEST = 13
     # TLS Handshake ServerHelloDone
     SERVERHELLODONE     = 14
+    # TLS Handshake ClientKeyExchange
+    CLIENTKEYEXCHANGE   = 16
     # TLS Handshake CertificateStatus
     # Used in OCSP-Stapling responses
     CERTIFICATESTATUS   = 22

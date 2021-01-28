@@ -31,11 +31,15 @@ class EAPPacket
     # MD5 Challenge Type
     # @todo This is weird. This should actually never occur in the Eduroam environment because it is insecure. Maybe we should emit a warning once we see it
     MD5CHALLENGE   =  4
+    # EAP Generic Token Card
+    GTC            =  6
     # TLS Type (not TTLS or PEAP)
     TLS            = 13
     # EAP-Cisco Wireless
     # @todo I don't know what this is. Subject to research
     CISCO_WIRELESS = 17
+    # EAP-SIM
+    SIM            = 18
     # TTLS Type
     TTLS           = 21
     # PEAP Type
@@ -47,8 +51,11 @@ class EAPPacket
     # @todo This is also interesting to research
     FAST           = 43
     # EAP-PWD Type
-    # @todo EAP-PWD is not yet analysed, but it will be interesting to analyse it.
+    # @todo EAP-PWD is rudimentary analysed, but it will be interesting to analyse it deeper.
     EAPPWD         = 52
+    # EAP-TEAP
+    # @todo This will be very interesting.
+    TEAP           = 55
 
     # Get EAP Type by the given code
     # @param code [Byte] Code of the EAP Type

@@ -23,6 +23,7 @@ class StatHandler
       :elastic_new,
       :elastic_filters,
       :elastic_update,
+      :elastic_nolive,
       :streams_timed_out,
       :streams_analyzed,
       :streams_errored,
