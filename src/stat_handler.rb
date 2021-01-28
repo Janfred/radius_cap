@@ -158,7 +158,7 @@ class StatHandler
         end
       end
     end
-    logger.info logmsg
+    logger.debug logmsg
   end
 
   # Log current statistic values and save current stat to history
@@ -168,7 +168,7 @@ class StatHandler
 
   # Private function to log additional statistic data
   def priv_log_additional(logmsg)
-    logger.info logmsg
+    logger.debug logmsg
   end
 
   # Log a message to the statistics logger
