@@ -10,9 +10,9 @@ require_relative './includes'
 @config[:elastic_filter] ||= []
 #@config[:socket_files] ||= ['/tmp/radsecproxy.sock']  # Not used in radius_cap.rb
 
-SemanticLogger.default_level = @config[:debug_level]
-SemanticLogger.add_appender(file_name: 'development.log')
-SemanticLogger.add_appender(io: STDOUT, formatter: :color) if @config[:debug]
+SemanticLogger.default_level = :debug
+SemanticLogger.add_appender(file_name: 'development.log', level: @config[:debug_level])
+SemanticLogger.add_appender(io: STDOUT, formatter: :color, level: @config[:debug_level]) if @config[:debug]
 SemanticLogger.add_appender(file_name: 'policy_violation.log', level: :debug, filter: /PolicyViolation/)
 SemanticLogger.add_appender(file_name: 'statistics.log', level: :debug, filter: /StatHandler/)
 
