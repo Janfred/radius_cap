@@ -52,6 +52,7 @@ class EAPStream
             logger.trace 'Seen empty EAP Message with a Accept or Reject type'
             next
           else
+            StatHandler.increase :eaperror_other
             logger.error 'Seen a RADIUS Packet without an EAP Content and it was not a final Message'
             raise EAPStreamError.new 'Ongoing RADIUS Packet without EAP Content captured'
           end
@@ -68,6 +69,7 @@ class EAPStream
     end
 
     if @eap_packets.length < 2
+      StatHandler.increase :eaperror_communcation_too_short
       logger.warn 'The EAP Stream was less then 2 messages long. This won\'t be a valid EAP communication'
       raise EAPStreamError.new 'The Communication is too short (less then 2 messages long)'
     end
@@ -83,8 +85,14 @@ class EAPStream
     # If this is not the case, the EAP Communication was most likely not captured completely.
     logger.trace("Code of the first EAP Packet: #{@eap_packets[0].code}")
     logger.trace("Type of the first EAP Packet: #{@eap_packets[0].type}")
-    raise EAPStreamError.new "The first EAP Packet has not a Response Code" if @eap_packets[0].code != EAPPacket::Code::RESPONSE
-    raise EAPStreamError.new "The first EAP Packet is not an Identity Type" if @eap_packets[0].type != EAPPacket::Type::IDENTITY
+    if @eap_packets[0].code != EAPPacket::Code::RESPONSE
+      StatHandler.increase :eaperror_other
+      raise EAPStreamError.new "The first EAP Packet has not a Response Code"
+    end
+    if @eap_packets[0].type != EAPPacket::Type::IDENTITY
+      StatHandler.increase :eaperror_first_not_identity
+      raise EAPStreamError.new "The first EAP Packet is not an Identity Type"
+    end
 
     eap_identity_bytes = @eap_packets[0].type_data
     @eap_identity = eap_identity_bytes.pack('C*')
@@ -96,7 +104,10 @@ class EAPStream
     # The Answer by the server is either an EAP Failure, in which case the Server
     # rejected the Client immediately or an EAP Request. If it is not, something is wrong.
     return if @eap_packets[1].code == EAPPacket::Code::FAILURE
-    raise EAPStreamError if @eap_packets[1].code != EAPPacket::Code::REQUEST
+    if @eap_packets[1].code != EAPPacket::Code::REQUEST
+      StatHandler.increase :eaperror_other
+      raise EAPStreamError
+    end
 
     # Now we check for the EAP Type.
     # The initial message by the server contains the Server Default EAP Method
@@ -104,13 +115,19 @@ class EAPStream
 
     # Now that we have the initial EAP type we have to make sure that the client continues
     # talking to the server and does not reject the suggested EAP Type
-    raise EAPStreamError.new "EAP Communication ended after 2 Messages" if @eap_packets[2].nil?
+    if @eap_packets[2].nil?
+      StatHandler.increase :eaperror_communcation_too_short
+      raise EAPStreamError.new "EAP Communication ended after 2 Messages"
+    end
 
     cur_ptr = 2
     # CAUTION: I have witnessed a case where the client retransmitted the EAP-Identity. This case will be handled here
     if @eap_packets[cur_ptr].type == EAPPacket::Type::IDENTITY
       logger.warn "Seen a retransmission of the EAP Identity at packet #{cur_ptr}"
-      raise EAPStreamError.new "The Server answered to a EAP-Identity Retransmission with a different type then he did before." if @eap_packets[cur_ptr+1].type != @initial_eap_type
+      if @eap_packets[cur_ptr+1].type != @initial_eap_type
+        StatHandler.increase :eaperror_other
+        raise EAPStreamError.new "The Server answered to a EAP-Identity Retransmission with a different type then he did before."
+      end
       logger.warn 'EAP-Identities did not match' if @eap_packets[cur_ptr].type_data == eap_identity_bytes
       cur_ptr += 2
     end
@@ -127,17 +144,26 @@ class EAPStream
 
     # If we're not done yet, the client most likely wants another EAP Type, so it
     # must answer with a Legacy NAK
-    raise EAPStreamError.new "The Client and Server want different EAP Types, but the Client did not send a NAK" if @eap_packets[cur_ptr].type != EAPPacket::Type::NAK
+    if @eap_packets[cur_ptr].type != EAPPacket::Type::NAK
+      StatHandler.increase :eaperror_other
+      raise EAPStreamError.new "The Client and Server want different EAP Types, but the Client did not send a NAK"
+    end
     # Normally, the EAP NAK packet has a payload of 1 byte containing the desired auth type, but is it also allowed to send multiple EAP Types.
-    raise EAPStreamError.new 'The Client\'s NAK did not contain a desired EAP Type.' if @eap_packets[cur_ptr].type_data.length == 0
-    logger.info "The client's NAK had more then one wanted eap type (#{@eap_packets[cur_ptr].type_data})" if @eap_packets[cur_ptr].type_data.length != 1
+    if @eap_packets[cur_ptr].type_data.length == 0
+      StatHandler.increase :eaperror_other
+      raise EAPStreamError.new 'The Client\'s NAK did not contain a desired EAP Type.'
+    end
+    logger.debug "The client's NAK had more then one wanted eap type (#{@eap_packets[cur_ptr].type_data})" if @eap_packets[cur_ptr].type_data.length != 1
 
     @wanted_eap_types = @eap_packets[cur_ptr].type_data
 
     cur_ptr += 1
 
     # Now the client has stated it's desired auth type. We are now parsing the Servers answer to that.
-    raise EAPStreamError.new 'The Client sent a NAK but the server didn\'t answer' if @eap_packets[cur_ptr].nil?
+    if @eap_packets[cur_ptr].nil?
+      StatHandler.increase :eaperror_unexpected_end
+      raise EAPStreamError.new 'The Client sent a NAK but the server didn\'t answer'
+    end
 
     # We now have to determine between a rejection and a success in agreement.
     if @eap_packets[cur_ptr].code == EAPPacket::Code::FAILURE
@@ -150,7 +176,10 @@ class EAPStream
 
     # If the server didn't reject the client, we just need to make sure the Server actually answeres
     # with a packet that matches the desired auth type sent by the client
-    raise EAPStreamError.new 'The Server answered with a different EAP Type then the Client requested' unless @wanted_eap_types.include?(@eap_packets[3].type)
+    unless @wanted_eap_types.include?(@eap_packets[3].type)
+      StatHandler.increase :eaperror_other
+      raise EAPStreamError.new 'The Server answered with a different EAP Type then the Client requested'
+    end
 
     # If this wasn't the case, we finally know our EAP Type.
     @eap_type = @eap_packets[cur_ptr].type

@@ -64,7 +64,10 @@ class RadiusStream
     # If the last message inserted was a message from the server, we can't insert an other message from the server,
     # because the client has to reply first. If this happens, it is very likely a resent
     # Packet because the original packet got lost.
-    raise PacketFlowInsertionError if @last_from_server
+   if @last_from_server
+     StatHandler.increase :pkterror_reply_on_reply
+     raise PacketFlowInsertionError
+   end
 
     # First check if the identifier matches the current identifier
     # RADIUS, being a transactional protocol, always has a Request-Response structure.
@@ -97,7 +100,10 @@ class RadiusStream
     # If the last message was from the client, we can't add another packet from the client.
     # This is most likely the case if the RADIUS-Server failed to respond and the client
     # resent his message. In any case, it should not be added here.
-    raise PacketFlowInsertionError unless @last_from_server
+    unless @last_from_server
+      StatHandler.increase :pkterror_reply_on_reply
+      raise PacketFlowInsertionError
+    end
 
     # First check if the identifier is increasing
     # TODO This check is kind of complicated,
@@ -186,6 +192,7 @@ class RadiusStreamHelper
       @known_streams << RadiusStream.new(pkt)
       return
     elsif p.length > 1
+      StatHandler.increase :pkterror_multiple_state
       logger.warn "Found multiple Streams for State #{pkt.state.pack('C*').unpack('H*')}" unless pkt.state.nil?
     end
 
@@ -213,6 +220,7 @@ class RadiusStreamHelper
       # RADIUS-Server is answering to, was not captured.
       # TODO This packet should be included in the debug capture
       logger.warn "Could not find a matching request from #{pkt.udp[:dst][:ip]}:#{pkt.udp[:dst][:port]} and ID #{pkt.identifier}"
+      StatHandler.increase :pkterror_no_state_found
       return
     elsif p.length > 1
       # Tis case should also not occur. This means that an essential part of the RADIUS-Protocol
@@ -220,6 +228,7 @@ class RadiusStreamHelper
       # This is worth a warning. We can still insert it into the packet stream, but should insert it
       # into the stream which was last updated, so we should make sure the list is sorted.
       logger.warn "Found multiple requests from #{pkt.udp[:dst][:ip]}:#{pkt.udp[:dst][:port]} and ID #{pkt.identifier}"
+      StatHandler.increase :pkterror_multiple_requests
       p.sort_by!(&:last_updated)
     end
     flow = p.last

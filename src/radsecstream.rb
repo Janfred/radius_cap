@@ -39,7 +39,10 @@ class RadsecStream
 
   def add_request(pkt)
     logger.trace("Add Request packet")
-    raise PacketFlowInsertionError.new("Attempted to insert a request without previous answer from server") unless @last_from_server
+    unless @last_from_server
+      StatHandler.increase :pkterror_reply_on_reply
+      raise PacketFlowInsertionError.new("Attempted to insert a request without previous answer from server")
+    end
     raise PacketFlowInsertionError.new("Attempted to insert a request with a non matching state") if pkt.state != @current_state
 
     @last_from_server = false
@@ -50,7 +53,10 @@ class RadsecStream
   end
   def add_response(pkt)
     logger.trace("Add response packet")
-    raise PacketFlowInsertionError.new("Attempted to insert a response without previous request from client") if @last_from_server
+    if @last_from_server
+      StatHandler.increase :pkterror_reply_on_reply
+      raise PacketFlowInsertionError.new("Attempted to insert a response without previous request from client")
+    end
     raise PacketFlowInsertionError.new("Attempted to insert a response with not matching identifier") if pkt.identifier != @current_pktid
 
     @last_from_server = true
@@ -120,7 +126,9 @@ class RadsecStreamHelper
     elsif p.length > 1
       if pkt.state.nil?
         logger.warn "Found multiple EAP States for nil state"
+        StatHandler.increase :pkterror_multiple_state
       else
+        StatHandler.increase :pkterror_multiple_state
         logger.warn "Found multiple EAP States for 0x#{pkt.state.pack('C*').unpack('H*').first}"
       end
     end
@@ -143,9 +151,11 @@ class RadsecStreamHelper
 
     if p.empty?
       logger.warn "Could not find a matching request from #{client} to #{server} and ID #{pkt.identifier}"
+      StatHandler.increase :pkterror_no_state_found
       return
     elsif p.length > 1
       logger.warn "Found multiple requests from #{client} to #{server} and ID #{pkt.identifier}"
+      StatHandler.increase :pkterror_multiple_requests
       p.sort_by!(&:last_updated)
     end
     flow = p.last

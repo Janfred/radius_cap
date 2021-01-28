@@ -28,6 +28,14 @@ class StatHandler
       :streams_errored,
       :streams_written,
       :streams_skipped,
+      :eaperror_first_not_identity,
+      :eaperror_communcation_too_short,
+      :eaperror_other,
+      :eaperror_unexpected_end,
+      :pkterror_reply_on_reply,
+      :pkterror_multiple_state,
+      :pkterror_no_state_found,
+      :pkterror_multiple_requests,
     ]
     @statistics.synchronize do
       null_stat

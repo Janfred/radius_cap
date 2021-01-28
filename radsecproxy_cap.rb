@@ -48,7 +48,7 @@ begin
   end
   sleep
 
-rescue Interrupt
+rescue SignalException
   logger.info("Capture Interrupt. Aborting capture")
   BlackBoard.sock_threads.each do |thr|
     thr[:watchdog].exit

@@ -59,7 +59,7 @@ begin
       BlackBoard.pktbuf_empty.signal
     end
   end
-rescue Interrupt
+rescue SignalException
   logger.info("Captured Interrupt")
 end
 
