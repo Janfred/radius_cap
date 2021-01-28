@@ -23,8 +23,7 @@ class TLSStream
         if cur_rec.is_a? TLSHandshakeRecord
           cur_rec.set_handshake_type
         end
-        # TODO THIS IS JUST HERE TO GET A DUMP FOR DEBUGGING
-        #  This is probably a rare case and I need to decide how to deal with it.
+        # TODO getting a statistic on TLS Alerts might be a good idea. Anyhow, it's not yet ready.
         if cur_rec.is_a? TLSAlertRecord
           # If this is the last packet and it is just a CLOSE_NOTIFY Alert, this is perfectly fine.
           if cur_pkt+1 == eaptlspackets.length && cur_rec.alert_code == TLSTypes::Alerts::CLOSE_NOTIFY

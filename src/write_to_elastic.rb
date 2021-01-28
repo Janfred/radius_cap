@@ -49,24 +49,32 @@ class ElasticHelper
 
   # Check if a data with the given id already exists in Elasticsearch
   # @param elastic_id [String] id of the data item in waiting
+  # @param check_online [Boolean] whether to check against elasticsearch or not.
+  #   May be disabled if the Queue reaches a certain high watermark of pending records.
   # @return [Boolean] if the id already is taken by an item in Elasticsearch
-  def self.check_exists(elastic_id)
-    self.instance.priv_check_exists elastic_id
+  def self.check_exists(elastic_id, check_online=true)
+    self.instance.priv_check_exists elastic_id, check_online
   end
 
   # Checks if elastic_id exists in Elasticsearch.
   # First it checks the locally saved ids, if the id is not found it looks up the ID in the Elastic database
   # @param elastic_id [String] ID of the elastic data
+  # @param check_online [Boolean] whether to check against elasticsearch or not.
+  #   May be disabled if the Queue reaches a certain high watermark of pending records.
   # @return [Boolean] if the elastic_id is already known.
-  def priv_check_exists(elastic_id)
+  def priv_check_exists(elastic_id, check_online=true)
     return true if @priv_known_ids.include? elastic_id
     @priv_known_ids << elastic_id
     # This is for debugging purposes (if the elastic write is disabled)
     return false if @priv_client.nil?
-    # Now we look up the id
-    data = @priv_client.search index: 'tlshandshakes', body: { query: { match: { "_id": elastic_id } } }
-    # Return result of elasticsearch
-    data["hits"]["hits"].length > 0
+    # Now we look up the id, but only if we are checking online
+    if check_online
+      data = @priv_client.search index: 'tlshandshakes', body: { query: { match: { "_id": elastic_id } } }
+      # Return result of elasticsearch
+      return data["hits"]["hits"].length > 0
+    else
+      return false
+    end
   end
 
   # Get current elasticdata
@@ -156,12 +164,14 @@ class ElasticHelper
   # @param no_direct_elastic [Boolean] If set to true, the data will not be written in elastic. Defaults to false.
   # @param output_to_file [Boolean] If set to true, the data will be written in a File named <id>.json. Defaults to false.
   # @return nil
-  def self.insert_into_elastic(raw_data, debug=false, no_direct_elastic=false, output_to_file=false)
+  def self.insert_into_elastic(raw_data, debug=false, no_direct_elastic=false, output_to_file=false, online_check=true)
     to_ins = ElasticHelper.convert_data_to_elasticsearch(raw_data)
-    elastic_exists = ElasticHelper.check_exists to_ins[:id]
+    elastic_exists = ElasticHelper.check_exists to_ins[:id], online_check
     ElasticHelper.client.index index: 'tlshandshakes', type: 'tlshandshake', id: to_ins[:id], body: to_ins[:data] unless no_direct_elastic
-    if(elastic_exists)
+    if elastic_exists
       StatHandler.increase(:elastic_update)
+    elsif !online_check
+      StatHandler.increase(:elastic_nolive)
     else
       StatHandler.increase(:elastic_new)
     end

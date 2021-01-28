@@ -5,9 +5,11 @@ Thread.start do
   loop do
     begin
       toins = nil
+      thres_ok = false
       ElasticHelper.elasticdata.synchronize do
         ElasticHelper.waitcond.wait_while { ElasticHelper.elasticdata.empty? }
         toins = ElasticHelper.elasticdata.shift
+        thres_ok = ElasticHelper.elasticdata.length < 1000
       end
 
       next if toins.nil?
@@ -48,7 +50,7 @@ Thread.start do
       if filters.length == 0
         StatHandler.increase(:elastic_writes)
         StatHandler.increase(:packet_elastic_written, roundtrips)
-        ElasticHelper.insert_into_elastic(toins, @config[:debug], @config[:noelastic], @config[:filewrite])
+        ElasticHelper.insert_into_elastic(toins, @config[:debug], @config[:noelastic], @config[:filewrite], thres_ok)
       else
         BlackBoard.logger.debug 'Filtered out Elasticdata'
         StatHandler.increase(:elastic_filters)
