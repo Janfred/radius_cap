@@ -14,8 +14,8 @@ class TLSStream
     @tlspackets = []
     @alerted = false
     seen_change_cipher_spec = false
-    eaptlspackets.each do |eaptlspkt|
-      cur_records = TLSRecord.parse(eaptlspkt, seen_change_cipher_spec)
+    eaptlspackets.length.times do |cur_pkt|
+      cur_records = TLSRecord.parse(eaptlspackets[cur_pkt], seen_change_cipher_spec)
       i = 0
       until seen_change_cipher_spec || i >= cur_records.length do
         cur_rec = cur_records[i]
@@ -26,9 +26,14 @@ class TLSStream
         # TODO THIS IS JUST HERE TO GET A DUMP FOR DEBUGGING
         #  This is probably a rare case and I need to decide how to deal with it.
         if cur_rec.is_a? TLSAlertRecord
-          logger.warn "Seen a TLS Alert #{cur_rec.ispect_alert}"
-          @alerted = true
-          return
+          # If this is the last packet and it is just a CLOSE_NOTIFY Alert, this is perfectly fine.
+          if cur_pkt+1 == eaptlspackets.length && cur_rec.alert_code == TLSTypes::Alerts::CLOSE_NOTIFY
+            logger.debug "Seen a TLS CloseNotify Alert at the end of the communication."
+          else
+            logger.warn "Seen a TLS Alert #{cur_rec.ispect_alert}"
+            @alerted = true
+            return
+          end
         end
         i += 1
       end
