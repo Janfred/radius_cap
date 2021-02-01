@@ -150,7 +150,7 @@ class RadsecStreamHelper
     }
 
     if p.empty?
-      logger.warn "Could not find a matching request from #{client} to #{server} and ID #{pkt.identifier}"
+      logger.debug "Could not find a matching request from #{client} to #{server} and ID #{pkt.identifier}"
       StatHandler.increase :pkterror_no_state_found
       return
     elsif p.length > 1
