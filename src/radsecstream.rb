@@ -154,7 +154,7 @@ class RadsecStreamHelper
       StatHandler.increase :pkterror_no_state_found
       return
     elsif p.length > 1
-      logger.warn "Found multiple requests from #{client} to #{server} and ID #{pkt.identifier}"
+      logger.debug "Found multiple requests from #{client} to #{server} and ID #{pkt.identifier}"
       StatHandler.increase :pkterror_multiple_requests
       p.sort_by!(&:last_updated)
     end

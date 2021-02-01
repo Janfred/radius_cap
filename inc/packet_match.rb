@@ -39,7 +39,7 @@ Thread.start do
       RadsecStreamHelper.add_packet(rp, pkt[:request], [pkt[:from], pkt[:from_sock], pkt[:source]], [pkt[:to], pkt[:to_sock], pkt[:source]])
       StatHandler.increase :packet_analyzed
     rescue PacketFlowInsertionError => e
-      BlackBoard.logger.warn 'PacketFlowInsertionError: ' + e.message
+      BlackBoard.logger.debug 'PacketFlowInsertionError: ' + e.message
       StatHandler.increase :packet_errored
     rescue => e
       puts "Error in Packetflow!"
