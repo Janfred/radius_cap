@@ -351,8 +351,16 @@ class ProtocolStack
     if m_d && m_d.length == 7
       data[:attributes][:mac] = m_d[1, 6].join ":"
     else
-      logger.warn "Found bad formatted or invalid MAC-Address: #{data[:attributes][:mac]} Falling back to default."
-      data[:attributes][:mac] = "ff:ff:ff:ff:ff:ff"
+      # THIS IS A WORKAROUND.
+      # Some NASes include an IP Address in the format xx-xx-xx-xx-xx-xx:<ipv4>
+      m_d_2 = data[:attributes][:mac].match /^([0-9a-f]{2})-([0-9a-f]{2})-([0-9a-f]{2})-([0-9a-f]{2})-([0-9a-f]{2})-([0-9a-f]{2}):[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/
+      if m_d_2 && m_d_2.length == 7
+        logger.info "Found included IPv4 Address in Calling-Station-ID attribute"
+        data[:attributes][:mac] = m_d_2[1,6].join ":"
+      else
+        logger.warn "Found bad formatted or invalid MAC-Address: #{data[:attributes][:mac]} Falling back to default."
+        data[:attributes][:mac] = "ff:ff:ff:ff:ff:ff"
+      end
     end
   end
 
