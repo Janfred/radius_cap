@@ -27,11 +27,13 @@ def watchdog(stat_item,thr)
   loop do
     sleep 40
     last_values = StatHandler.get_values stat_item
-    next if last_values.length < 2
+    next if last_values.length < 3
     if last_values[-2,2].reduce(0, :+) == 0
       BlackBoard.logger.warn "Sending Error to read thread for #{stat_item}"
       thr.raise(SocketRestartError)
     end
+  rescue
+    # Do nothing
   end
 end
 
