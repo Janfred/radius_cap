@@ -65,6 +65,20 @@ end
 
 logger.info("Terminating Capture")
 
+logger.info("Waiting for empty parser buffer")
+
+parserempty = false
+until parserempty do
+  StackParser.instance.priv_stack_data.synchronize do
+    parserempty = StackParser.instance.priv_stack_data.empty?
+  end
+  sleep 1
+end
+
+logger.info("Parser buffer is empty.")
+
+sleep 0.5
+
 logger.info("Waiting for empty packet buffer")
 
 pktbufempty = false

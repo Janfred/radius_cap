@@ -16,8 +16,9 @@ Thread.start do
 
     logmsg = ""
     logmsg +=  "Elastic queue length #{ stat[:elastic_length] }"
+    logmsg += " Stream queue length #{ StackParser.instance.priv_stack_data.length }"
     logmsg += " Pktbuf queue length #{ stat[:pktbuf_length] }"
-    logmsg += " Known streams length #{RadsecStreamHelper.instance.known_streams.length}"
+    logmsg += " Known streams length #{ RadsecStreamHelper.instance.known_streams.length }"
 
     StatHandler.log_additional logmsg
   end

@@ -1,6 +1,8 @@
 # Class for parsing Streams
 class StackParser
 
+  PARSETHREADCOUNT = 4
+
   include SemanticLogger::Loggable
   include Singleton
 
@@ -15,16 +17,24 @@ class StackParser
   @priv_waitcond
 
   # Parser Thread
-  attr_reader :parsethread
-  @parsethread
+  attr_reader :parsethreads
+  @parsethreads
+
+  attr_reader :threadmutex
+  @threadmutex
 
   def initialize
     @priv_stack_data = []
     @priv_stack_data.extend(MonitorMixin)
     @priv_waitcond = @priv_stack_data.new_cond
-    @parsethread = Thread.start do
-      Thread.current.name = "Parser"
-      parser
+    @threadmutex = []
+    @threadmutex.extend(MonitorMixin)
+    @parsethreads = []
+    PARSETHREADCOUNT.times do |i|
+      @parsethreads << Thread.start do
+        Thread.current.name = "Parser #{i}"
+        parser
+      end
     end
   end
 

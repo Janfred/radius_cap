@@ -377,6 +377,12 @@ class TLSCertStoreHelper
     priv_add_known_intermediates
   end
 
+  def sync
+    StackParser.instance.threadmutex.synchronize do
+      yield
+    end
+  end
+
   # Add the seen_certs to the additional cert store
   def priv_add_known_intermediates
     @additional_cert_store.add_path('seen_certs')
@@ -455,12 +461,14 @@ class TLSCertStoreHelper
     issuer_path = authority_key_identifier
     cert_path = subject_key_identifier
 
-    unless File.directory? File.join('seen_certs', issuer_path)
-      Dir.mkdir(File.join('seen_certs', issuer_path))
-    end
-    unless File.exists? File.join('seen_certs', issuer_path, cert_path)
-      File.write File.join('seen_certs', issuer_path, cert_path), cert.to_pem
-      @additional_cert_store.add_cert(cert) if intermediate
+    sync do
+      unless File.directory? File.join('seen_certs', issuer_path)
+        Dir.mkdir(File.join('seen_certs', issuer_path))
+      end
+      unless File.exists? File.join('seen_certs', issuer_path, cert_path)
+        File.write File.join('seen_certs', issuer_path, cert_path), cert.to_pem
+        @additional_cert_store.add_cert(cert) if intermediate
+      end
     end
   end
 
@@ -476,9 +484,11 @@ class TLSCertStoreHelper
   def priv_add_trust_anchor(cert)
     raise StandardError unless cert.is_a? OpenSSL::X509::Certificate
     certname = get_subj_key_identifier(cert) + '.pem'
-    unless File.exists? File.join('seen_certs', certname)
-      File.write(File.join('seen_certs', certname), cert.to_pem)
-      @additional_cert_store.add_cert(cert)
+    sync do
+      unless File.exists? File.join('seen_certs', certname)
+        File.write(File.join('seen_certs', certname), cert.to_pem)
+        @additional_cert_store.add_cert(cert)
+      end
     end
   end
 

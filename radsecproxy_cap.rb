@@ -71,6 +71,21 @@ end
 logger.info("Packet buffer is empty.")
 # We should leave the parser thread a short time to finish the parsing, before we look for an empty elastic queue
 sleep 0.5
+
+logger.info("Waiting for empty parser buffer")
+
+parserempty = false
+until parserempty do
+  StackParser.instance.priv_stack_data.synchronize do
+    parserempty = StackParser.instance.priv_stack_data.empty?
+  end
+  sleep 1
+end
+
+logger.info("Parser buffer is empty.")
+
+sleep 0.5
+
 logger.info("Waiting for empty elastic buffer")
 
 elasticempty = false
