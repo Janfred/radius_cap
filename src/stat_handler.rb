@@ -91,6 +91,27 @@ class StatHandler
         end
       end
     end
+    Thread.start do
+      server = TCPServer.new '127.0.0.1', 6897
+      loop do
+        Thread.start(server.accept) do |client|
+          stat = {}
+          ElasticHelper.elasticdata.synchronize do
+            stat[:elastic_length] = ElasticHelper.elasticdata.length
+          end
+          BlackBoard.pktbuf.synchronize do
+            stat[:pktbuf_length] = BlackBoard.pktbuf.length
+          end
+          StackParser.instance.priv_stack_data.synchronize do
+            stat[:stack_length] = StackParser.instance.priv_stack_data.length
+          end
+          stat[:known_streams] = RadsecStreamHelper.instance.known_streams.length
+
+          client.write stat.to_json
+          client.close
+        end
+      end
+    end
   end
 
   # Reset the value of all statistic symbols to 0
