@@ -159,7 +159,15 @@ module TLSTypes
   # TLS Compression methods
   module Compression
     # No compression
-    NULL = 0x00
+    NULL = 0
+
+    # DEFLATE compression
+    # https://datatracker.ietf.org/doc/html/rfc3749
+    DEFLATE = 1
+
+    # LZS compression
+    # https://datatracker.ietf.org/doc/html/rfc3943
+    LZS = 64
 
     # Get the compression name by the given code
     # @param code [Integer] Code of the Compression
