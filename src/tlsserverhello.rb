@@ -51,6 +51,10 @@ class TLSServerHello
         "Unknown"
                        end
 
+    to_ret[:compression] = {}
+    to_ret[:compression][:code] = @compression
+    to_ret[:compression][:name] = TLSTypes::Compression::get_compression_name_by_code(@compression)
+
     to_ret[:downgrade] = @downgrade || "None"
 
     to_ret[:all_extensions] = []
@@ -345,11 +349,11 @@ class TLSServerHello
 
   # Parses Certificate Request
   # @todo This is just a stub, it should be extended.
-  def parse_certificaterequest(dat)
+  def parse_certificaterequest(data)
     nil
   end
 
-  # Parses ServerHelloDone. This just sents the serverhellodone to true
+  # Parses ServerHelloDone. This just sets the serverhellodone to true
   # @return nil
   def parse_serverhellodone(data)
     @serverhellodone = true
@@ -417,12 +421,12 @@ class TLSCertStoreHelper
     subject_key_identifier_exten = cert.extensions.select{|x| x.oid == "subjectKeyIdentifier"}
     if subject_key_identifier_exten.length < 1
       logger.warn "Found certificate without subjectKeyIdentifier. Using SHA-2 Hash of the certificate"
-      return Digest::SHA2.hexdigest(cert.to_der).upcase
+      Digest::SHA2.hexdigest(cert.to_der).upcase
     elsif subject_key_identifier_exten.length == 1
-      return subject_key_identifier_exten.first.value.gsub(/:/,'')
+      subject_key_identifier_exten.first.value.gsub(/:/,'')
     else
       logger.warn "Found multiple subjectKeyIdentifier Extensions in X.509 Cert for #{cert.subject.to_s}"
-      return subject_key_identifier_exten.first.value.gsub(/:/,'')
+      subject_key_identifier_exten.first.value.gsub(/:/,'')
     end
   end
 

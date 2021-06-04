@@ -156,6 +156,23 @@ module TLSTypes
     end
   end
 
+  # TLS Compression methods
+  module Compression
+    # No compression
+    NULL = 0x00
+
+    # Get the compression name by the given code
+    # @param code [Integer] Code of the Compression
+    # @return [String] Name of the Compression, or "UNKNOWN_COMPRESSION_<num>" if Compression is unknown
+    def Compression::get_compression_name_by_code(code)
+      Compression.constants.each do |const|
+        next if Compression.const_get(const) != code
+        return const.to_s
+      end
+      "UNKNOWN_COMPRESSION_#{code}"
+    end
+  end
+
   # Container for all Extensions constants
   module ExtenData
     # Constants for Server Name Indication. Currently only HOST_NAME.
@@ -204,6 +221,11 @@ class TLSClientHello
       else
         'Unknown'
                        end
+
+    to_ret[:compression] = {}
+    to_ret[:compression][:order] = @compression.map(&:to_s).join(' ')
+    to_ret[:compression][:names] = @compression.map{|x| TLSTypes::Compression::get_compression_name_by_code(x)}
+
     to_ret[:all_extensions] = []
     to_ret[:extensionorder] = ''
     @extensions.each do |exten|
