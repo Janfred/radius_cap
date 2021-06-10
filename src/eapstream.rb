@@ -174,7 +174,7 @@ class EAPStream
       return nil
     end
 
-    # If the server didn't reject the client, we just need to make sure the Server actually answeres
+    # If the server didn't reject the client, we just need to make sure the Server actually answers
     # with a packet that matches the desired auth type sent by the client
     unless @wanted_eap_types.include?(@eap_packets[3].type)
       StatHandler.increase :eaperror_other

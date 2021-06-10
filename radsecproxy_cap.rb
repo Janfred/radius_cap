@@ -30,6 +30,8 @@ BlackBoard.pktbuf.extend(MonitorMixin)
 BlackBoard.pktbuf_empty = BlackBoard.pktbuf.new_cond
 BlackBoard.policy_logger = policylogger
 
+ElasticHelper.bulk_insert = @config[:bulk_insert]
+
 require_relative './inc/elastic_write.rb'
 
 logger.info("Start Packet parsing")
@@ -95,6 +97,8 @@ until elasticempty do
   end
   sleep 1
 end
+
+ElasticHelper.flush_bulk
 
 logger.info("Elastic buffer is empty.")
 logger.info("Saving stat")

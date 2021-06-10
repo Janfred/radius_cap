@@ -25,6 +25,53 @@ class ElasticHelper
 
   def initialize
     @priv_known_ids = []
+    @priv_bulk = nil
+    @bulk_data_store = []
+  end
+
+  # Set Bulk insert size
+  # @private
+  # @param value [Integer,NilClass] Bulk size or nil for no bulk insertion
+  def priv_bulk_insert=(value)
+    @priv_bulk=value
+  end
+  # Get Bulk insert size
+  # @private
+  # @return [Integer,NilClass] Insertion bulk size or nil if bulk insertion not active
+  def priv_bulk_insert
+    @priv_bulk
+  end
+
+  # Set Bulk insert size
+  # @param value [Integer,NilClass] Bulk size or nil for no bulk insertion
+  def self.bulk_insert=(value)
+    self.instance.priv_bulk_insert=value
+  end
+  # Get Bulk insert size
+  # @return [Integer,NilClass] Insertion bulk size or nil if bulk insertion not active
+  def self.bulk_insert
+    self.instance.priv_bulk_insert
+  end
+
+  # Bulk data to insert
+  # @private
+  # @return [Array] Data to insert
+  def priv_bulk_data
+    @bulk_data_store
+  end
+  # Clear bulk data
+  # @private
+  def priv_clear_bulk_data
+    @bulk_data_store = []
+  end
+  # Clear bulk data
+  def self.clear_bulk_data
+    self.instance.priv_clear_bulk_data
+  end
+  # Bulk data to insert
+  # @return [Array] Data to insert
+  def self.bulk_data
+    self.instance.priv_bulk_data
   end
 
   # Initializes the Connection to Elasticsearch and loads MacVendor Database
@@ -167,7 +214,15 @@ class ElasticHelper
   def self.insert_into_elastic(raw_data, debug=false, no_direct_elastic=false, output_to_file=false, online_check=true)
     to_ins = ElasticHelper.convert_data_to_elasticsearch(raw_data)
     elastic_exists = ElasticHelper.check_exists to_ins[:id], online_check
-    ElasticHelper.client.index index: 'tlshandshakes', type: 'tlshandshake', id: to_ins[:id], body: to_ins[:data] unless no_direct_elastic
+    if ElasticHelper.bulk_insert
+      ElasticHelper.bulk_data << to_ins
+      if ElasticHelper.bulk_data.length >= ElasticHelper.bulk_insert
+        ElasticHelper.client.bulk index: 'tlshandshakes', type: 'tlshandshake', body: ElasticHelper.bulk_data.map{ |x| {index: { _id: x[:id], data: x[:data] } } }
+        ElasticHelper.clear_bulk_data
+      end
+    else
+      ElasticHelper.client.index index: 'tlshandshakes', type: 'tlshandshake', id: to_ins[:id], body: to_ins[:data] unless no_direct_elastic
+    end
     if elastic_exists
       StatHandler.increase(:elastic_update)
     elsif !online_check
@@ -180,5 +235,9 @@ class ElasticHelper
     nil
   end
 
+  def self.flush_bulk
+    ElasticHelper.client.bulk index: 'tlshandshakes', type: 'tlshandshake', body: ElasticHelper.bulk_data.map{ |x| {index: { _id: x[:id], data: x[:data] } } }
+    ElasticHelper.clear_bulk_data
+  end
 end
 
