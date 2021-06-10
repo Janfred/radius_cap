@@ -2,10 +2,11 @@
 class BlackBoard
   include Singleton
 
-  attr_accessor :logger, :pktbuf, :pktbuf_empty, :policy_logger, :sock_threads
+  attr_accessor :logger, :pktbuf, :pktbuf_empty, :policy_logger, :sock_threads, :policy_detail_logger
   def initialize
     @logger = nil
     @policy_logger
+    @policy_detail_logger
     @pktbuf = nil
     @pktbuf_empty = nil
     @sock_threads
@@ -26,6 +27,14 @@ class BlackBoard
   # Setter for the policy logging instance
   def self.policy_logger=(l)
     BlackBoard.instance.policy_logger=l
+  end
+  # Getter for the policy detail logging instance
+  def self.policy_detail_logger
+    BlackBoard.instance.policy_detail_logger
+  end
+  # Setter for the policy detail logging instance
+  def self.policy_detail_logger=(l)
+    BlackBoard.instance.policy_detail_logger=l
   end
   # Getter for the Packet Buffer
   def self.pktbuf

@@ -271,6 +271,13 @@ class RadiusPacket
     check_eduroam_service_policy
   end
 
+  # Convert Attributes to Hex string
+  # @param attrs [Array] Array of attributes as byte arrays
+  # @return [String] Hex value of attributes, separated by ' - ' if more then one.
+  def attr_to_hex(attrs)
+    attrs.map{|x| x.pack('C*').unpack('H*').first}.join(" - ")
+  end
+  private :attr_to_hex
   # Check RADIUS Protocol violations
   # @raise [ProtocolViolationError] if violations are found
   def check_radius_protocol
@@ -279,29 +286,35 @@ class RadiusPacket
     # Check Usernames. (0-1 in Request and accept, otherwise 0)
     if @packettype == RadiusPacket::Type::ACCEPT || @packettype == RadiusPacket::Type::REQUEST
       if @attributes_by_type[RadiusPacket::Attribute::USERNAME].length > 1
+        BlackBoard.policy_detail_logger.debug "Multiple USERNAME attributes in #{Type::get_type_name_by_code(@packettype)}: " + attr_to_hex(@attributes_by_type[RadiusPacket::Attribute::USERNAME])
         raise ProtocolViolationError.new "Found multiple USERNAME attributes in #{Type::get_type_name_by_code(@packettype)}"
       end
     else
       if @attributes_by_type[RadiusPacket::Attribute::USERNAME].length > 0
+        BlackBoard.policy_detail_logger.debug "Found Username attribute in #{Type::get_type_name_by_code(@packettype)}: " + attr_to_hex(@attributes_by_type[RadiusPacket::Attribute::USERNAME])
         raise ProtocolViolationError.new "Found USERNAME attribute in #{Type::get_type_name_by_code(@packettype)}"
       end
     end
 
     # Check State variable. (0 for Rejects, 0-1 otherwise)
     if @attributes_by_type[RadiusPacket::Attribute::STATE].length > 0 && @packettype == RadiusPacket::Type::REJECT
+      BlackBoard.policy_detail_logger.debug "Found STATE attributes in #{Type::get_type_name_by_code(@packettype)}: " + attr_to_hex(@attributes_by_type[RadiusPacket::Attribute::STATE])
       raise ProtocolViolationError.new "Found STATE attributes in #{Type::get_type_name_by_code(@packettype)}"
     end
     if @attributes_by_type[RadiusPacket::Attribute::STATE].length > 1
+      BlackBoard.policy_detail_logger.debug "Found multiple STATE attributes in #{Type::get_type_name_by_code(@packettype)}: " + attr_to_hex(@attributes_by_type[RadiusPacket::Attribute::STATE])
       raise ProtocolViolationError.new "Found multiple STATE attributes in #{Type::get_type_name_by_code(@packettype)}"
     end
 
     # Check Calling-Station-ID (0-1 for Request, 0 otherwise)
     if @packettype == RadiusPacket::Type::REQUEST
       if @attributes_by_type[RadiusPacket::Attribute::CALLINGSTATIONID].length > 1
+        BlackBoard.policy_detail_logger.debug "Found multiple CALLINGSTATIONID attributes in #{Type::get_type_name_by_code(@packettype)}: " + attr_to_hex(@attributes_by_type[RadiusPacket::Attribute::CALLINGSTATIONID])
         raise ProtocolViolationError.new "Found multiple CALLINGSTATIONID attributes in #{Type::get_type_name_by_code(@packettype)}"
       end
     else
       if @attributes_by_type[RadiusPacket::Attribute::CALLINGSTATIONID].length > 0
+        BlackBoard.policy_detail_logger.debug "Found CALLINGSTATIONID attribute in #{Type::get_type_name_by_code(@packettype)}: " + attr_to_hex(@attributes_by_type[RadiusPacket::Attribute::CALLINGSTATIONID])
         raise ProtocolViolationError.new "Found CALLINGSTATIONID attribute in #{Type::get_type_name_by_code(@packettype)}"
       end
     end

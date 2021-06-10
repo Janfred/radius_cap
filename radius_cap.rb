@@ -15,9 +15,11 @@ SemanticLogger.add_appender(file_name: 'development.log', level: @config[:debug_
 SemanticLogger.add_appender(io: STDOUT, formatter: :color, level: @config[:debug_level]) if @config[:debug]
 SemanticLogger.add_appender(file_name: 'policy_violation.log', level: :debug, filter: /PolicyViolation/)
 SemanticLogger.add_appender(file_name: 'statistics.log', level: :debug, filter: /StatHandler/)
+SemanticLogger.add_appender(file_name: 'policy_violation_detail.log', level: :debug, filter: /PolicyDetailViolation/)
 
 logger = SemanticLogger['radius_cap']
 policylogger = SemanticLogger['PolicyViolation']
+policydetaillogger = SemanticLogger['PolicyDetailViolation']
 logger.info("Requirements done. Loading radius_cap.rb functions")
 
 # Error to be thrown if the EAP Packet fragmentation causes an error
@@ -31,6 +33,9 @@ BlackBoard.pktbuf = []
 BlackBoard.pktbuf.extend(MonitorMixin)
 BlackBoard.pktbuf_empty = BlackBoard.pktbuf.new_cond
 BlackBoard.policy_logger = policylogger
+BlackBoard.policy_detail_logger = policydetaillogger
+
+ElasticHelper.bulk_insert = @config[:bulk_insert]
 
 require_relative './inc/elastic_write.rb'
 
@@ -101,6 +106,8 @@ until elasticempty do
   end
   sleep 1
 end
+
+ElasticHelper.flush_bulk
 
 logger.info("Elastic buffer is empty.")
 logger.info("Saving stat")
