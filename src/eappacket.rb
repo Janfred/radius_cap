@@ -22,10 +22,10 @@ class EAPPacket
     # Get EAP Code by the given code
     # @param code [Byte] Code of the EAP Code
     # @return [String] Name of the EAP Code, or "UNKNOWN_EAP_CODE_<num>" if EAP Type is unknown
-    def Type::get_code_name_by_code(code)
+    def Code::get_code_name_by_code(code)
       return nil if code.nil?
-      Type.constants.each do |const|
-        next if Type.const_get(const) != code
+      Code.constants.each do |const|
+        next if Code.const_get(const) != code
         return const.to_s
       end
       "UNKNOWN_EAP_CODE_#{code}"
