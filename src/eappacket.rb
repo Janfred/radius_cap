@@ -18,6 +18,18 @@ class EAPPacket
     SUCCESS  = 3
     # EAP FAILURE
     FAILURE  = 4
+
+    # Get EAP Code by the given code
+    # @param code [Byte] Code of the EAP Code
+    # @return [String] Name of the EAP Code, or "UNKNOWN_EAP_CODE_<num>" if EAP Type is unknown
+    def Type::get_code_name_by_code(code)
+      return nil if code.nil?
+      Type.constants.each do |const|
+        next if Type.const_get(const) != code
+        return const.to_s
+      end
+      "UNKNOWN_EAP_CODE_#{code}"
+    end
   end
   # Constants for EAP Types
   # https://www.iana.org/assignments/eap-numbers/eap-numbers.xhtml

@@ -77,24 +77,54 @@ class EAPStream
     set_eap_type
   end
 
+  # Check for unusual eap communication (e.g. double identity transmission)
+  def run_type_check(first_payload, expected_eap_type)
+    cur_ptr = first_payload - 1
+    loop do
+      cur_ptr += 1
+      # Stop if we reached the end
+      return unless @eap_packets[cur_ptr]
+
+      # Accepts/Rejects are ok
+      next if @eap_packets[cur_ptr].code == EAPPacket::Code::SUCCESS
+      next if @eap_packets[cur_ptr].code == EAPPacket::Code::FAILURE
+
+      # Current EAP Type is the expected EAP type
+      next if @eap_packets[cur_ptr].type == expected_eap_type
+
+      if @eap_packets[cur_ptr].code == EAPPacket::Code::RESPONSE && @eap_packets[cur_ptr].type == EAPPacket::Type::IDENTITY
+        logger.trace "Found a new identity packet at position #{cur_ptr}. Restarting eap type determination"
+        set_eap_type(cur_ptr)
+        return
+      end
+
+      # Current EAP packet is neither new identity nor the expected EAP type.
+      # For now I just send out a warning, TODO: this should probably be an error. Needs more investigation.
+      logger.warn("Unexpected EAP packet: Position #{cur_ptr} Expected Type: #{EAPPacket::Type::get_type_name_by_code(expected_eap_type)} -- Actual: #{EAPPacket::Code::get_code_name_by_code(@eap_packets[cur_ptr].code)} Type #{EAPPacket::Type::get_type_name_by_code(@eap_packets[cur_ptr].type)}")
+      return
+    end
+  end
+
   # Private helper function to determine the EAP Type.
   # @raise EAPStreamError if the EAP Communication violates the EAP RFC
-  def set_eap_type
+  # @param start_with_id [Integer], index to start the eap type recognition. Defaults to 0. See #run_type_check
+  def set_eap_type(start_with_id = 0)
     # The first EAP Packet is always a EAP Response (For some weird reasons)
     # and EAP Type is Identity.
     # If this is not the case, the EAP Communication was most likely not captured completely.
-    logger.trace("Code of the first EAP Packet: #{@eap_packets[0].code}")
-    logger.trace("Type of the first EAP Packet: #{@eap_packets[0].type}")
-    if @eap_packets[0].code != EAPPacket::Code::RESPONSE
+    cur_ptr = start_with_id
+    logger.trace("Code of the first EAP Packet: #{@eap_packets[cur_ptr].code}")
+    logger.trace("Type of the first EAP Packet: #{@eap_packets[cur_ptr].type}")
+    if @eap_packets[cur_ptr].code != EAPPacket::Code::RESPONSE
       StatHandler.increase :eaperror_other
       raise EAPStreamError.new "The first EAP Packet has not a Response Code"
     end
-    if @eap_packets[0].type != EAPPacket::Type::IDENTITY
+    if @eap_packets[cur_ptr].type != EAPPacket::Type::IDENTITY
       StatHandler.increase :eaperror_first_not_identity
       raise EAPStreamError.new "The first EAP Packet is not an Identity Type"
     end
 
-    eap_identity_bytes = @eap_packets[0].type_data
+    eap_identity_bytes = @eap_packets[cur_ptr].type_data
     @eap_identity = eap_identity_bytes.pack('C*')
 
     @initial_eap_type = nil
@@ -103,8 +133,8 @@ class EAPStream
 
     # The Answer by the server is either an EAP Failure, in which case the Server
     # rejected the Client immediately or an EAP Request. If it is not, something is wrong.
-    return if @eap_packets[1].code == EAPPacket::Code::FAILURE
-    if @eap_packets[1].code != EAPPacket::Code::REQUEST
+    return if @eap_packets[cur_ptr+1].code == EAPPacket::Code::FAILURE
+    if @eap_packets[cur_ptr+1].code != EAPPacket::Code::REQUEST
       StatHandler.increase :eaperror_other
       raise EAPStreamError
     end
@@ -115,15 +145,20 @@ class EAPStream
 
     # Now that we have the initial EAP type we have to make sure that the client continues
     # talking to the server and does not reject the suggested EAP Type
-    if @eap_packets[2].nil?
+    if @eap_packets[cur_ptr+2].nil?
       StatHandler.increase :eaperror_communcation_too_short
       raise EAPStreamError.new "EAP Communication ended after 2 Messages"
     end
 
-    cur_ptr = 2
+    cur_ptr +=2
     # CAUTION: I have witnessed a case where the client retransmitted the EAP-Identity. This case will be handled here
     if @eap_packets[cur_ptr].type == EAPPacket::Type::IDENTITY
       logger.warn "Seen a retransmission of the EAP Identity at packet #{cur_ptr}"
+      unless @eap_packets[cur_ptr+1]
+        # Communication too short
+        StatHandler.increase :eaperror_communcation_too_short
+        raise EAPStreamError.new "EAP Communication ended after retransmission of identity"
+      end
       if @eap_packets[cur_ptr+1].type != @initial_eap_type
         StatHandler.increase :eaperror_other
         raise EAPStreamError.new "The Server answered to a EAP-Identity Retransmission with a different type then he did before."
@@ -137,6 +172,7 @@ class EAPStream
       # on the EAP type. We're done here.
       @eap_type = @initial_eap_type
       @first_eap_payload = cur_ptr - 1
+      run_type_check(@first_eap_payload, @eap_type)
       logger.trace "The first EAP Payload is in packet #{@first_eap_payload}"
       return nil
     end
@@ -184,6 +220,8 @@ class EAPStream
     # If this wasn't the case, we finally know our EAP Type.
     @eap_type = @eap_packets[cur_ptr].type
     @first_eap_payload = cur_ptr
+
+    run_type_check(@first_eap_payload, @eap_type)
 
     logger.trace "The first EAP Payload is in packet #{@first_eap_payload}"
 
