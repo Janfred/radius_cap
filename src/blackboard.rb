@@ -2,7 +2,7 @@
 class BlackBoard
   include Singleton
 
-  attr_accessor :logger, :pktbuf, :pktbuf_empty, :policy_logger, :sock_threads, :policy_detail_logger
+  attr_accessor :logger, :pktbuf, :pktbuf_empty, :policy_logger, :sock_threads, :policy_detail_logger,:config
   def initialize
     @logger = nil
     @policy_logger
@@ -10,6 +10,7 @@ class BlackBoard
     @pktbuf = nil
     @pktbuf_empty = nil
     @sock_threads
+    @config
   end
 
   # Getter for the script wide general logging instance
@@ -59,5 +60,13 @@ class BlackBoard
   # Setter for the Socket Thread Array
   def self.sock_threads=(t)
     BlackBoard.instance.sock_threads=t
+  end
+  # Getter for the config storage
+  def self.config
+    BlackBoard.instance.config
+  end
+  # Setter for the config storage
+  def self.config=(c)
+    BlackBoard.instance.config=c
   end
 end

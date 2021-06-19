@@ -17,6 +17,8 @@ SemanticLogger.add_appender(file_name: 'policy_violation.log', level: :debug, fi
 SemanticLogger.add_appender(file_name: 'statistics.log', level: :debug, filter: /StatHandler/)
 SemanticLogger.add_appender(file_name: 'policy_violation_detail.log', level: :debug, filter: /PolicyDetailViolation/)
 
+BlackBoard.config=@config
+
 logger = SemanticLogger['radius_cap']
 policylogger = SemanticLogger['PolicyViolation']
 policydetaillogger = SemanticLogger['PolicyDetailViolation']

@@ -41,15 +41,18 @@ class StatHandler
     @statistics.synchronize do
       null_stat
     end
-    if File.exists?('stat_tmp')
-      data = JSON.parse(File.read('stat_tmp'))
-      thres = Time.now - 3600
-      data.shift while data.length > 0 && Time.parse(data[0]["timestamp"]) < thres
-      data.each do |d|
-        @stat_history << d
+    no_stat_server = BlackBoard.config && BlackBoard.config[:no_stat_server]
+    unless no_stat_server
+      if File.exists?('stat_tmp')
+        data = JSON.parse(File.read('stat_tmp'))
+        thres = Time.now - 3600
+        data.shift while data.length > 0 && Time.parse(data[0]["timestamp"]) < thres
+        data.each do |d|
+          @stat_history << d
+        end
       end
+      @stat_server_thr = start_stat_server
     end
-    @stat_server_thr = start_stat_server
   end
 
   # Private function for adding stat
