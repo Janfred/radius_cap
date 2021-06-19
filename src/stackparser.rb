@@ -449,9 +449,13 @@ class ProtocolStack
     tlsclienthello = TLSClientHello.new(client_hello.data)
     @tls_data[:tlsclienthello] = tlsclienthello.to_h
 
+    logger.trace "Client Hello Data: " + @tls_data[:tlsclienthello].inspect
+
     raise ProtocolStackError.new 'The next EAP-TLS Packet with the ServerHello does not exist' if tlspackets[1].nil?
     tlsserverhello = TLSServerHello.new(tlspackets[1])
     @tls_data[:tlsserverhello] = tlsserverhello.to_h
+
+    logger.trace "Server Hello Data: " + @tls_data[:tlsserverhello].inspect
 
     if tlsserverhello.additional[:resumption]
       # If this is a Session Resumption, we don't save the data but just log the incident.
