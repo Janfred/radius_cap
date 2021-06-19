@@ -47,6 +47,8 @@ module TLSTypes
   module Alerts
     # TLS Alert Close Notify
     CLOSE_NOTIFY            = 0x00
+    # TLS Alert Unexpected Message
+    UNEXPECTED_MESSAGE      = 0x0a
     # TLS Alert Handshake Failure
     HANDSHAKE_FAILURE       = 0x28
     # TLS Alert No Certificate

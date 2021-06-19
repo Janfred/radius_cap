@@ -107,7 +107,11 @@ until elasticempty do
   sleep 1
 end
 
-ElasticHelper.flush_bulk
+begin
+  ElasticHelper.flush_bulk
+rescue
+  #left blank intentionally
+end
 
 logger.info("Elastic buffer is empty.")
 logger.info("Saving stat")

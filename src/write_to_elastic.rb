@@ -217,7 +217,14 @@ class ElasticHelper
     if ElasticHelper.bulk_insert
       ElasticHelper.bulk_data << to_ins
       if ElasticHelper.bulk_data.length >= ElasticHelper.bulk_insert
-        ElasticHelper.client.bulk index: 'tlshandshakes', type: 'tlshandshake', body: ElasticHelper.bulk_data.map{ |x| {index: { _id: x[:id], data: x[:data] } } }
+        begin
+          ElasticHelper.client.bulk index: 'tlshandshakes', type: 'tlshandshake', body: ElasticHelper.bulk_data.map{ |x| {index: { _id: x[:id], data: x[:data] } } } unless no_direct_elastic
+        rescue => e
+          logger.warn "Error in Bulk indexing.", e
+          filename = File.join('debugcapture', 'elasticbulk_' + DateTime.now.strftime('%s') + '.txt')
+          logger.warn 'Writing elastic bulk insert to ' + filename
+          File.write(filename, ElasticHelper.bulk_data.inspect)
+        end
         ElasticHelper.clear_bulk_data
       end
     else
