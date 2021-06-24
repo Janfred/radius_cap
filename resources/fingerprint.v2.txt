@@ -27,3 +27,4 @@ fb855a002eaa4f1189edcc8a55fa92a17d1d6f54aabdf6701fafd8d657a0296d|Android  |Andro
 60bd9a585079aa15cbd6dcc3ee341135d173bf33f3c4ee9af4435871d770d9a1|Android  |Android 8.0.1 |Android 8.0.1/Lineage, Samsung (Data origin: Marburg)
 9a23342b0cf9842e2fec68484d5eb74de21599b7541fa6b2c70709391e63240c|Android  |Android 7.0   |Android 7.0, HTC M9 (Data origin: Marburg)
 0f193f1dc16910b73c27609de96bd87fbabb0cdbd03545c1f0b957316b87b903|Windows  |Windows XP    |Windows XP SP1, Via Asus Tool|
+08c052491a8904c7ed15e2a8835992dc906b9c9328d9bbdb3a62ac291d6d9a57|Windows  |Windows 10    |Windows 10 Pro, Version 21H1 Build 19043.985 oder Version 20H2 Build 19042.1052
