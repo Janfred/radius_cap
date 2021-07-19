@@ -274,6 +274,12 @@ class TLSClientHello
     to_ret[:cipherdata][:outdated] = cdata.includes_old_outdated?
     to_ret[:cipherdata][:min_sec_lvl] = cdata.get_min_sec_level
     to_ret[:cipherdata][:max_sec_lvl] = cdata.get_max_sec_level
+    to_ret[:cipherdata][:all_keyx] = cdata.all_keyx
+    to_ret[:cipherdata][:all_auth] = cdata.all_auth
+    to_ret[:cipherdata][:all_encr] = cdata.all_encr
+    to_ret[:cipherdata][:all_keyx_list] = to_ret[:cipherdata][:all_keyx].sort.join(' ')
+    to_ret[:cipherdata][:all_auth_list] = to_ret[:cipherdata][:all_auth].sort.join(' ')
+    to_ret[:cipherdata][:all_encr_list] = to_ret[:cipherdata][:all_encr].sort.join(' ')
     to_ret[:cipherdata][:pfs_avail] = cdata.pfs_avail?
     to_ret[:cipherdata][:only_pfs] = cdata.only_pfs?
     to_ret[:cipherdata][:anull] = cdata.anull_present?

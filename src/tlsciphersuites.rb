@@ -6,6 +6,15 @@ class TLSCipherSuite
     @internal_cs.delete nil
   end
 
+  def all_encr
+    @internal_cs.map{|x| x[:encryption] || (!x[:scsv] && "NULL")}.uniq - [nil, false]
+  end
+  def all_keyx
+    @internal_cs.map{|x| x[:keyxchange] || (!x[:scsv] && "NULL")}.uniq - [nil, false]
+  end
+  def all_auth
+    @internal_cs.map{|x| x[:auth] || (!x[:scsv] && "NULL")}.uniq - [nil, false]
+  end
   # Checks if broken encryption algorithms are included.
   # The following encryption algorithms are considered broken:
   # RC2-40, RC4-40, RC4-128, DES-40, DES
@@ -35,6 +44,7 @@ class TLSCipherSuite
   def get_min_sec_level
     cur_level = 1000
     @internal_cs.each do |x|
+      next if x[:scsv]
       lvl = SECURITY_LEVELS[x[:encryption]]
       return -1 unless lvl
       cur_level = [cur_level, lvl].min
@@ -48,6 +58,7 @@ class TLSCipherSuite
   def get_max_sec_level
     cur_level = -1
     @internal_cs.each do |x|
+      next if x[:scsv]
       lvl = SECURITY_LEVELS[x[:encryption]]
       next unless lvl
       cur_level = [cur_level, lvl].max
@@ -140,8 +151,8 @@ class TLSCipherSuite
     "DES"         =>  56,
     "3DES"        => 112,
     "IDEA"        => 128,
-    "AES-128"     => 128,
-    "AES-256"     => 256,
+    "AES128"      => 128,
+    "AES256"      => 256,
     "CAMELLIA128" => 128,
     "CAMELLIA256" => 256,
     "SEED"        => 128,
