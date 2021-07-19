@@ -6,6 +6,55 @@ class TLSCipherSuite
     @internal_cs.delete nil
   end
 
+  # Checks if broken encryption algorithms are included.
+  # The following encryption algorithms are considered broken:
+  # RC2-40, RC4-40, RC4-128, DES-40, DES
+  def includes_broken?
+    !(@internal_cs.map {|x| x[:encryption]} & %w[RC2-40 RC4-40 RC4-128 DES-40 DES]).empty?
+  end
+
+  # Checks if outdated functions are used.
+  # The following methods are considered outdated:
+  # RC2, RC4, DES, MD5, IDEA
+  def includes_old_outdated?
+    !((@internal_cs.map{|x| x[:encryption]} & %w[RC2-40 RC4-40 RC4-128 DES-40 DES IDE]).empty? &&
+      (@internal_cs.map{|x| x[:mac]} & %w[MD5]).empty?)
+  end
+
+  # Checks if export level cipher suites are included in the TLS client hello
+  def includes_export?
+    @internal_cs.each do |x|
+      return true if x[:name].match /EXPORT/
+    end
+    false
+  end
+
+  # Get the worst security level of all offered cipher suites.
+  # This is solely based on the key length of the encryption algorithm.
+  # @return [Integer] minimum security level or -1 if an unknown cipher suite is included
+  def get_min_sec_level
+    cur_level = 1000
+    @internal_cs.each do |x|
+      lvl = SECURITY_LEVELS[x[:encryption]]
+      return -1 unless lvl
+      cur_level = [cur_level, lvl].min
+    end
+    cur_level
+  end
+
+  # Get the best security level of all offered cipher suites.
+  # This is solely based on the key length of the encryption algorithm.
+  # @return [Integer] maximum security level
+  def get_max_sec_level
+    cur_level = -1
+    @internal_cs.each do |x|
+      lvl = SECURITY_LEVELS[x[:encryption]]
+      next unless lvl
+      cur_level = [cur_level, lvl].max
+    end
+    cur_level
+  end
+
   # Converts the Cipher Suite to an array of human readable names
   # @return [Array] Human readable Names of the CipherSuites
   def humanreadable
@@ -82,6 +131,24 @@ class TLSCipherSuite
     {code: val[0], keyxchange: val[1], auth: val[2], encryption: val[3], mode: val[4], mac: val[5], pfs: val[6], scsv: val[7], tlsv13: val[8], name: val[9]}
   end
 
+  SECURITY_LEVELS = {
+    nil           =>   0,
+    "RC2-40"      =>  40,
+    "RC4-40"      =>  40,
+    "RC4-128"     => 128,
+    "DES-40"      =>  40,
+    "DES"         =>  56,
+    "3DES"        => 112,
+    "IDEA"        => 128,
+    "AES-128"     => 128,
+    "AES-256"     => 256,
+    "CAMELLIA128" => 128,
+    "CAMELLIA256" => 256,
+    "SEED"        => 128,
+    "ARIA128"     => 128,
+    "ARIA256"     => 256,
+    "CHACHA20"    => 128,
+  }
   # List of all supported Cipher Suites
   KNOWN_CIPHERSUITES = [
 #     Ciphersuite   KeyX       Auth       Encry          Mode       MAC         PFS    SCSV   TLS1.3 Humanreadable Name

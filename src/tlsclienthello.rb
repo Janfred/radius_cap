@@ -269,6 +269,11 @@ class TLSClientHello
     to_ret[:ciphersuites] = @ciphersuites.map { |c| "0x%02X%02X" % c }
     to_ret[:cipherdata] = {}
     cdata = TLSCipherSuite.new(@ciphersuites)
+    to_ret[:cipherdata][:export] = cdata.includes_export?
+    to_ret[:cipherdata][:broken] = cdata.includes_broken?
+    to_ret[:cipherdata][:outdated] = cdata.includes_old_outdated?
+    to_ret[:cipherdata][:min_sec_lvl] = cdata.get_min_sec_level
+    to_ret[:cipherdata][:max_sec_lvl] = cdata.get_max_sec_level
     to_ret[:cipherdata][:pfs_avail] = cdata.pfs_avail?
     to_ret[:cipherdata][:only_pfs] = cdata.only_pfs?
     to_ret[:cipherdata][:anull] = cdata.anull_present?
