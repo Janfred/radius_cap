@@ -47,7 +47,7 @@ loop do
 
   hits.each do |hit|
     id = hit["_id"]
-    body = hit["_body"]
+    body = hit["_source"]
 
     body["meta"]["scheme_ver"] = 2
     body["meta"].delete("exported")
