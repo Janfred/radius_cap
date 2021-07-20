@@ -15,6 +15,18 @@ class TLSCipherSuite
   def all_auth
     @internal_cs.map{|x| x[:auth] || (!x[:scsv] && "NULL")}.uniq - [nil, false]
   end
+  def all_mac
+    @internal_cs.map{|x| x[:mac] || (!x[:scsv] && "NULL")}.uniq - [nil, false]
+  end
+
+  def set_length
+    @internal_cs.length
+  end
+
+  def set_length_noscsv
+    @internal_cs.select{|x| !x[:scsv]}.length
+  end
+
   # Checks if broken encryption algorithms are included.
   # The following encryption algorithms are considered broken:
   # RC2-40, RC4-40, RC4-128, DES-40, DES

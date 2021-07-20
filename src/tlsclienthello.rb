@@ -277,9 +277,11 @@ class TLSClientHello
     to_ret[:cipherdata][:all_keyx] = cdata.all_keyx
     to_ret[:cipherdata][:all_auth] = cdata.all_auth
     to_ret[:cipherdata][:all_encr] = cdata.all_encr
+    to_ret[:cipherdata][:all_mac] = cdata.all_mac
     to_ret[:cipherdata][:all_keyx_list] = to_ret[:cipherdata][:all_keyx].sort.join(' ')
     to_ret[:cipherdata][:all_auth_list] = to_ret[:cipherdata][:all_auth].sort.join(' ')
     to_ret[:cipherdata][:all_encr_list] = to_ret[:cipherdata][:all_encr].sort.join(' ')
+    to_ret[:cipherdata][:all_mac_list]  = to_ret[:cipherdata][:all_mac].sort.join(' ')
     to_ret[:cipherdata][:pfs_avail] = cdata.pfs_avail?
     to_ret[:cipherdata][:only_pfs] = cdata.only_pfs?
     to_ret[:cipherdata][:anull] = cdata.anull_present?
@@ -289,6 +291,8 @@ class TLSClientHello
     to_ret[:cipherdata][:des] = cdata.des_present?
     to_ret[:cipherdata][:humanreadable] = cdata.humanreadable
     to_ret[:cipherdata][:cipherset] = cdata.cipherset
+    to_ret[:cipherdata][:ciperset_length] = cdata.set_length
+    to_ret[:cipherdata][:cipherset_length_noscsv] = cdata.set_length_noscsv
 
     to_ret[:cipherdata][:supported_group_set] = to_ret[:supportedgroups].join('+') || ''
     to_ret[:cipherdata][:signature_algorithm_set] = to_ret[:signaturealgorithms].join('+') || ''
