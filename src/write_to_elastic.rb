@@ -191,7 +191,7 @@ class ElasticHelper
     #   THIS SHOULD DEFINITELY BE CONFIGURABLE OR AT LEST SIT
     #   AT A MORE VISIBLE POINT OF THE CODE, SO IT CAN BE
     #   CHANGED EASILY IF THE VERSIONS NEED TO BE BUMPED
-    meta[:scheme_ver] = 3
+    meta[:scheme_ver] = 4
     meta[:capture_ver] = 4
     meta[:realm] = realm.downcase
     meta[:realm_tld] = meta[:realm].split(".").last
