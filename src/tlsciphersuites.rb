@@ -10,10 +10,10 @@ class TLSCipherSuite
     @internal_cs.map{|x| x[:encryption] || (!x[:scsv] && "NULL")}.uniq - [nil, false]
   end
   def all_keyx
-    @internal_cs.map{|x| x[:keyxchange] || (!x[:scsv] && "NULL")}.uniq - [nil, false]
+    @internal_cs.map{|x| x[:keyxchange] || (!x[:scsv] && !x[:tlsv13] && "NULL")}.uniq - [nil, false]
   end
   def all_auth
-    @internal_cs.map{|x| x[:auth] || (!x[:scsv] && "NULL")}.uniq - [nil, false]
+    @internal_cs.map{|x| x[:auth] || (!x[:scsv] && !x[:tlsv13] && "NULL")}.uniq - [nil, false]
   end
   def all_mac
     @internal_cs.map{|x| x[:mac] || (!x[:scsv] && "NULL")}.uniq - [nil, false]
