@@ -38,7 +38,7 @@ class TLSCipherSuite
   # The following methods are considered outdated:
   # RC2, RC4, DES, MD5, IDEA
   def includes_old_outdated?
-    !((@internal_cs.map{|x| x[:encryption]} & %w[RC2-40 RC4-40 RC4-128 DES-40 DES IDE]).empty? &&
+    !((@internal_cs.map{|x| x[:encryption]} & %w[RC2-40 RC4-40 RC4-128 DES-40 DES IDEA]).empty? &&
       (@internal_cs.map{|x| x[:mac]} & %w[MD5]).empty?)
   end
 
