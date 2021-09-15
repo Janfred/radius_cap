@@ -14,3 +14,6 @@ gem 'semantic_logger'
 
 # For scheduling the diagnostic output
 gem 'rufus-scheduler'
+
+# For profiling method calls
+gem 'method_profiler'

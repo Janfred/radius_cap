@@ -17,6 +17,9 @@ GEM
     fugit (1.4.2)
       et-orbi (~> 1.1, >= 1.1.8)
       raabro (~> 1.4)
+    hirb (0.7.3)
+    method_profiler (2.0.1)
+      hirb (>= 0.6.0)
     multi_json (1.14.1)
     multipart-post (2.1.1)
     packetfu (1.1.13)
@@ -36,6 +39,7 @@ PLATFORMS
 
 DEPENDENCIES
   elasticsearch
+  method_profiler
   packetfu
   rufus-scheduler
   semantic_logger
