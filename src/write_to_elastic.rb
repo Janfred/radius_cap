@@ -1,7 +1,7 @@
 require 'elasticsearch'
 require 'singleton'
 require 'digest'
-require_relative './macvendor.rb'
+require_relative './macvendor'
 
 # Helper class for dealing with ElasticSearch
 class ElasticHelper
@@ -89,7 +89,7 @@ class ElasticHelper
     @priv_elasticdata = []
     @priv_elasticdata.extend(MonitorMixin)
     @priv_waitcond = @priv_elasticdata.new_cond
-    @priv_client = Elasticsearch::Client.new log: false unless debug
+    @priv_client = Elasticsearch::Client.new log: false, user: BlackBoard.config[:elastic_username], password: BlackBoard.config[:elastic_password] unless debug
     MacVendor.init_data
     nil
   end

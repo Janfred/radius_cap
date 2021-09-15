@@ -9,4 +9,6 @@
     { username: "plsignoreme@somedomain", mac: nil},
     { username: nil, mac: "12:34:56:78:9a:bc"},
   ],
+  elastic_username: 'username',
+  elastic_password: 'password',
 }
