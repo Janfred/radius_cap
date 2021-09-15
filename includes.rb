@@ -14,6 +14,7 @@ require 'rufus-scheduler'
 # Require local files
 require_relative './src/stat_handler.rb'
 require_relative './src/radiuspacket.rb'
+require_relative './src/certificate_store'
 require_relative './src/eappacket.rb'
 require_relative './src/tlsclienthello.rb'
 require_relative './src/tlsserverhello.rb'
