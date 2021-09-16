@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+@nopacketfu = true
+
 require_relative './includes'
 require 'method_profiler'
 @config[:debug] = false if @config[:debug].nil?
