@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+@nopacketfu = true
+
 require_relative './includes'
 
 @config[:debug] = false if @config[:debug].nil?

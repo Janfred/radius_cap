@@ -8,7 +8,15 @@ require 'semantic_logger'
 require 'singleton'
 require 'openssl'
 require 'socket'
-require 'packetfu'
+if @nopacketfu
+  module PacketFu
+    class Packet
+      # left blank intentionallyg
+    end
+  end
+else
+  require 'packetfu'
+end
 require 'rufus-scheduler'
 
 # Require local files
