@@ -1,5 +1,3 @@
-require 'packetfu'
-
 # Error to be raised if the actual length of the packet does not match the specified length.
 # This could happen if the IP packet was fragmented or the Radius Packet is faulty
 class PacketLengthNotValidError < StandardError
