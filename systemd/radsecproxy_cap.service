@@ -1,0 +1,16 @@
+[Unit]
+Description=radsecproxy_cap
+
+[Service]
+Type=simple
+WorkingDirectory=/srv/radius_cap/radius_cap/
+ExecStart=/srv/radius_cap/.rbenv/shims/ruby /srv/radius_cap/radius_cap/radsecproxy_cap.rb
+ProtectSystem=full
+PrivateDevices=true
+PrivateTmp=false
+ProtectHome=true
+User=radius_cap
+Environment=BUNDLER_GEMFILE=Gemfile.radsec
+
+[Install]
+WantedBy=multi-user.target

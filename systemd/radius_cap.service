@@ -1,0 +1,14 @@
+[Unit]
+Description=radius_cap
+
+[Service]
+Type=simple
+WorkingDirectory=/srv/radius_cap/
+ExecStart=/srv/radius_cap/radius_cap.rb
+ProtectSystem=full
+PrivateDevices=true
+PrivateTmp=false
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
