@@ -107,10 +107,19 @@ $> su - radius_cap
 #> bundle install
 
 # You can check the correct functionality with
-#> BUNDLER_GEMFILE=Gemfile.radsec ruby radsecproxy_cap.rb
+#> BUNDLE_GEMFILE=Gemfile.radsec ruby radsecproxy_cap.rb
 ```
 
 TODO: systemd
+
+### Systemd
+
+To run the capturing as systemd units, systemd files can be found in the `systemd/` directory.
+Copy the according file to the directory `/etc/systemd/system` and execute `systemctl daemon-reload`.
+
+After that you can start the capturing tool with `systemctl start radius_cap` or `systemctl start radsecproxy_cap`
+
+To start the tool on startup run `systemctl enable radius_cap` or `systemctl enable radsecproxy_cap`
 
 ## Configuration
 
@@ -162,6 +171,48 @@ And the following directories are used:
   * Output-Directory for observed certificates. Filename is `<sha256sum of PEM encoding>.pem`
 * `statistics`
   * Output-Directory for `profiler` files, subdirectories for each profiler call with the timestamp
+
+## Capturing sources configuration
+
+I order to not disrupt the production environment, it is highly recommended to run this analysis tool on a different server.
+To still be able to capture the RADIUS packets, a copy of all RADIUS packets has to be forwarded to the analysis server.
+
+### Capturing raw RADIUS packets
+
+For the raw RADIUS packets, this can be achieved by using the `iptables -j TEE` option.
+In order for this to function, the analysis server has to be in the same layer 2 domain as the RADIUS server.
+On the RADIUS server you can add the following rules to iptables (either directly or through netfilter-persistent or similar tools)
+
+```
+# IP-Addr of RADIUS server: 192.0.2.1
+# IP-Addr of the analysis server: 192.0.2.10
+
+# To forward all incoming RADIUS packets
+iptables -t mangle -A PREROUTING -d 192.0.2.1 -p udp -m udp --dport 1812 -j TEE --gateway 192.0.2.10
+# To forward all outgoing RADIUS packets
+iptables -t mangle -A POSTROUTING -s 192.0.2.1 -p udp -m udp --dport 1812 -j TEE --gateway 192.0.2.10
+```
+
+If you have multiple RADIUS servers, you have to do this on all of them to capture all packets.
+
+### Capturing via radsecproxy socket
+
+For the radsecproxy capture, the output socket of the Radsecproxy has to be forwarded to the analysis machine.
+For this purposes the `systemd/` directory contains the `radsec_ssh_tunnel@.service` unit.
+
+For this to work, on the destination server there must exist a user `radius_cap` with the privileges to open the UNIX socket.
+It is assumed that the socket is located under `/tmp/radsecproxy.sock`.
+The local socket is then put under `/tmp/radsecproxy.<servername>.sock`.
+
+To start the SSH tunnel run `systemctl start radsec_ssh_tunnel@<servername>`.
+To start the tunnel on startup, run `systemctl enable radsec_ssh_tunnel@<servername>`.
+
+
+## License and contact to maintainers
+
+See [License][LICENSE.txt]
+
+The tool was written by Jan-Frederik Rieckers. You can contact the maintainer under `rieckers@uni-bremen.de`
 
 ---
 [ba-thesis]: https://user.informatik.uni-bremen.de/rieckers/Bachelor_EAP-TLS.pdf

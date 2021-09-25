@@ -10,7 +10,7 @@ PrivateDevices=true
 PrivateTmp=false
 ProtectHome=true
 User=radius_cap
-Environment=BUNDLER_GEMFILE=Gemfile.radsec
+Environment=BUNDLE_GEMFILE=Gemfile.radsec
 
 [Install]
 WantedBy=multi-user.target
