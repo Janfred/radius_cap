@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'json'
 require 'time'
 
@@ -8,45 +10,45 @@ class StatHandler
 
   # Create new instance of the StatHandler class
   def initialize
-    @stat_history=[]
+    @stat_history = []
     @stat_history.extend(MonitorMixin)
-    @statistics={}
+    @statistics = {}
     @statistics.extend(MonitorMixin)
-    @stat_items = [
-      :packet_captured,
-      :packet_analyzed,
-      :packet_errored,
-      :packet_elastic_filtered,
-      :packet_elastic_written,
-      :packet_timed_out,
-      :elastic_writes,
-      :elastic_new,
-      :elastic_filters,
-      :elastic_update,
-      :elastic_nolive,
-      :streams_timed_out,
-      :streams_analyzed,
-      :streams_errored,
-      :streams_written,
-      :streams_skipped,
-      :eaperror_first_not_identity,
-      :eaperror_communcation_too_short,
-      :eaperror_other,
-      :eaperror_unexpected_end,
-      :pkterror_reply_on_reply,
-      :pkterror_multiple_state,
-      :pkterror_no_state_found,
-      :pkterror_multiple_requests,
+    @stat_items = %i[
+      packet_captured
+      packet_analyzed
+      packet_errored
+      packet_elastic_filtered
+      packet_elastic_written
+      packet_timed_out
+      elastic_writes
+      elastic_new
+      elastic_filters
+      elastic_update
+      elastic_nolive
+      streams_timed_out
+      streams_analyzed
+      streams_errored
+      streams_written
+      streams_skipped
+      eaperror_first_not_identity
+      eaperror_communication_too_short
+      eaperror_other
+      eaperror_unexpected_end
+      pkterror_reply_on_reply
+      pkterror_multiple_state
+      pkterror_no_state_found
+      pkterror_multiple_requests
     ]
     @statistics.synchronize do
       null_stat
     end
     no_stat_server = BlackBoard.config && BlackBoard.config[:no_stat_server]
     unless no_stat_server
-      if File.exists?('stat_tmp')
+      if File.exist?('stat_tmp')
         data = JSON.parse(File.read('stat_tmp'))
         thres = Time.now - 3600
-        data.shift while data.length > 0 && Time.parse(data[0]["timestamp"]) < thres
+        data.shift while !data.empty? && Time.parse(data[0]['timestamp']) < thres
         data.each do |d|
           @stat_history << d
         end
@@ -75,6 +77,7 @@ class StatHandler
   def self.write_temp_stat
     StatHandler.instance.priv_write_temp_stat
   end
+
   # Private function for stat temp file
   def priv_write_temp_stat
     File.write('stat_tmp', @stat_history.to_json)
@@ -88,7 +91,7 @@ class StatHandler
       loop do
         Thread.start(server.accept) do |client|
           @stat_history.synchronize do
-            client.write (@stat_history.length >= 15 ? @stat_history[-15,15] : @stat_history).to_json
+            client.write (@stat_history.length >= 15 ? @stat_history[-15, 15] : @stat_history).to_json
             client.close
           end
         end
@@ -126,7 +129,7 @@ class StatHandler
 
   end
 
-  # Private function for increasing a vield value
+  # Private function for increasing a field value
   def priv_increase(field,num)
     @statistics.synchronize do
       @statistics[field] ||= 0
@@ -163,32 +166,30 @@ class StatHandler
 
   # Private function for logging the current statistics
   def priv_log_stat
-    logmsg = ""
+    logmsg = ''
     cur_stat = {}
     @statistics.synchronize do
-      logmsg +=  "Pkt Capture: #{@statistics[:packet_captured]}"
+      logmsg += "Pkt Capture: #{@statistics[:packet_captured]}"
       logmsg += " Pkt Analyze: #{@statistics[:packet_analyzed]}"
       logmsg += " Pkt Errored: #{@statistics[:packet_errored]}"
       logmsg += " Pkt Elastic: #{@statistics[:packet_elastic_written]}"
       logmsg += " Pkt FilterE: #{@statistics[:packet_elastic_filtered]}"
       logmsg += " Pkt Timeout: #{@statistics[:packet_timed_out]}"
-      logmsg += " ---"
+      logmsg += ' ---'
       logmsg += " Stream analyze: #{@statistics[:streams_analyzed]}"
       logmsg += " Stream timeout: #{@statistics[:streams_timed_out]}"
-      logmsg += " ---"
+      logmsg += ' ---'
       logmsg += " Elastic writes: #{@statistics[:elastic_writes]}"
-      logmsg += " Elsatic filter: #{@statistics[:elastic_filters]}"
+      logmsg += " Elastic filter: #{@statistics[:elastic_filters]}"
 
       @stat_items.each do |i|
         cur_stat[i] = @statistics[i]
       end
-      cur_stat["timestamp"] = Time.now.strftime('%Y-%m-%dT%H:%M')
+      cur_stat['timestamp'] = Time.now.strftime('%Y-%m-%dT%H:%M')
       null_stat
       @stat_history.synchronize do
         @stat_history << cur_stat
-        if @stat_history.length > 60
-          @stat_history.shift @stat_history.length-60
-        end
+        @stat_history.shift @stat_history.length - 60 if @stat_history.length > 60
       end
     end
     logger.debug logmsg
@@ -205,7 +206,7 @@ class StatHandler
   end
 
   # Log a message to the statistics logger
-  # @param logmsg [String] Logmessage to log to statistics logger
+  # @param logmsg [String] Log message to log to statistics logger
   def self.log_additional(logmsg)
     StatHandler.instance.priv_log_additional logmsg
   end

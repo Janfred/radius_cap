@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rubygems'
 require 'bundler/setup'
 
@@ -11,7 +13,7 @@ require 'socket'
 if @nopacketfu
   module PacketFu
     class Packet
-      # left blank intentionallyg
+      # left blank intentionally
     end
   end
 else
@@ -20,18 +22,18 @@ end
 require 'rufus-scheduler'
 
 # Require local files
-require_relative './src/stat_handler.rb'
-require_relative './src/radiuspacket.rb'
-require_relative './src/eappacket.rb'
-require_relative './src/tlsclienthello.rb'
-require_relative './src/tlsserverhello.rb'
-require_relative './localconfig.rb'
-require_relative './src/write_to_elastic.rb'
-require_relative './src/macvendor.rb'
-require_relative './src/radiusstream.rb'
-require_relative './src/radsecstream.rb'
-require_relative './src/eapstream.rb'
-require_relative './src/stackparser.rb'
-require_relative './src/tlsstream.rb'
-require_relative './src/eappwdstream.rb'
-require_relative './src/blackboard.rb'
+require_relative './src/stat_handler'
+require_relative './src/radiuspacket'
+require_relative './src/eappacket'
+require_relative './src/tlsclienthello'
+require_relative './src/tlsserverhello'
+require_relative './localconfig'
+require_relative './src/write_to_elastic'
+require_relative './src/macvendor'
+require_relative './src/radiusstream'
+require_relative './src/radsecstream'
+require_relative './src/eapstream'
+require_relative './src/stackparser'
+require_relative './src/tlsstream'
+require_relative './src/eappwdstream'
+require_relative './src/blackboard'

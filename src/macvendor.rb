@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'singleton'
 
 # Helper Class for finding out the Vendor
@@ -12,9 +14,10 @@ class MacVendor
     @vendorhash = {}
     File.open(File.join('resources', 'oui.txt')) do |f|
       f.each do |line|
-        match = line.match /^([0-9A-F]{2})-([0-9A-F]{2})-([0-9A-F]{2}) {3}\(hex\)\t\t(.*)\r$/
+        match = line.match(/^([0-9A-F]{2})-([0-9A-F]{2})-([0-9A-F]{2}) {3}\(hex\)\t\t(.*)\r$/)
         next unless match
-        key = match[1].downcase + ":" + match[2].downcase + ":" + match[3].downcase
+
+        key = "#{match[1].downcase}:#{match[2].downcase}:#{match[3].downcase}"
         @vendorhash[key] = match[4]
       end
     end
@@ -30,6 +33,6 @@ class MacVendor
   # @param oid [String] OID in Format "xx:xx:xx"
   # @return [String] Vendor registered with the given OID
   def self.by_oid(oid)
-    self.instance.vendorhash[oid] || "UNKNOWN"
+    instance.vendorhash[oid] || 'UNKNOWN'
   end
 end

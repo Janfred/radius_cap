@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
 
 ################################################################################
 #    radius_cap, a RADIUS EAP-TLS analysis software                            #
@@ -29,11 +30,11 @@ require_relative './includes'
 @config[:filewrite] = false if @config[:filewrite].nil?
 @config[:debug_level] ||= :warn
 @config[:elastic_filter] ||= []
-@config[:socket_files] ||= [{path: '/tmp/radsecproxy.sock', label: 'radsecproxy'}]
+@config[:socket_files] ||= [{ path: '/tmp/radsecproxy.sock', label: 'radsecproxy' }]
 
 SemanticLogger.default_level = :debug
 SemanticLogger.add_appender(file_name: 'development.log', level: @config[:debug_level])
-SemanticLogger.add_appender(io: STDOUT, formatter: :color, level: @config[:debug_level]) if @config[:debug]
+SemanticLogger.add_appender(io: $stdout, formatter: :color, level: @config[:debug_level]) if @config[:debug]
 SemanticLogger.add_appender(file_name: 'policy_violation.log', level: :debug, filter: /PolicyViolation/)
 SemanticLogger.add_appender(file_name: 'statistics.log', level: :debug, filter: /StatHandler/)
 SemanticLogger.add_appender(file_name: 'policy_violation_detail.log', level: :debug, filter: /PolicyDetailViolation/)
@@ -43,7 +44,7 @@ BlackBoard.config=@config
 logger = SemanticLogger['radius_cap']
 policylogger = SemanticLogger['PolicyViolation']
 policydetaillogger = SemanticLogger['PolicyDetailViolation']
-logger.info("Requirements done. Loading radsecproxy_cap.rb functions")
+logger.info('Requirements done. Loading radsecproxy_cap.rb functions')
 
 
 
@@ -60,18 +61,18 @@ BlackBoard.policy_detail_logger = policydetaillogger
 
 ElasticHelper.bulk_insert = @config[:bulk_insert]
 
-require_relative './inc/elastic_write.rb'
+require_relative './inc/elastic_write'
 
-logger.info("Start Packet parsing")
+logger.info('Start Packet parsing')
 
-require_relative './inc/packet_match.rb'
+require_relative './inc/packet_match'
 
-require_relative './inc/stat_radsec.rb'
+require_relative './inc/stat_radsec'
 
-require_relative './inc/sock_read.rb'
+require_relative './inc/sock_read'
 
 BlackBoard.sock_threads = []
-logger.info("Start Packet capture")
+logger.info('Start Packet capture')
 begin
   @config[:socket_files].each do |path|
     sock_read(path[:path], path[:label])
@@ -79,47 +80,47 @@ begin
   sleep
 
 rescue SignalException
-  logger.info("Capture Interrupt. Aborting capture")
+  logger.info('Capture Interrupt. Aborting capture')
   BlackBoard.sock_threads.each do |thr|
     thr[:watchdog].exit
     thr.exit
   end
 end
 
-logger.info("Terminating Capture")
+logger.info('Terminating Capture')
 
-logger.info("Waiting for empty packet buffer")
+logger.info('Waiting for empty packet buffer')
 
 pktbufempty = false
-until pktbufempty do
+until pktbufempty
   BlackBoard.pktbuf.synchronize do
     pktbufempty = BlackBoard.pktbuf.empty?
   end
   sleep 1
 end
 
-logger.info("Packet buffer is empty.")
+logger.info('Packet buffer is empty.')
 # We should leave the parser thread a short time to finish the parsing, before we look for an empty elastic queue
 sleep 0.5
 
-logger.info("Waiting for empty parser buffer")
+logger.info('Waiting for empty parser buffer')
 
 parserempty = false
-until parserempty do
+until parserempty
   StackParser.instance.priv_stack_data.synchronize do
     parserempty = StackParser.instance.priv_stack_data.empty?
   end
   sleep 1
 end
 
-logger.info("Parser buffer is empty.")
+logger.info('Parser buffer is empty.')
 
 sleep 0.5
 
-logger.info("Waiting for empty elastic buffer")
+logger.info('Waiting for empty elastic buffer')
 
 elasticempty = false
-until elasticempty do
+until elasticempty
   ElasticHelper.elasticdata.synchronize do
     elasticempty = ElasticHelper.elasticdata.empty?
   end
@@ -128,12 +129,12 @@ end
 
 begin
   ElasticHelper.flush_bulk
-rescue
+rescue StandardError
   # left blank intentionally
 end
 
-logger.info("Elastic buffer is empty.")
-logger.info("Saving stat")
+logger.info('Elastic buffer is empty.')
+logger.info('Saving stat')
 StatHandler.write_temp_stat
 
-logger.info("Terminating.")
+logger.info('Terminating.')

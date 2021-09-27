@@ -1,10 +1,11 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
 
 # Helper Class for finding out the assumed Operating system by a given Handshake Fingerprint
 class Fingerprint
-  # Fingerprintversion to use.
+  # Fingerprint version to use.
   # Used for switching to a new fingerprint version which includes different information in the Hash
-  VERSION="v2"
+  VERSION = 'v2'
 
   @@fingerprintdb = {}
   @@fingerprintdb_lastupdate = nil
@@ -16,11 +17,12 @@ class Fingerprint
 
   # Fetch assumed Operating system by given fingerprint
   # @param fp [String] Handshake Fingerprint (SHA2-Hash as downcase hex string)
-  # @return [Hash] Assumed Operating System from given Fingerprint, or a Hash with os, os_version and detail set to "Not in FP-DB" if no match is found
+  # @return [Hash] Assumed Operating System from given Fingerprint, or a Hash with os, os_version
+  #   and detail set to "Not in FP-DB" if no match is found
   def self.to_h(fp)
-    self.check_new_file
+    check_new_file
     to_ret = @@fingerprintdb[fp]
-    to_ret || { os: "Not in FP-DB", os_version: "Not in FP-DB", detail: "Not in FP-DB" }
+    to_ret || { os: 'Not in FP-DB', os_version: 'Not in FP-DB', detail: 'Not in FP-DB' }
   end
 
   # Loads a new fingerprint database if a new file version is available or the database is not yet initialized
@@ -34,11 +36,13 @@ class Fingerprint
       begin
         File.read(File.join('resources', "./fingerprint.#{VERSION}.txt")).each_line do |l|
           next unless l.match /^[0-9a-f]{64}|[^|]*|[^|]*|[^|]*$/
+
           d = l.split('|').collect(&:strip)
           next if d[0] == 'Fingerprint'
-          temp_db[d[0]] = {os: d[1], os_version: d[2], detail: d[3]}
+
+          temp_db[d[0]] = { os: d[1], os_version: d[2], detail: d[3] }
         end
-      rescue => e
+      rescue StandardError => e
         $stderr.puts 'Error reading fingerprintdb'
       end
       @@fingerprintdb = temp_db

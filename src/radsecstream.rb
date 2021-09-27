@@ -1,15 +1,14 @@
+# frozen_string_literal: true
 
 require 'singleton'
-
-
 
 # Class for handling Streams of Radsec Packets
 class RadsecStream
   include SemanticLogger::Loggable
 
-  attr_reader :time_created, :last_updated, :current_state, :current_pktid
-  attr_reader :client, :server
-  attr_reader :packets, :username, :callingstationid
+  attr_reader :time_created, :last_updated, :current_state, :current_pktid,
+              :client, :server,
+              :packets, :username, :callingstationid
 
   @time_created
   @last_updated
@@ -22,7 +21,7 @@ class RadsecStream
   @username
   @callingstationid
 
-  def initialize(pkt,client,server)
+  def initialize(pkt, client, server)
     @time_created = Time.now
     @last_updated = Time.now
     @current_pktid = pkt.identifier
@@ -34,16 +33,20 @@ class RadsecStream
     @username = pkt.username
     @callingstationid = pkt.callingstationid
 
-    logger.trace "Created RadsecStream for Username #{@username} MAC #{@callingstationid} from #{@client} to #{@server} and pktid #{@current_pktid}"
+    logger.trace "Created RadsecStream for Username #{@username} MAC #{@callingstationid}" \
+                 " from #{@client} to #{@server} and pktid #{@current_pktid}"
   end
 
   def add_request(pkt)
-    logger.trace("Add Request packet")
+    logger.trace('Add Request packet')
     unless @last_from_server
       StatHandler.increase :pkterror_reply_on_reply
-      raise PacketFlowInsertionError.new("Attempted to insert a request without previous answer from server")
+      raise PacketFlowInsertionError, 'Attempted to insert a request without previous answer from server'
     end
-    raise PacketFlowInsertionError.new("Attempted to insert a request with a non matching state") if pkt.state != @current_state
+
+    unless pkt.state == @current_state
+      raise PacketFlowInsertionError, 'Attempted to insert a request with a non matching state'
+    end
 
     @last_from_server = false
     @current_pktid = pkt.identifier
@@ -51,13 +54,16 @@ class RadsecStream
     @packets << pkt
     nil
   end
+
   def add_response(pkt)
-    logger.trace("Add response packet")
+    logger.trace('Add response packet')
     if @last_from_server
       StatHandler.increase :pkterror_reply_on_reply
-      raise PacketFlowInsertionError.new("Attempted to insert a response without previous request from client")
+      raise PacketFlowInsertionError, 'Attempted to insert a response without previous request from client'
     end
-    raise PacketFlowInsertionError.new("Attempted to insert a response with not matching identifier") if pkt.identifier != @current_pktid
+    unless pkt.identifier == @current_pktid
+      raise PacketFlowInsertionError, 'Attempted to insert a response with not matching identifier'
+    end
 
     @last_from_server = true
     @current_state = pkt.state
@@ -77,16 +83,18 @@ class RadsecStreamHelper
   include SemanticLogger::Loggable
 
   attr_reader :known_streams
+
   @known_streams
 
   attr_writer :timeout
+
   @timeout
 
   @housekeeping_counter
 
   # Initialize the known stream and set timeout
   # @param timeout [Integer] number of seconds after a Radsec Stream is considered timed out. Defaults to 60
-  def initialize(timeout=10)
+  def initialize(timeout = 10)
     logger.trace("Initialize RadsecStreamHelper with timeout of #{timeout} seconds")
     @known_streams = []
     @timeout = timeout
@@ -111,29 +119,29 @@ class RadsecStreamHelper
   # @param client sending client of the request
   # @param server receiving server of the request
   def insert_request(pkt, client, server)
-    logger.trace("Inserting packet from client")
-    p = @known_streams.select { |x|
+    logger.trace('Inserting packet from client')
+    p = @known_streams.select do |x|
       x.current_state == pkt.state &&
-          x.client == client &&
-          x.server == server &&
-          x.username == pkt.username &&
-          x.callingstationid == pkt.callingstationid
-    }
+        x.client == client &&
+        x.server == server &&
+        x.username == pkt.username &&
+        x.callingstationid == pkt.callingstationid
+    end
     if p.empty?
-      logger.trace "Creating a new RadsecStream"
+      logger.trace 'Creating a new RadsecStream'
       @known_streams << RadsecStream.new(pkt, client, server)
       return
     elsif p.length > 1
       if pkt.state.nil?
-        logger.warn "Found multiple EAP States for nil state"
+        logger.warn 'Found multiple EAP States for nil state'
         StatHandler.increase :pkterror_multiple_state
       else
         StatHandler.increase :pkterror_multiple_state
-        logger.warn "Found multiple EAP States for 0x#{pkt.state.pack('C*').unpack('H*').first}"
+        logger.warn "Found multiple EAP States for 0x#{pkt.state.pack('C*').unpack1('H*')}"
       end
     end
     flow = p.first
-    logger.trace "Insert Packet in RadsecStream"
+    logger.trace 'Insert Packet in RadsecStream'
     flow.add_request(pkt)
   end
 
@@ -142,12 +150,12 @@ class RadsecStreamHelper
   # @param server sending server of the response
   # @param client receiving client of the response
   def insert_response(pkt, server, client)
-    logger.trace("Inserting packet from server")
-    p = @known_streams.select { |x|
+    logger.trace('Inserting packet from server')
+    p = @known_streams.select do |x|
       x.current_pktid == pkt.identifier &&
-      x.client == client &&
-      x.server == server
-    }
+        x.client == client &&
+        x.server == server
+    end
 
     if p.empty?
       logger.debug "Could not find a matching request from #{client} to #{server} and ID #{pkt.identifier}"
@@ -159,7 +167,7 @@ class RadsecStreamHelper
       p.sort_by!(&:last_updated)
     end
     flow = p.last
-    logger.trace("Insert Packet in RadsecStream")
+    logger.trace('Insert Packet in RadsecStream')
     flow.add_response(pkt)
   end
 
@@ -167,11 +175,12 @@ class RadsecStreamHelper
   def housekeeping
     @housekeeping_counter += 1
     return if @housekeeping_counter < 10
-    logger.trace("Starting Housekeeping")
+
+    logger.trace('Starting Housekeeping')
     t = Time.now
-    old = @known_streams.select{ |x| (t-x.last_updated) > @timeout }
+    old = @known_streams.select { |x| (t - x.last_updated) > @timeout }
     old.each do |o|
-      logger.debug "Timing out 0x#{o.current_state.pack('C*').unpack('H*').first}" if o.current_state
+      logger.debug "Timing out 0x#{o.current_state.pack('C*').unpack1('H*')}" if o.current_state
       logger.debug 'Timing out state without state variable' unless o.current_state
       StatHandler.increase :streams_timed_out
       StatHandler.increase :packet_timed_out, o.packets.length
@@ -184,14 +193,14 @@ class RadsecStreamHelper
   # Add Packet to Packetflow
   # @param pkt [RadsecPacket] Packet to insert in the PacketFlow
   def self.add_packet(pkt, request, src, dst)
-    logger.trace("Add packet to a stream")
+    logger.trace('Add packet to a stream')
     RadsecStreamHelper.instance.priv_add_packet(pkt, request, src, dst)
   end
 
   # Start Parsing of a certain Packetflow once it is done.
   # @param pktflow [RadsecStream] Stream to parse
   def self.notify_flow_done(pktflow)
-    logger.trace("Notify Packetflow is done")
+    logger.trace('Notify Packetflow is done')
     RadsecStreamHelper.instance.priv_notify_flow_done(pktflow)
   end
 

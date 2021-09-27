@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Error to be raised if the actual length of the packet does not match the specified length.
 # This could happen if the IP packet was fragmented or the Radius Packet is faulty
 class PacketLengthNotValidError < StandardError
@@ -35,10 +37,12 @@ class RadiusPacket
     # Get Attribute name by the given code
     # @param code [Byte] Code of the Attribute
     # @return [String] Name of the Attribute, or "UNKNOWN_ATTRIBUTE_<num>" if Attribute is unknown.
-    def Type::get_type_name_by_code(code)
+    def self.get_type_name_by_code(code)
       return nil if code.nil?
+
       Type.constants.each do |const|
         next if Type.const_get(const) != code
+
         return const.to_s
       end
       "UNKNOWN_TYPE_#{code}"
@@ -163,50 +167,39 @@ class RadiusPacket
     # Get Attribute name by the given code
     # @param code [Byte] Code of the Attribute
     # @return [String] Name of the Attribute, or "UNKNOWN_ATTRIBUTE_<num>" if Attribute is unknown.
-    def Attribute::get_attribute_name_by_code(code)
+    def self.get_attribute_name_by_code(code)
       return nil if code.nil?
+
       Attribute.constants.each do |const|
         next if Attribute.const_get(const) != code
+
         return const.to_s
       end
       "UNKNOWN_ATTRIBUTE_#{code}"
     end
   end
 
-  attr_reader :packetfu_pkt
-  attr_reader :raw_data
-  attr_reader :packettype
-  attr_reader :identifier
-  attr_reader :length
-  attr_reader :authenticator
-  attr_reader :attributes
-  attr_reader :eap
-  attr_reader :udp
-  attr_reader :state
-  attr_reader :username
-  attr_reader :callingstationid
-  attr_reader :realm
+  attr_reader :packetfu_pkt, :raw_data, :packettype, :identifier, :length, :authenticator, :attributes, :eap,
+              :udp, :state, :username, :callingstationid, :realm
 
   def initialize(pkt)
-    if pkt.is_a? PacketFu::Packet
-      if pkt.udp_len < 20
-        raise PacketLengthNotValidError.new 'Length of packet violates RFC2865'
-      end
+    case pkt
+    when PacketFu::Packet
+      raise PacketLengthNotValidError, 'Length of packet violates RFC2865' if pkt.udp_len < 20
 
       # Save UDP Header information (needed for matching packets
-      @udp = {src: {ip: pkt.ip_saddr, port: pkt.udp_sport}, dst: {ip: pkt.ip_daddr, port: pkt.udp_dport}}
+      @udp = { src: { ip: pkt.ip_saddr, port: pkt.udp_sport }, dst: { ip: pkt.ip_daddr, port: pkt.udp_dport } }
 
       @raw_data = pkt.payload.unpack('C*')
       @packetfu_pkt = pkt
-    elsif pkt.is_a? Array
-      if pkt.length < 20
-        raise PacketLengthNotValidError.new 'Length of packet violates RFC2865'
-      end
-      @udp = {src: {ip: nil, port: nil}, dst: {ip: nil, port: nil}}
+    when Array
+      raise PacketLengthNotValidError, 'Length of packet violates RFC2865' if pkt.length < 20
+
+      @udp = { src: { ip: nil, port: nil }, dst: { ip: nil, port: nil } }
       @packetfu_pkt = nil
       @raw_data = pkt
     else
-      raise StandardError.new 'Invalid input to RadiusPacket init'
+      raise StandardError, 'Invalid input to RadiusPacket init'
     end
     # Parse Radius Headers
     @packettype = @raw_data[0]
@@ -236,26 +229,22 @@ class RadiusPacket
     while cur_ptr < @length do
       attribute = {}
       attribute[:type] = @raw_data[cur_ptr]
-      attribute[:length] = @raw_data[cur_ptr+1]
-      attribute[:data] = @raw_data[cur_ptr+2..cur_ptr+attribute[:length]-1]
+      attribute[:length] = @raw_data[cur_ptr + 1]
+      attribute[:data] = @raw_data[cur_ptr + 2..cur_ptr + attribute[:length] - 1]
       @attributes << attribute
       @attributes_by_type[attribute[:type]] ||= []
       @attributes_by_type[attribute[:type]] << attribute
       cur_ptr += attribute[:length]
-      if attribute[:type] == RadiusPacket::Attribute::STATE
-        @state ||= attribute[:data]
-      end
+      @state ||= attribute[:data] if attribute[:type] == RadiusPacket::Attribute::STATE
       if attribute[:type] == RadiusPacket::Attribute::USERNAME
         @username ||= attribute[:data]
         unless @username.nil?
           parts = @username.pack('C*').split('@')
-          @realm ||= 'NONE' if parts.length==1
+          @realm ||= 'NONE' if parts.length == 1
           @realm ||= parts.last
         end
       end
-      if attribute[:type] == RadiusPacket::Attribute::CALLINGSTATIONID
-        @callingstationid ||= attribute[:data]
-      end
+      @callingstationid ||= attribute[:data] if attribute[:type] == RadiusPacket::Attribute::CALLINGSTATIONID
     end
 
     parse_eap
@@ -273,15 +262,18 @@ class RadiusPacket
   # @param attrs [Array] Array of attributes as byte arrays
   # @return [String] Hex value of attributes, separated by ' - ' if more then one.
   def attr_to_hex(attrs)
-    attrs.map{|x| x[:data].pack('C*').unpack('H*').first}.join(" - ")
+    attrs.map { |x| x[:data].pack('C*').unpack1('H*') }.join(' - ')
   end
+
   # Convert Attributes to normal string (escaped by inspect)
   # @param attrs [Array] Array of attributes as byte arrays
   # @return [String] String value of attributes, separated by ' - ' if more then one
   def attr_to_string(attrs)
-    attrs.map{|x| x[:data].pack('C*').inspect}.join(" - ")
+    attrs.map { |x| x[:data].pack('C*').inspect }.join(' - ')
   end
+
   private :attr_to_hex, :attr_to_string
+
   # Check RADIUS Protocol violations
   # @raise [ProtocolViolationError] if violations are found
   def check_radius_protocol
@@ -290,36 +282,48 @@ class RadiusPacket
     # Check Usernames. (0-1 in Request and accept, otherwise 0)
     if @packettype == RadiusPacket::Type::ACCEPT || @packettype == RadiusPacket::Type::REQUEST
       if @attributes_by_type[RadiusPacket::Attribute::USERNAME].length > 1
-        BlackBoard.policy_detail_logger.debug "Multiple USERNAME attributes in #{Type::get_type_name_by_code(@packettype)}: " + attr_to_string(@attributes_by_type[RadiusPacket::Attribute::USERNAME])
-        raise ProtocolViolationError.new "Found multiple USERNAME attributes in #{Type::get_type_name_by_code(@packettype)}"
+        BlackBoard.policy_detail_logger.debug 'Multiple USERNAME attributes in ' \
+                                              "#{Type.get_type_name_by_code(@packettype)}: " +
+                                              attr_to_string(@attributes_by_type[RadiusPacket::Attribute::USERNAME])
+        raise ProtocolViolationError, "Found multiple USERNAME attributes in #{Type.get_type_name_by_code(@packettype)}"
       end
     else
-      if @attributes_by_type[RadiusPacket::Attribute::USERNAME].length > 0
-        BlackBoard.policy_detail_logger.debug "Found Username attribute in #{Type::get_type_name_by_code(@packettype)}: " + attr_to_string(@attributes_by_type[RadiusPacket::Attribute::USERNAME])
-        raise ProtocolViolationError.new "Found USERNAME attribute in #{Type::get_type_name_by_code(@packettype)}"
+      unless @attributes_by_type[RadiusPacket::Attribute::USERNAME].empty?
+        BlackBoard.policy_detail_logger.debug 'Found Username attribute in ' \
+                                              "#{Type.get_type_name_by_code(@packettype)}: " +
+                                              attr_to_string(@attributes_by_type[RadiusPacket::Attribute::USERNAME])
+        raise ProtocolViolationError, "Found USERNAME attribute in #{Type.get_type_name_by_code(@packettype)}"
       end
     end
 
     # Check State variable. (0 for Rejects, 0-1 otherwise)
-    if @attributes_by_type[RadiusPacket::Attribute::STATE].length > 0 && @packettype == RadiusPacket::Type::REJECT
-      BlackBoard.policy_detail_logger.debug "Found STATE attributes in #{Type::get_type_name_by_code(@packettype)}: " + attr_to_hex(@attributes_by_type[RadiusPacket::Attribute::STATE])
-      raise ProtocolViolationError.new "Found STATE attributes in #{Type::get_type_name_by_code(@packettype)}"
+    if !@attributes_by_type[RadiusPacket::Attribute::STATE].empty? && @packettype == RadiusPacket::Type::REJECT
+      BlackBoard.policy_detail_logger.debug "Found STATE attributes in #{Type.get_type_name_by_code(@packettype)}: " +
+                                            attr_to_hex(@attributes_by_type[RadiusPacket::Attribute::STATE])
+      raise ProtocolViolationError, "Found STATE attributes in #{Type.get_type_name_by_code(@packettype)}"
     end
     if @attributes_by_type[RadiusPacket::Attribute::STATE].length > 1
-      BlackBoard.policy_detail_logger.debug "Found multiple STATE attributes in #{Type::get_type_name_by_code(@packettype)}: " + attr_to_hex(@attributes_by_type[RadiusPacket::Attribute::STATE])
-      raise ProtocolViolationError.new "Found multiple STATE attributes in #{Type::get_type_name_by_code(@packettype)}"
+      BlackBoard.policy_detail_logger.debug 'Found multiple STATE attributes in ' \
+                                            "#{Type.get_type_name_by_code(@packettype)}: " +
+                                            attr_to_hex(@attributes_by_type[RadiusPacket::Attribute::STATE])
+      raise ProtocolViolationError, "Found multiple STATE attributes in #{Type.get_type_name_by_code(@packettype)}"
     end
 
     # Check Calling-Station-ID (0-1 for Request, 0 otherwise)
     if @packettype == RadiusPacket::Type::REQUEST
       if @attributes_by_type[RadiusPacket::Attribute::CALLINGSTATIONID].length > 1
-        BlackBoard.policy_detail_logger.debug "Found multiple CALLINGSTATIONID attributes in #{Type::get_type_name_by_code(@packettype)}: " + attr_to_string(@attributes_by_type[RadiusPacket::Attribute::CALLINGSTATIONID])
-        raise ProtocolViolationError.new "Found multiple CALLINGSTATIONID attributes in #{Type::get_type_name_by_code(@packettype)}"
+        BlackBoard.policy_detail_logger.debug 'Found multiple CALLINGSTATIONID attributes in ' \
+                   "#{Type.get_type_name_by_code(@packettype)}: " +
+                   attr_to_string(@attributes_by_type[RadiusPacket::Attribute::CALLINGSTATIONID])
+        raise ProtocolViolationError, 'Found multiple CALLINGSTATIONID attributes in ' \
+                                      "#{Type.get_type_name_by_code(@packettype)}"
       end
     else
-      if @attributes_by_type[RadiusPacket::Attribute::CALLINGSTATIONID].length > 0
-        BlackBoard.policy_detail_logger.debug "Found CALLINGSTATIONID attribute in #{Type::get_type_name_by_code(@packettype)}: " + attr_to_string(@attributes_by_type[RadiusPacket::Attribute::CALLINGSTATIONID])
-        raise ProtocolViolationError.new "Found CALLINGSTATIONID attribute in #{Type::get_type_name_by_code(@packettype)}"
+      if @attributes_by_type[RadiusPacket::Attribute::CALLINGSTATIONID].length.positive?
+        BlackBoard.policy_detail_logger.debug 'Found CALLINGSTATIONID attribute in ' \
+                   "#{Type.get_type_name_by_code(@packettype)}: " +
+                   attr_to_string(@attributes_by_type[RadiusPacket::Attribute::CALLINGSTATIONID])
+        raise ProtocolViolationError, "Found CALLINGSTATIONID attribute in #{Type.get_type_name_by_code(@packettype)}"
       end
     end
 
@@ -328,10 +332,9 @@ class RadiusPacket
   # Check Eduroam service policy violations
   # @raise [PolicyViolationError] if a policy violation is found
   def check_eduroam_service_policy
-    if @packettype == RadiusPacket::Type::REQUEST
-      if @attributes_by_type[RadiusPacket::Attribute::CALLINGSTATIONID].length < 1
-        raise PolicyViolationError.new "No CALLINGSTATIONID attribute in #{Type::get_type_name_by_code(@packettype)}"
-      end
+    if @packettype == RadiusPacket::Type::REQUEST &&
+       @attributes_by_type[RadiusPacket::Attribute::CALLINGSTATIONID].empty?
+      raise PolicyViolationError, "No CALLINGSTATIONID attribute in #{Type.get_type_name_by_code(@packettype)}"
     end
   end
 
@@ -339,6 +342,7 @@ class RadiusPacket
   def parse_eap
     @attributes.each do |a|
       next unless a[:type] == RadiusPacket::Attribute::EAPMESSAGE
+
       @eap ||= []
       @eap += a[:data]
     end
@@ -349,79 +353,79 @@ class RadiusPacket
   def inspect
     str  = "#<#{self.class.name}: "
     str += case @packettype
-      when RadiusPacket::Type::REQUEST
-        "Request"
-      when RadiusPacket::Type::ACCEPT
-        "Accept"
-      when RadiusPacket::Type::REJECT
-        "Reject"
-      when RadiusPacket::Type::CHALLENGE
-        "Challenge"
-      else
-        "UNKNOWN!"
-    end
+           when RadiusPacket::Type::REQUEST
+             'Request'
+           when RadiusPacket::Type::ACCEPT
+             'Accept'
+           when RadiusPacket::Type::REJECT
+             'Reject'
+           when RadiusPacket::Type::CHALLENGE
+             'Challenge'
+           else
+             'UNKNOWN!'
+           end
     str += ' id:0x%02X' % @identifier
     @attributes.each do |a|
       case a[:type]
-        when RadiusPacket::Attribute::USERNAME
-          str += " Username: #{a[:data].pack('C*')}"
-        when RadiusPacket::Attribute::USERPASSWORD
-        when RadiusPacket::Attribute::NASIPADDRESS
-        when RadiusPacket::Attribute::NASPORT
-        when RadiusPacket::Attribute::SERVICETYPE
-        when RadiusPacket::Attribute::FRAMEDPROTOCOL
-        when RadiusPacket::Attribute::FRAMEDIPADDRESS
-        when RadiusPacket::Attribute::FRAMEDIPNETMASK
-        when RadiusPacket::Attribute::FRAMEDROUTING
-        when RadiusPacket::Attribute::FRAMEDMTU
-        when RadiusPacket::Attribute::FRAMEDCOMPRESSION
-        when RadiusPacket::Attribute::LOGINIPHOST
-        when RadiusPacket::Attribute::REPLYMESSAGE
-        when RadiusPacket::Attribute::REMOTEACCESSSERVICE
-        when RadiusPacket::Attribute::STATE
-          str += " State: 0x#{a[:data].pack('C*').unpack('H*').first}"
-        when RadiusPacket::Attribute::VENDORSPECIFIC
-        when RadiusPacket::Attribute::SESSIONTIMEOUT
-        when RadiusPacket::Attribute::CALLEDSTATIONID
-        when RadiusPacket::Attribute::CALLINGSTATIONID
-          str += " Calling-Station-Id: #{a[:data].pack('C*')}"
-        when RadiusPacket::Attribute::NASIDENTIFIER
-        when RadiusPacket::Attribute::PROXYSTATE
-          str += " Proxy-State: 0x#{a[:data].pack('C*').unpack('H*').first}"
-        when RadiusPacket::Attribute::ACCTSESSIONID
-        when RadiusPacket::Attribute::ACCTMULTISESSIONID
-        when RadiusPacket::Attribute::EVENTTIMESTAMP
-        when RadiusPacket::Attribute::NASPORTTYPE
-        when RadiusPacket::Attribute::TUNNELTYPE
-        when RadiusPacket::Attribute::TUNNELMEDIUMTYPE
-        when RadiusPacket::Attribute::TUNNELCLIENTENDPOINT
-        when RadiusPacket::Attribute::CONNECTINFO
-        when RadiusPacket::Attribute::CONFIGURATIONTOKEN
-        when RadiusPacket::Attribute::EAPMESSAGE
-        when RadiusPacket::Attribute::MESSAGEAUTHENTICATOR
-        when RadiusPacket::Attribute::TUNNELPRIVATEGROUPID
-        when RadiusPacket::Attribute::NASPORTID
-        when RadiusPacket::Attribute::CUI
-        when RadiusPacket::Attribute::NASIPV6ADDRESS
-        when RadiusPacket::Attribute::FRAMEDINTERFACEID
-        when RadiusPacket::Attribute::FRAMEDIPV6PREFIX
-        when RadiusPacket::Attribute::EAPKEYNAME
-        when RadiusPacket::Attribute::OPERATORNAME
-        when RadiusPacket::Attribute::LOCATIONINFORMATION
-        when RadiusPacket::Attribute::LOCATIONDATA
-        when RadiusPacket::Attribute::LOCATIONCAPABLE
-        when RadiusPacket::Attribute::MOBILITYDOMAINID
-        when RadiusPacket::Attribute::WLANPAIRWISECIPHER
-        when RadiusPacket::Attribute::WLANGROUPCIPHER
-        when RadiusPacket::Attribute::WLANAKMSUITE
-        when RadiusPacket::Attribute::WLANGROUPMGMTCIPHER
-        when RadiusPacket::Attribute::WLANRFBAND
-        else
-          str += " Unknown Type #{a[:type]}"
+      when RadiusPacket::Attribute::USERNAME
+        str += " Username: #{a[:data].pack('C*')}"
+      when RadiusPacket::Attribute::USERPASSWORD
+      when RadiusPacket::Attribute::NASIPADDRESS
+      when RadiusPacket::Attribute::NASPORT
+      when RadiusPacket::Attribute::SERVICETYPE
+      when RadiusPacket::Attribute::FRAMEDPROTOCOL
+      when RadiusPacket::Attribute::FRAMEDIPADDRESS
+      when RadiusPacket::Attribute::FRAMEDIPNETMASK
+      when RadiusPacket::Attribute::FRAMEDROUTING
+      when RadiusPacket::Attribute::FRAMEDMTU
+      when RadiusPacket::Attribute::FRAMEDCOMPRESSION
+      when RadiusPacket::Attribute::LOGINIPHOST
+      when RadiusPacket::Attribute::REPLYMESSAGE
+      when RadiusPacket::Attribute::REMOTEACCESSSERVICE
+      when RadiusPacket::Attribute::STATE
+        str += " State: 0x#{a[:data].pack('C*').unpack1('H*')}"
+      when RadiusPacket::Attribute::VENDORSPECIFIC
+      when RadiusPacket::Attribute::SESSIONTIMEOUT
+      when RadiusPacket::Attribute::CALLEDSTATIONID
+      when RadiusPacket::Attribute::CALLINGSTATIONID
+        str += " Calling-Station-Id: #{a[:data].pack('C*')}"
+      when RadiusPacket::Attribute::NASIDENTIFIER
+      when RadiusPacket::Attribute::PROXYSTATE
+        str += " Proxy-State: 0x#{a[:data].pack('C*').unpack1('H*')}"
+      when RadiusPacket::Attribute::ACCTSESSIONID
+      when RadiusPacket::Attribute::ACCTMULTISESSIONID
+      when RadiusPacket::Attribute::EVENTTIMESTAMP
+      when RadiusPacket::Attribute::NASPORTTYPE
+      when RadiusPacket::Attribute::TUNNELTYPE
+      when RadiusPacket::Attribute::TUNNELMEDIUMTYPE
+      when RadiusPacket::Attribute::TUNNELCLIENTENDPOINT
+      when RadiusPacket::Attribute::CONNECTINFO
+      when RadiusPacket::Attribute::CONFIGURATIONTOKEN
+      when RadiusPacket::Attribute::EAPMESSAGE
+      when RadiusPacket::Attribute::MESSAGEAUTHENTICATOR
+      when RadiusPacket::Attribute::TUNNELPRIVATEGROUPID
+      when RadiusPacket::Attribute::NASPORTID
+      when RadiusPacket::Attribute::CUI
+      when RadiusPacket::Attribute::NASIPV6ADDRESS
+      when RadiusPacket::Attribute::FRAMEDINTERFACEID
+      when RadiusPacket::Attribute::FRAMEDIPV6PREFIX
+      when RadiusPacket::Attribute::EAPKEYNAME
+      when RadiusPacket::Attribute::OPERATORNAME
+      when RadiusPacket::Attribute::LOCATIONINFORMATION
+      when RadiusPacket::Attribute::LOCATIONDATA
+      when RadiusPacket::Attribute::LOCATIONCAPABLE
+      when RadiusPacket::Attribute::MOBILITYDOMAINID
+      when RadiusPacket::Attribute::WLANPAIRWISECIPHER
+      when RadiusPacket::Attribute::WLANGROUPCIPHER
+      when RadiusPacket::Attribute::WLANAKMSUITE
+      when RadiusPacket::Attribute::WLANGROUPMGMTCIPHER
+      when RadiusPacket::Attribute::WLANRFBAND
+      else
+        str += " Unknown Type #{a[:type]}"
       end
     end
     # Add end and return
-    str + ">"
+    "#{str}>"
   end
 
   # Deeper inspect of the RADIUS Packet
@@ -430,29 +434,29 @@ class RadiusPacket
     str  = "#<#{self.class.name}: "
     str += case @packettype
            when RadiusPacket::Type::REQUEST
-             "Request"
+             'Request'
            when RadiusPacket::Type::ACCEPT
-             "Accept"
+             'Accept'
            when RadiusPacket::Type::REJECT
-             "Reject"
+             'Reject'
            when RadiusPacket::Type::CHALLENGE
-             "Challenge"
+             'Challenge'
            else
-             "UNKNOWN!"
+             'UNKNOWN!'
            end
     str += ' id:0x%02X' % @identifier
-    attrs=[]
+    attrs = []
     @attributes.each do |a|
-      attr_name = RadiusPacket::Attribute::get_attribute_name_by_code(a[:type])
-      case a[:type]
-      when RadiusPacket::Attribute::CALLEDSTATIONID,
-        RadiusPacket::Attribute::CALLINGSTATIONID,
-        RadiusPacket::Attribute::USERNAME
-        attr_val = a[:data].pack('C*')
-      else
-        attr_val = a[:data].pack('C*').unpack('H*').first
-      end
-      attrs << ' ' + attr_name + ': ' + attr_val
+      attr_name = RadiusPacket::Attribute.get_attribute_name_by_code(a[:type])
+      attr_val = case a[:type]
+                 when RadiusPacket::Attribute::CALLEDSTATIONID,
+                      RadiusPacket::Attribute::CALLINGSTATIONID,
+                      RadiusPacket::Attribute::USERNAME
+                   a[:data].pack('C*')
+                 else
+                   a[:data].pack('C*').unpack1('H*')
+                 end
+      attrs << " #{attr_name}: #{attr_val}"
     end
     ([str] + attrs + ['>']).join "\n"
   end

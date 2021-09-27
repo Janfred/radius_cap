@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 # Statistic thread
 Thread.start do
-  Thread.current.name= "Statistic writer"
+  Thread.current.name = 'Statistic writer'
   scheduler = Rufus::Scheduler.new
   scheduler.cron '* * * * *' do
     StatHandler.log_stat
@@ -14,9 +16,9 @@ Thread.start do
     end
     RadiusStreamHelper.instance.known_streams.length
 
-    logmsg = ""
-    logmsg +=  "Elastic queue length #{ stat[:elastic_length] }"
-    logmsg += " Pktbuf queue length #{ stat[:pktbuf_length] }"
+    logmsg = ''
+    logmsg += "Elastic queue length #{stat[:elastic_length]}"
+    logmsg += " Pktbuf queue length #{stat[:pktbuf_length]}"
     logmsg += " Known streams length #{RadiusStreamHelper.instance.known_streams.length}"
 
     StatHandler.log_additional logmsg

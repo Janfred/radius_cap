@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require 'digest'
-require_relative './tlsciphersuites.rb'
-require_relative './fingerprint.rb'
+require_relative './tlsciphersuites'
+require_relative './fingerprint'
 
 # Error thrown when the TLS Client Hello parsing fails.
 class TLSClientHelloError < StandardError
@@ -20,6 +22,7 @@ module TLSTypes
     # TLS ApplicationData Record
     APPLICATION_DATA   = 0x17
   end
+
   # Supported Handshake Types
   module HandshakeType
     # TLS Handshake ClientHello
@@ -81,9 +84,10 @@ module TLSTypes
     # Get alert name by the given code
     # @param code [Byte] Code of the Alert
     # @return [String] Name of the Alert, or "UNKNOWN_ALERT_<num>" if Alert is unknown
-    def Alerts::get_altert_name_by_code(code)
+    def self.get_alert_name_by_code(code)
       Alerts.constants.each do |const|
         next if Alerts.const_get(const) != code
+
         return const.to_s
       end
       "UNKNOWN_ALERT_#{code}"
@@ -149,9 +153,10 @@ module TLSTypes
     # Get the extension name by the given code
     # @param code [Integer] Code of the Extension
     # @return [String] Name of the Extension, or "UNKNOWN_EXTENSION_<num>" if Extension is unknown
-    def Extensions::get_extension_name_by_code(code)
+    def self.get_extension_name_by_code(code)
       Extensions.constants.each do |const|
         next if Extensions.const_get(const) != code
+
         return const.to_s
       end
       "UNKNOWN_EXTENSION_#{code}"
@@ -174,9 +179,10 @@ module TLSTypes
     # Get the compression name by the given code
     # @param code [Integer] Code of the Compression
     # @return [String] Name of the Compression, or "UNKNOWN_COMPRESSION_<num>" if Compression is unknown
-    def Compression::get_compression_name_by_code(code)
+    def self.get_compression_name_by_code(code)
       Compression.constants.each do |const|
         next if Compression.const_get(const) != code
+
         return const.to_s
       end
       "UNKNOWN_COMPRESSION_#{code}"
@@ -190,6 +196,7 @@ module TLSTypes
       # SNI HostName
       HOST_NAME = 0
     end
+
     # Constants for Status Request. Currently only OCSP is specified
     module StatusRequest
       # StatusRequest OCSP
@@ -222,51 +229,53 @@ class TLSClientHello
   def to_h
     to_ret = {}
     to_ret[:version] = case @innervers
-      when [0x03, 0x03]
-        'TLSv1.2'
-      when [0x03, 0x02]
-        'TLSv1.1'
-      when [0x03, 0x01]
-        'TLSv1.0'
-      else
-        'Unknown'
+                       when [0x03, 0x03]
+                         'TLSv1.2'
+                       when [0x03, 0x02]
+                         'TLSv1.1'
+                       when [0x03, 0x01]
+                         'TLSv1.0'
+                       else
+                         'Unknown'
                        end
 
     to_ret[:compression] = {}
     to_ret[:compression][:order] = @compression.map(&:to_s).join(' ')
-    to_ret[:compression][:names] = @compression.map{|x| TLSTypes::Compression::get_compression_name_by_code(x)}
+    to_ret[:compression][:names] = @compression.map { |x| TLSTypes::Compression.get_compression_name_by_code(x) }
 
     to_ret[:all_extensions] = []
     to_ret[:extensionorder] = ''
     @extensions.each do |exten|
-      exten_s = TLSTypes::Extensions::get_extension_name_by_code(exten[:type])
+      exten_s = TLSTypes::Extensions.get_extension_name_by_code(exten[:type])
       to_ret[:all_extensions] << exten_s
     end
     to_ret[:extensionorder] = to_ret[:all_extensions].join ' '
 
     to_ret[:renegotion] = @ciphersuites.include?([0x00, 0xFF]) || !!@byexten[TLSTypes::Extensions::RENEGOTIATION_INFO]
-    to_ret[:servername] = parse_servername(@byexten[TLSTypes::Extensions::SERVER_NAME]) if @byexten[TLSTypes::Extensions::SERVER_NAME]
+    if @byexten[TLSTypes::Extensions::SERVER_NAME]
+      to_ret[:servername] = parse_servername(@byexten[TLSTypes::Extensions::SERVER_NAME])
+    end
     to_ret[:extendedmastersecret] = !!@byexten[TLSTypes::Extensions::EXTENDED_MASTER_SECRET]
     if @byexten[TLSTypes::Extensions::SUPPORTED_VERSIONS]
       ver = parse_supported_versions(@byexten[TLSTypes::Extensions::SUPPORTED_VERSIONS])
       to_ret[:version] = 'TLSv1.3' if ver.include? [0x03, 0x04]
     end
-    if @byexten[TLSTypes::Extensions::SUPPORTED_GROUPS]
-      to_ret[:supportedgroups] = parse_supported_groups(@byexten[TLSTypes::Extensions::SUPPORTED_GROUPS])
-    else
-      to_ret[:supportedgroups] = []
-    end
-    if @byexten[TLSTypes::Extensions::STATUS_REQUEST]
-      to_ret[:statusrequest] = parse_status_request(@byexten[TLSTypes::Extensions::STATUS_REQUEST])
-    else
-      to_ret[:statusrequest] = []
-    end
-    if @byexten[TLSTypes::Extensions::SIGNATURE_ALGORITHMS]
-      to_ret[:signaturealgorithms] = parse_signature_algorithms(@byexten[TLSTypes::Extensions::SIGNATURE_ALGORITHMS])
-    else
-      to_ret[:signaturealgorithms] = []
-    end
-    to_ret[:ciphersuites] = @ciphersuites.map { |c| "0x%02X%02X" % c }
+    to_ret[:supportedgroups] = if @byexten[TLSTypes::Extensions::SUPPORTED_GROUPS]
+                                 parse_supported_groups(@byexten[TLSTypes::Extensions::SUPPORTED_GROUPS])
+                               else
+                                 []
+                               end
+    to_ret[:statusrequest] = if @byexten[TLSTypes::Extensions::STATUS_REQUEST]
+                               parse_status_request(@byexten[TLSTypes::Extensions::STATUS_REQUEST])
+                             else
+                               []
+                             end
+    to_ret[:signaturealgorithms] = if @byexten[TLSTypes::Extensions::SIGNATURE_ALGORITHMS]
+                                     parse_signature_algorithms(@byexten[TLSTypes::Extensions::SIGNATURE_ALGORITHMS])
+                                   else
+                                     []
+                                   end
+    to_ret[:ciphersuites] = @ciphersuites.map { |c| '0x%02X%02X' % c }
     to_ret[:cipherdata] = {}
     cdata = TLSCipherSuite.new(@ciphersuites)
     to_ret[:cipherdata][:export] = cdata.includes_export?
@@ -303,13 +312,13 @@ class TLSClientHello
     to_ret[:fingerprinting] = {}
 
     to_ret[:fingerprinting][:v2] = Digest::SHA2.hexdigest(
-        to_ret[:version] + '|' +
-            to_ret[:cipherdata][:cipherset] + '|' +
-            to_ret[:cipherdata][:supported_group_set] + '|' +
-            to_ret[:cipherdata][:signature_algorithm_set] + '|' +
-            ((to_ret[:statusrequest].nil? || to_ret[:statusrequest] == []) ? 'False' : to_ret[:statusrequest]) + '|' +
-            (to_ret[:renegotiation] ? 'True' : 'False') + '|' +
-            (to_ret[:extendedmastersecret] ? 'True' : 'False'))
+      to_ret[:version] + '|' +
+        to_ret[:cipherdata][:cipherset] + '|' +
+        to_ret[:cipherdata][:supported_group_set] + '|' +
+        to_ret[:cipherdata][:signature_algorithm_set] + '|' +
+        ((to_ret[:statusrequest].nil? || to_ret[:statusrequest] == []) ? 'False' : to_ret[:statusrequest]) + '|' +
+        (to_ret[:renegotiation] ? 'True' : 'False') + '|' +
+        (to_ret[:extendedmastersecret] ? 'True' : 'False'))
 
     to_ret[:fingerprinting][:osdetails] = Fingerprint.to_h(to_ret[:fingerprinting][:v2])
 
@@ -320,17 +329,18 @@ class TLSClientHello
   # @param data Extension Data as Byte Array
   # @return Parsed Extension content
   def parse_signature_algorithms(data)
-    length = data[0]*256 + data[1]
+    length = data[0] * 256 + data[1]
     return if data.length != length + 2
+
     cur_ptr = 2
     to_ret = []
     while cur_ptr < data.length do
       algo = TLSSignatureScheme.by_arr(data[cur_ptr, 2])
-      if algo.nil?
-        to_ret << "Unknown (#{data[cur_ptr, 2]})"
-      else
-        to_ret << algo[:name]
-      end
+      to_ret << if algo.nil?
+                  "Unknown (#{data[cur_ptr, 2]})"
+                else
+                  algo[:name]
+                end
       cur_ptr += 2
     end
     to_ret
@@ -342,10 +352,10 @@ class TLSClientHello
   def parse_status_request(data)
     type = data[0]
     case type
-      when TLSTypes::ExtenData::StatusRequest::OCSP
-        return "OCSP"
-      else
-        return "Unknown #{type}"
+    when TLSTypes::ExtenData::StatusRequest::OCSP
+      'OCSP'
+    else
+      "Unknown #{type}"
     end
   end
 
@@ -353,17 +363,18 @@ class TLSClientHello
   # @param data Extension Data as Byte Array
   # @return Parsed Extension content
   def parse_supported_groups(data)
-    length = data[0]*256 + data[1]
+    length = data[0] * 256 + data[1]
     return if data.length != length+2
+
     cur_ptr = 2
     to_ret = []
     while cur_ptr < data.length do
       algo = TLSSupportedGroups.by_arr(data[cur_ptr, 2])
-      if algo.nil?
-        to_ret << "Unknown (#{data[cur_ptr, 2]})"
-      else
-        to_ret << algo[:name]
-      end
+      to_ret << if algo.nil?
+                  "Unknown (#{data[cur_ptr, 2]})"
+                else
+                  algo[:name]
+                end
       cur_ptr += 2
     end
     to_ret
@@ -375,6 +386,7 @@ class TLSClientHello
   def parse_supported_versions(data)
     length = data[0]
     return [] if length+1!=data.length
+
     cur_ptr = 1
     to_ret = []
     while cur_ptr < data.length do
@@ -391,14 +403,13 @@ class TLSClientHello
     total_length = data[0]*256 + data[1]
     cur_ptr = 2
     return if cur_ptr + total_length != data.length
+
     to_ret = []
     while cur_ptr<data.length do
       type = data[cur_ptr]
       length = data[cur_ptr+1]*256 + data[cur_ptr+2]
       cur_ptr += 3
-      if type == TLSTypes::ExtenData::ServerName::HOST_NAME
-        to_ret << data[cur_ptr, length].pack('C*')
-      end
+      to_ret << data[cur_ptr, length].pack('C*') if type == TLSTypes::ExtenData::ServerName::HOST_NAME
       cur_ptr += length
     end
     to_ret
@@ -407,52 +418,53 @@ class TLSClientHello
   # Inspect the current Client Hello
   # @return [String] description of the Client Hello
   def inspect
-    str  = "#<#{self.class.name}:"
-    #str += " v1.2" if @innververs == 0x0303
-    #str += " Cipher:"
-    @ciphersuites.each do |c|
-      #str += " 0x%02X%02X" % c
-    end
+    str = "#<#{self.class.name}:"
+    # str += " v1.2" if @innververs == 0x0303
+    # str += " Cipher:"
+    # @ciphersuites.each do |c|
+    #   str += " 0x%02X%02X" % c
+    # end
     @extensions.each do |e|
       case e[:type]
-        when TLSTypes::Extensions::SERVER_NAME
-          str += " ServerName"
-        when TLSTypes::Extensions::STATUS_REQUEST
-          str += " StatusRequest"
-        when TLSTypes::Extensions::SUPPORTED_GROUPS
-          str += " SupportedGroups"
-        when TLSTypes::Extensions::EC_POINT_FORMATS
-          str += " ECPointFormats"
-        when TLSTypes::Extensions::SIGNATURE_ALGORITHMS
-          str += " SignatureAlgorithms"
-        when TLSTypes::Extensions::HEARTBEAT
-          str += " Heartbeat"
-        when TLSTypes::Extensions::SIGNED_CERT_TIMESTAMP
-          str += " SignedCertTimestamp"
-        when TLSTypes::Extensions::ENCRYPT_THEN_HMAC
-          str += " EncryptThenHMAC"
-        when TLSTypes::Extensions::EXTENDED_MASTER_SECRET
-          str += " ExtendedMasterSecret"
-        when TLSTypes::Extensions::SESSION_TICKET
-          str += " SessionTicket"
-        when TLSTypes::Extensions::SUPPORTED_VERSIONS
-          str += " SupportedVersions"
-        when TLSTypes::Extensions::PSK_KEY_EXCHANGE_MODES
-          str += " PSKKeyExchangeModes"
-        when TLSTypes::Extensions::KEY_SHARE
-          str += " KeyShare"
-        when TLSTypes::Extensions::RENEGOTIATION_INFO
-          str += " RenegotiationInfo"
-        else
-          $stderr.puts "Unsupported TLS Extension #{e[:type]}"
+      when TLSTypes::Extensions::SERVER_NAME
+        str += ' ServerName'
+      when TLSTypes::Extensions::STATUS_REQUEST
+        str += ' StatusRequest'
+      when TLSTypes::Extensions::SUPPORTED_GROUPS
+        str += ' SupportedGroups'
+      when TLSTypes::Extensions::EC_POINT_FORMATS
+        str += ' ECPointFormats'
+      when TLSTypes::Extensions::SIGNATURE_ALGORITHMS
+        str += ' SignatureAlgorithms'
+      when TLSTypes::Extensions::HEARTBEAT
+        str += ' Heartbeat'
+      when TLSTypes::Extensions::SIGNED_CERT_TIMESTAMP
+        str += ' SignedCertTimestamp'
+      when TLSTypes::Extensions::ENCRYPT_THEN_HMAC
+        str += ' EncryptThenHMAC'
+      when TLSTypes::Extensions::EXTENDED_MASTER_SECRET
+        str += ' ExtendedMasterSecret'
+      when TLSTypes::Extensions::SESSION_TICKET
+        str += ' SessionTicket'
+      when TLSTypes::Extensions::SUPPORTED_VERSIONS
+        str += ' SupportedVersions'
+      when TLSTypes::Extensions::PSK_KEY_EXCHANGE_MODES
+        str += ' PSKKeyExchangeModes'
+      when TLSTypes::Extensions::KEY_SHARE
+        str += ' KeyShare'
+      when TLSTypes::Extensions::RENEGOTIATION_INFO
+        str += ' RenegotiationInfo'
+      else
+        $stderr.puts "Unsupported TLS Extension #{e[:type]}"
       end
     end
 
-    if @extensions.select { |x| x[:type] == TLSTypes::Extensions::RENEGOTIATION_INFO }.empty? && !@ciphersuites.include?([0x00, 0xFF])
-      str += " ###### NO RENEGOTIATION INFO ####### "
+    if @extensions.select { |x| x[:type] == TLSTypes::Extensions::RENEGOTIATION_INFO }.empty? &&
+       !@ciphersuites.include?([0x00, 0xFF])
+      str += ' ###### NO RENEGOTIATION INFO ####### '
     end
 
-    str + ">"
+    "#{str}>"
   end
 
   # Parses TLS Client Hello and returns a new Instance of TLSClientHello
@@ -461,6 +473,7 @@ class TLSClientHello
   # @return New Instance of TLSClientHello
   def initialize(data)
     raise TLSClientHelloError, 'Not a TLS Client Hello' unless data[0] == TLSTypes::HandshakeType::CLIENTHELLO
+
     @innerlen = data[1]*256*256 + data[2]*256 + data[3]
     @innervers = data[4, 2]
     @random = data[6, 32]

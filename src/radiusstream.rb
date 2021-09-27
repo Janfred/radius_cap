@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 
 require 'singleton'
 
@@ -9,9 +10,9 @@ end
 class RadiusStream
   include SemanticLogger::Loggable
 
-  attr_reader :time_created,:last_updated, :current_pktid, :current_state
-  attr_reader :udp_src_ip, :udp_dst_ip, :udp_src_port, :udp_dst_port
-  attr_reader :packets, :username, :callingstationid
+  attr_reader :time_created, :last_updated, :current_pktid, :current_state,
+              :udp_src_ip, :udp_dst_ip, :udp_src_port, :udp_dst_port, :packets, :username, :callingstationid
+
   # Timestamp of the Creation
   @time_created
   # Timestamp of the last update of this specific stream. Used for timeouts.
@@ -60,14 +61,14 @@ class RadiusStream
   # @raise PacketFlowInsertionError if the given packet does not match the already captured flow
   # @todo The raised errors should have a message.
   def add_packet_from_radius(pkt)
-    logger.trace("Add Packet from RADIUS-Server")
+    logger.trace('Add Packet from RADIUS-Server')
     # If the last message inserted was a message from the server, we can't insert an other message from the server,
     # because the client has to reply first. If this happens, it is very likely a resent
     # Packet because the original packet got lost.
-   if @last_from_server
-     StatHandler.increase :pkterror_reply_on_reply
-     raise PacketFlowInsertionError
-   end
+    if @last_from_server
+      StatHandler.increase :pkterror_reply_on_reply
+      raise PacketFlowInsertionError
+    end
 
     # First check if the identifier matches the current identifier
     # RADIUS, being a transactional protocol, always has a Request-Response structure.
@@ -86,8 +87,8 @@ class RadiusStream
     # If this was a final answer (Accept or Reject) we have to tell our supervisor that our
     # flow is now complete and can be parsed.
     if pkt.packettype == RadiusPacket::Type::ACCEPT ||
-        pkt.packettype == RadiusPacket::Type::REJECT
-      logger.debug("Final Answer added, notify RadiusStreamHelper")
+       pkt.packettype == RadiusPacket::Type::REJECT
+      logger.debug('Final Answer added, notify RadiusStreamHelper')
       RadiusStreamHelper.notify_flow_done(self)
     end
   end
@@ -96,7 +97,7 @@ class RadiusStream
   # @param pkt [RadiusPacket] Packet to insert
   # @raise PacketFlowInsertionError if the given packet does not match the already captured flow
   def add_packet_to_radius(pkt)
-    logger.trace("Add Packet to RADIUS-Server")
+    logger.trace('Add Packet to RADIUS-Server')
     # If the last message was from the client, we can't add another packet from the client.
     # This is most likely the case if the RADIUS-Server failed to respond and the client
     # resent his message. In any case, it should not be added here.
@@ -108,7 +109,7 @@ class RadiusStream
     # First check if the identifier is increasing
     # TODO This check is kind of complicated,
     #  because the identifier range is only 8bit and overflows on regular bases
-    #raise PacketFlowInsertionError if pkt.identifier <= @current_pktid
+    # raise PacketFlowInsertionError if pkt.identifier <= @current_pktid
 
     # The state attribute must be the same as sent by the server. If it was omitted (nil)
     # then it must not be included in the client's answer
@@ -142,10 +143,12 @@ class RadiusStreamHelper
 
   # [Array<RadiusStream>] Currently known streams
   attr_reader :known_streams
+
   @known_streams
 
   # [Integer] Number of seconds after a Radius Stream is considered timed out.
   attr_writer :timeout
+
   @timeout
 
   # Counter for housekeeping calls. The Housekeeping is only executed every 10 packets.
@@ -175,20 +178,20 @@ class RadiusStreamHelper
 
   # Private helper to insert a packet sent to the radius
   def insert_packet_to_radius(pkt)
-    logger.trace("Try to insert Packet to RADIUS")
+    logger.trace('Try to insert Packet to RADIUS')
 
     p = @known_streams.select { |x|
       x.current_state == pkt.state &&
-          x.udp_src_ip == pkt.udp[:src][:ip] &&
-          x.udp_src_port == pkt.udp[:src][:port] &&
-          x.udp_dst_ip == pkt.udp[:dst][:ip] &&
-          x.udp_dst_port == pkt.udp[:dst][:port] &&
-          x.username == pkt.username &&
-          x.callingstationid == pkt.callingstationid
+        x.udp_src_ip == pkt.udp[:src][:ip] &&
+        x.udp_src_port == pkt.udp[:src][:port] &&
+        x.udp_dst_ip == pkt.udp[:dst][:ip] &&
+        x.udp_dst_port == pkt.udp[:dst][:port] &&
+        x.username == pkt.username &&
+        x.callingstationid == pkt.callingstationid
     }
     if p.empty?
       # This is probably a completely new request
-      logger.trace("Creating a new RadiusStream")
+      logger.trace('Creating a new RadiusStream')
       @known_streams << RadiusStream.new(pkt)
       return
     elsif p.length > 1
@@ -197,29 +200,30 @@ class RadiusStreamHelper
     end
 
     flow = p.first
-    logger.trace("Insert Packet in RadiusStream")
+    logger.trace('Insert Packet in RadiusStream')
     flow.add_packet_to_radius(pkt)
-    end
+  end
 
   # Private helper to insert a packet sent from the radius
   # @param pkt [RadiusPacket] Packet to insert
   # @todo There might be some packets without a state set. This should be worth a log message.
   def insert_packet_from_radius(pkt)
-    logger.trace("Try to insert packet from RADIUS")
+    logger.trace('Try to insert packet from RADIUS')
     # This must be an ongoing packet. Packets sent are matched by UDP Port/IP Address and Packet ID
     p = @known_streams.select { |x|
       x.udp_src_ip == pkt.udp[:dst][:ip] &&
-      x.udp_dst_ip == pkt.udp[:src][:ip] &&
-      x.udp_src_port == pkt.udp[:dst][:port] &&
-      x.udp_dst_port == pkt.udp[:src][:port] &&
-      x.current_pktid == pkt.identifier
+        x.udp_dst_ip == pkt.udp[:src][:ip] &&
+        x.udp_src_port == pkt.udp[:dst][:port] &&
+        x.udp_dst_port == pkt.udp[:src][:port] &&
+        x.current_pktid == pkt.identifier
     }
 
     if p.empty?
       # This case should not occur. This is probably the case if the packet, which the
       # RADIUS-Server is answering to, was not captured.
       # TODO This packet should be included in the debug capture
-      logger.warn "Could not find a matching request from #{pkt.udp[:dst][:ip]}:#{pkt.udp[:dst][:port]} and ID #{pkt.identifier}"
+      logger.warn "Could not find a matching request from #{pkt.udp[:dst][:ip]}:#{pkt.udp[:dst][:port]}" \
+                  " and ID #{pkt.identifier}"
       StatHandler.increase :pkterror_no_state_found
       return
     elsif p.length > 1
@@ -232,7 +236,7 @@ class RadiusStreamHelper
       p.sort_by!(&:last_updated)
     end
     flow = p.last
-    logger.trace("Insert Packet in RadiusStream")
+    logger.trace('Insert Packet in RadiusStream')
     flow.add_packet_from_radius(pkt)
   end
 
@@ -240,11 +244,12 @@ class RadiusStreamHelper
   def housekeeping
     @housekeeping_counter += 1
     return if @housekeeping_counter < 10
-    logger.trace("Starting Housekeeping")
+
+    logger.trace('Starting Housekeeping')
     t = Time.now
     old = @known_streams.select{ |x| (t-x.last_updated) > @timeout }
     old.each do |o|
-      logger.debug "Timing out 0x#{o.current_state.pack('C*').unpack('H*').first}" if o.current_state
+      logger.debug "Timing out 0x#{o.current_state.pack('C*').unpack1('H*')}" if o.current_state
       logger.debug 'Timing out state without state variable' unless o.current_state
       StatHandler.increase :streams_timed_out
       StatHandler.increase :packet_timed_out, o.packets.length
@@ -257,14 +262,14 @@ class RadiusStreamHelper
   # Add Packet to Packetflow
   # @param pkt [RadiusPacket] Packet to insert in the PacketFlow
   def self.add_packet(pkt)
-    logger.trace("Add packet to a Stream")
+    logger.trace('Add packet to a Stream')
     RadiusStreamHelper.instance.priv_add_packet(pkt)
   end
 
   # Start Parsing of a certain Packetflow once it is done.
   # @param pktflow [RadiusStream] Stream to parse
   def self.notify_flow_done(pktflow)
-    logger.trace("One Packetflow is done")
+    logger.trace('One Packetflow is done')
     RadiusStreamHelper.instance.priv_notify_flow_done(pktflow)
   end
 
