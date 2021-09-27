@@ -1,6 +1,10 @@
 @config = {
-  ipaddrs: [ '10.11.0.216', '10.11.0.217'],
-  ignoreips: [ '10.11.0.224', '10.11.0.225'],
+  socket_files: [
+    {path: "/tmp/radsecproxy.radsec1.sock", label: "radsec1"},
+    {path: "/tmp/radsecproxy.radsec2.sock", label: "radsec2"},
+  ],
+  ipaddrs: [ '192.0.2.1', '192.0.2.2'],
+  ignoreips: [ '192.0.2.101', '192.0.2.102'],
   debug: false,
   noelastic: false,
   filewrite: false,

@@ -73,7 +73,6 @@ $> cd /srv/radius_cap
 # You can abort with Ctrl+C
 ```
 
-TODO: Systemd unit
 
 ### Capturing via Radsecproxy
 
@@ -110,9 +109,8 @@ $> su - radius_cap
 #> BUNDLE_GEMFILE=Gemfile.radsec ruby radsecproxy_cap.rb
 ```
 
-TODO: systemd
 
-### Systemd
+### Systemd Unit
 
 To run the capturing as systemd units, systemd files can be found in the `systemd/` directory.
 Copy the according file to the directory `/etc/systemd/system` and execute `systemctl daemon-reload`.
@@ -144,6 +142,7 @@ It has the following configuration options:
 * `profiler` -> Boolean, used for debugging to profile memory usage. Set to true to output memory profiler details. DO NOT USE IN PRODUCTION!
 * `certificate_dontsave` -> Boolean, do not save certificates to the file system
 
+A sample can be found in `localconfig.rb.templates`
 
 ## Log files
 
@@ -210,9 +209,11 @@ To start the tunnel on startup, run `systemctl enable radsec_ssh_tunnel@<servern
 
 ## License and contact to maintainers
 
-See [License][LICENSE.txt]
+This tool is released under GNU GPLv3. See [License][LICENSE.txt]
 
-The tool was written by Jan-Frederik Rieckers. You can contact the maintainer under `rieckers@uni-bremen.de`
+The tool was written by Jan-Frederik Rieckers. You can contact the author under `rieckers@uni-bremen.de`
+
+If in doubt of license restrictions or you would like to use the tool under a different license, contact the author.
 
 ---
 [ba-thesis]: https://user.informatik.uni-bremen.de/rieckers/Bachelor_EAP-TLS.pdf
