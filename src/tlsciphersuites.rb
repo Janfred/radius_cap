@@ -6,23 +6,35 @@ class TLSCipherSuite
     @internal_cs.delete nil
   end
 
+  # Get all encryption algorithms present
+  # @return Array<String>
   def all_encr
     @internal_cs.map{|x| x[:encryption] || (!x[:scsv] && "NULL")}.uniq - [nil, false]
   end
+  # Get all key exchange algorithms present
+  # @return Array<String>
   def all_keyx
     @internal_cs.map{|x| x[:keyxchange] || (!x[:scsv] && !x[:tlsv13] && "NULL")}.uniq - [nil, false]
   end
+  # Get all authentication algorithms present
+  # @return Array<String>
   def all_auth
     @internal_cs.map{|x| x[:auth] || (!x[:scsv] && !x[:tlsv13] && "NULL")}.uniq - [nil, false]
   end
+  # Get all MAC algorithms present
+  # @return Array<String>
   def all_mac
     @internal_cs.map{|x| x[:mac] || (!x[:scsv] && "NULL")}.uniq - [nil, false]
   end
 
+  # Get the length of the cipher suite set
+  # @return Integer
   def set_length
     @internal_cs.length
   end
 
+  # Get the length of the cipher suite set without SCSV
+  # @return Integer
   def set_length_noscsv
     @internal_cs.select{|x| !x[:scsv]}.length
   end
@@ -154,6 +166,7 @@ class TLSCipherSuite
     {code: val[0], keyxchange: val[1], auth: val[2], encryption: val[3], mode: val[4], mac: val[5], pfs: val[6], scsv: val[7], tlsv13: val[8], name: val[9]}
   end
 
+  # List of security levels of different encryption methods
   SECURITY_LEVELS = {
     nil           =>   0,
     "RC2-40"      =>  40,

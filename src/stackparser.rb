@@ -1,6 +1,7 @@
 # Class for parsing Streams
 class StackParser
 
+  # Number of threads to start for parsing
   PARSETHREADCOUNT = 4
 
   include SemanticLogger::Loggable

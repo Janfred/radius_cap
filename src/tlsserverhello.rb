@@ -381,6 +381,7 @@ class TLSCertStoreHelper
     priv_add_known_intermediates
   end
 
+  # Helper method to synchronize file writes
   def sync
     StackParser.instance.threadmutex.synchronize do
       yield

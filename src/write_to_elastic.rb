@@ -242,6 +242,8 @@ class ElasticHelper
     nil
   end
 
+  # Flush the saved bulk inserts.
+  # Should only be called to flush the queue on script exit
   def self.flush_bulk
     ElasticHelper.client.bulk index: 'tlshandshakes', type: 'tlshandshake', body: ElasticHelper.bulk_data.map{ |x| {index: { _id: x[:id], data: x[:data] } } }
     ElasticHelper.clear_bulk_data
