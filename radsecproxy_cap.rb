@@ -22,8 +22,10 @@
 
 @nopacketfu = true
 
-require_relative './includes'
+@nopacketfu = true
 
+require_relative './includes'
+require 'method_profiler'
 @config[:debug] = false if @config[:debug].nil?
 @config[:eap_timeout] ||= 60
 @config[:noelastic] = false if @config[:noelastic].nil?
@@ -51,6 +53,36 @@ logger.info('Requirements done. Loading radsecproxy_cap.rb functions')
 
 
 
+if @config[:profiler]
+  [
+    #EAPPacket,
+    #EAPStream,
+    #EAPTLSFragment,
+    #EAPTLSStream,
+    #ElasticHelper,
+    #Fingerprint,
+    #MacVendor,
+    #ProtocolStack,
+    #RadiusPacket,
+    #RadsecStream,
+    RadsecStreamHelper,
+    #StackParser,
+    #TLSAlertRecord,
+    #TLSApplicationDataRecord,
+    TLSCertStoreHelper,
+    #TLSChangeCipherSpecRecord,
+    #TLSCipherSuite,
+    TLSClientHello,
+    #TLSHandshakeRecord,
+    #TLSRecord,
+    TLSServerHello,
+    #TLSServerKeyExchange,
+    #TLSSignatureScheme,
+    #TLSStream,
+  ].each do |cls|
+    BlackBoard.profilers[cls.to_s] = MethodProfiler.observe(cls)
+  end
+end
 
 BlackBoard.logger = logger
 BlackBoard.pktbuf = []

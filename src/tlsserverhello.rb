@@ -86,45 +86,56 @@ class TLSServerHello
     # but not existent
     to_ret[:keyexchange] ||= [sig_scheme: 'None', curve_name: 'None']
 
-    to_ret[:certificate] = {}
-    to_ret[:certificate][:sent_chain_length] = @cert_data.length
-    to_ret[:certificate][:public_trusted] = @public_trusted[:valid]
-
-    if @public_trusted[:valid]
-      to_ret[:certificate][:complete_public_chain_length] = @public_trusted[:chain].length
-      to_ret[:certificate][:public_trust_anchor] = @public_trusted[:chain].last.subject.to_s
+    if BlackBoard.config[:certificate_dontsave] && @cert_hashes
+      to_ret[:certificate_raw] = {}
+      index = 0
+      to_ret[:certificate_raw][:array] = []
+      to_ret[:certificate_raw][:by_index] = {}
+      @cert_hashes.each do |c|
+        to_ret[:certificate_raw][:array] << c
+        to_ret[:certificate_raw][:by_index][index] = c
+        index += 1
+      end
+      to_ret[:certificate_raw][:length] = @cert_hashes.length
     else
-      to_ret[:certificate][:complete_public_chain_length] = 0
-      to_ret[:certificate][:public_trust_anchor] = 'UNKNOWN'
+
+      to_ret[:certificate] = {}
+      to_ret[:certificate][:sent_chain_length] = @cert_data.length
+      to_ret[:certificate][:public_trusted] = @public_trusted[:valid]
+
+      if @public_trusted[:valid]
+        to_ret[:certificate][:complete_public_chain_length] = @public_trusted[:chain].length
+        to_ret[:certificate][:public_trust_anchor] = @public_trusted[:chain].last.subject.to_s
+      else
+        to_ret[:certificate][:complete_public_chain_length] = 0
+        to_ret[:certificate][:public_trust_anchor] = "UNKNOWN"
+      end
+
+      index = 0
+      to_ret[:certificate][:public_chain] = {}
+      to_ret[:certificate][:public_chain][:array] = []
+      to_ret[:certificate][:public_chain][:by_index] = {}
+      @public_trusted[:chain].reverse.each do |c|
+        to_ret[:certificate][:public_chain][:array] << c.subject.to_s
+        to_ret[:certificate][:public_chain][:by_index][index] = c.subject.to_s
+        index += 1
+      end
+
+      index = 0
+      to_ret[:certificate][:additional_chain] = {}
+      to_ret[:certificate][:additional_chain][:array] = []
+      to_ret[:certificate][:additional_chain][:by_index] = {}
+      @additional_trusted[:chain].reverse.each do |c|
+        to_ret[:certificate][:additional_chain][:array] << c.subject.to_s
+        to_ret[:certificate][:additional_chain][:by_index][index] = c.subject.to_s
+        index += 1
+      end
+
+      to_ret[:certificate][:additional_trusted] = @additional_trusted[:valid]
+      to_ret[:certificate][:complete_additional_chain_length] = @additional_trusted[:chain].length
+      to_ret[:certificate][:additional_trust_anchor] = @additional_trusted[:chain].last.subject.to_s unless @additional_trusted[:chain].last.nil?
+
     end
-
-    index = 0
-    to_ret[:certificate][:public_chain] = {}
-    to_ret[:certificate][:public_chain][:array] = []
-    to_ret[:certificate][:public_chain][:by_index] = {}
-    @public_trusted[:chain].reverse.each do |c|
-      to_ret[:certificate][:public_chain][:array] << c.subject.to_s
-      to_ret[:certificate][:public_chain][:by_index][index] = c.subject.to_s
-      index += 1
-    end
-
-    index = 0
-    to_ret[:certificate][:additional_chain] = {}
-    to_ret[:certificate][:additional_chain][:array] = []
-    to_ret[:certificate][:additional_chain][:by_index] = {}
-    @additional_trusted[:chain].reverse.each do |c|
-      to_ret[:certificate][:additional_chain][:array] << c.subject.to_s
-      to_ret[:certificate][:additional_chain][:by_index][index] = c.subject.to_s
-      index += 1
-    end
-
-    to_ret[:certificate][:additional_trusted] = @additional_trusted[:valid]
-    to_ret[:certificate][:complete_additional_chain_length] = @additional_trusted[:chain].length
-    unless @additional_trusted[:chain].last.nil?
-      to_ret[:certificate][:additional_trust_anchor] = @additional_trusted[:chain].last.subject.to_s
-    end
-
-
     to_ret
   end
 
@@ -318,21 +329,27 @@ class TLSServerHello
       cur_ptr += this_length
     end
 
-    unless @cert_data.empty?
-      server_cert = @cert_data.first
-      chain = @cert_data[1..-1]
+    if BlackBoard.config[:certificate_dontsave]
+      @cert_hashes = TLSCertStoreOnly.save_certificates(@cert_data)
+    else
+      if @cert_data.length > 0
+        server_cert = @cert_data.first
+        chain = @cert_data[1..-1]
 
-      TLSCertStoreHelper.save_server_cert(server_cert)
+        TLSCertStoreHelper.save_server_cert(server_cert)
 
-      chain.each do |c|
-        TLSCertStoreHelper.add_trust_anchor(c) if TLSCertStoreHelper.check_trust_anchor(c)
-        TLSCertStoreHelper.add_known_intermediate(c)
+        chain.each do |c|
+          if TLSCertStoreHelper.check_trust_anchor(c)
+            TLSCertStoreHelper.add_trust_anchor(c)
+          end
+          TLSCertStoreHelper.add_known_intermediate(c)
+        end
+
+        @public_trusted = TLSCertStoreHelper.check_public_trust(server_cert, chain)
+        logger.trace 'Public Cert Result: ' + @public_trusted.inspect
+        @additional_trusted = TLSCertStoreHelper.check_additional_trust(server_cert, chain)
+        logger.trace 'Additional Cert Result: ' + @additional_trusted.inspect
       end
-
-      @public_trusted = TLSCertStoreHelper.check_public_trust(server_cert, chain)
-      logger.trace "Public Cert Result: #{@public_trusted.inspect}"
-      @additional_trusted = TLSCertStoreHelper.check_additional_trust(server_cert, chain)
-      logger.trace "Additional Cert Result: #{@additional_trusted.inspect}"
     end
     nil
   end
@@ -369,185 +386,3 @@ class TLSServerHello
   end
 end
 
-# Class for Storing the seen TLS Certs
-class TLSCertStoreHelper
-  include Singleton
-  include SemanticLogger::Loggable
-
-
-  attr_reader :trusted_cert_store, :additional_cert_store
-
-  def initialize
-    @trusted_cert_store = OpenSSL::X509::Store.new
-    @trusted_cert_store.set_default_paths
-
-    @additional_cert_store = OpenSSL::X509::Store.new
-    @additional_cert_store.set_default_paths
-
-    priv_add_known_intermediates
-  end
-
-  # Helper method to synchronize file writes
-  def sync(&block)
-    StackParser.instance.threadmutex.synchronize(&block)
-  end
-
-  # Add the seen_certs to the additional cert store
-  def priv_add_known_intermediates
-    @additional_cert_store.add_path('seen_certs')
-  end
-
-  # Convert original subject name to a posix compatible file name.
-  # Replaces slashes with Paragraph, everything else with underscore
-  # @param orig_name [String] original subject
-  # @return [String] an escaped file name
-  # @private
-  def subj_to_filename(orig_name)
-    to_return = orig_name
-    to_return.gsub!(%r{/}, '§')
-    to_return.gsub!(/[^0-9a-zA-Z. _=§-]/, '_')
-
-    to_return
-  end
-
-  # Save a server certicicate to the certificate store
-  # @param cert [OpenSSL::X509::Certificate] certificate to save
-  def self.save_server_cert(cert)
-    TLSCertStoreHelper.instance.priv_add_cert(cert, false)
-  end
-
-  # Get the subject key identifier fo the certificate.
-  # If the certificate contains multiple SubjectKeyIdentifier attributes the first one is returned,
-  # if none is given the SHA2-Hash of the entire certificate (DER encoded) is returned.
-  # @param cert [OpenSSL::X509::Certificate] certificate
-  # @return [String] SubjectKeyIdentifier
-  # @private
-  def get_subj_key_identifier(cert)
-    subject_key_identifier_exten = cert.extensions.select { |x| x.oid == 'subjectKeyIdentifier' }
-    if subject_key_identifier_exten.empty?
-      logger.warn 'Found certificate without subjectKeyIdentifier. Using SHA-2 Hash of the certificate'
-      Digest::SHA2.hexdigest(cert.to_der).upcase
-    elsif subject_key_identifier_exten.length == 1
-      subject_key_identifier_exten.first.value.gsub(/:/, '')
-    else
-      logger.warn "Found multiple subjectKeyIdentifier Extensions in X.509 Cert for #{cert.subject}"
-      subject_key_identifier_exten.first.value.gsub(/:/, '')
-    end
-  end
-
-  # Private Function to add a cert to certificate store.
-  # If this is an intermediate certificate, it is also stored in the additional cert store for future reference
-  # @param cert [OpenSSL::X509::Certificate] certificate to save
-  # @param intermediate [Boolean]
-  def priv_add_cert(cert, intermediate=false)
-    raise StandardError unless cert.is_a? OpenSSL::X509::Certificate
-
-    issuer = cert.issuer.to_s
-    cert_serial = cert.serial
-    cert_name = cert.subject.to_s
-
-    subject_key_identifier = get_subj_key_identifier(cert)
-
-    authority_key_identifier_exten = cert.extensions.select { |x| x.oid == 'authorityKeyIdentifier' }
-    authority_key_identifier = ''
-    case authority_key_identifier_exten.length
-    when 0
-      authority_key_identifier = 'UNKNOWN'
-    when 1
-      authority_key_identifier = authority_key_identifier_exten.first.value
-    else
-      logger.warn "Found multiple authorityKeyIdentifier Extensions in X.509 Cert for #{cert_name}"
-      authority_key_identifier = authority_key_identifier_exten.first.value
-    end
-
-    match = authority_key_identifier.match(/^keyid:(.*)$/)
-    authority_key_identifier = if match
-                                 match[1].gsub(/:/, '')
-                               else
-                                 'UNKNOWN'
-                               end
-
-    logger.trace "Issuer: #{issuer} | Serial: #{cert_serial} | Cert Name: #{cert_name}"
-
-    issuer_path = authority_key_identifier
-    cert_path = subject_key_identifier
-
-    sync do
-      Dir.mkdir(File.join('seen_certs', issuer_path)) unless File.directory? File.join('seen_certs', issuer_path)
-      unless File.exist? File.join('seen_certs', issuer_path, cert_path)
-        File.write File.join('seen_certs', issuer_path, cert_path), cert.to_pem
-        @additional_cert_store.add_cert(cert) if intermediate
-      end
-    end
-  end
-
-  # Add a possible Trust anchor to the Cert store
-  # @param cert [OpenSSL::X509::Certificate] Certificate to add
-  def self.add_trust_anchor(cert)
-    TLSCertStoreHelper.instance.priv_add_trust_anchor(cert)
-  end
-
-  # Private helper function to add trust anchor
-  # @param cert [OpenSSL::X509::Certificate] Certificate to add
-  # @private
-  def priv_add_trust_anchor(cert)
-    raise StandardError unless cert.is_a? OpenSSL::X509::Certificate
-
-    certname = "#{get_subj_key_identifier(cert)}.pem"
-    sync do
-      unless File.exist? File.join('seen_certs', certname)
-        File.write(File.join('seen_certs', certname), cert.to_pem)
-        @additional_cert_store.add_cert(cert)
-      end
-    end
-  end
-
-  # Add an intermediate certificate to the cert store
-  # @param cert [OpenSSL::X509::Certificate] certificate to add
-  def self.add_known_intermediate(cert)
-    TLSCertStoreHelper.instance.priv_add_cert(cert, true)
-  end
-
-  # Check if a given certificate may be a trust anchor (based on same Issuer and Subject)
-  # @param cert [OpenSSL::X509::Certificate] Certificate to check
-  # @return [Boolean] if the given Cert may be a trust anchor
-  def self.check_trust_anchor(cert)
-    raise StandardError unless cert.is_a? OpenSSL::X509::Certificate
-
-    logger.trace "Checking #{cert.issuer} against #{cert.subject}"
-    cert.issuer.eql? cert.subject
-  end
-
-  # Check a given Cert with a given Certificate Chain against the public trust store
-  # @param cert [OpenSSL::X509::Certificate] Certificate to check
-  # @param chain [Array<OpenSSL::X509::Certificate] Chain of Certificates as Array of Certificates
-  # @return [Hash]
-  #    * :valid [Boolean] if the certificate is trusted
-  #    * :chain [Array] Certificate Chain
-  def self.check_public_trust(cert, chain)
-    certstore = TLSCertStoreHelper.instance.trusted_cert_store
-    raise StandardError unless certstore.is_a? OpenSSL::X509::Store
-
-    to_return = {}
-    to_return[:valid] = certstore.verify(cert, chain)
-    to_return[:chain] = certstore.chain
-
-    to_return
-  end
-  # Check a given Cert with a given certificate chain against the additional trust store
-  # @param cert [OpenSSL::X509::Certificate] Certificate to check
-  # @param chain [Array<OpenSSL::X509::Certificate] Chain of Certificates as Array of Certificates
-  # @return [Hash]
-  #    * :valid [Boolean] if the certificate is trusted
-  #    * :chain [Array] Certificate Chain
-  def self.check_additional_trust(cert, chain)
-    certstore = TLSCertStoreHelper.instance.additional_cert_store
-    raise StandardError unless certstore.is_a? OpenSSL::X509::Store
-
-    to_return = {}
-    to_return[:valid] = certstore.verify(cert, chain)
-    to_return[:chain] = certstore.chain
-
-    to_return
-  end
-end

@@ -1,6 +1,7 @@
 GEM
   remote: https://rubygems.org/
   specs:
+    ast (2.4.2)
     concurrent-ruby (1.1.9)
     elasticsearch (7.15.0)
       elasticsearch-api (= 7.15.0)
@@ -34,12 +35,33 @@ GEM
     fugit (1.5.2)
       et-orbi (~> 1.1, >= 1.1.8)
       raabro (~> 1.4)
+    hirb (0.7.3)
+    method_profiler (2.0.1)
+      hirb (>= 0.6.0)
     multi_json (1.15.0)
     multipart-post (2.1.1)
     packetfu (1.1.13)
       pcaprub
+    parallel (1.21.0)
+    parser (3.0.2.0)
+      ast (~> 2.4.1)
     pcaprub (0.13.0)
     raabro (1.4.0)
+    rainbow (3.0.0)
+    regexp_parser (2.1.1)
+    rexml (3.2.5)
+    rubocop (1.22.1)
+      parallel (~> 1.10)
+      parser (>= 3.0.0.0)
+      rainbow (>= 2.2.2, < 4.0)
+      regexp_parser (>= 1.8, < 3.0)
+      rexml
+      rubocop-ast (>= 1.12.0, < 2.0)
+      ruby-progressbar (~> 1.7)
+      unicode-display_width (>= 1.4.0, < 3.0)
+    rubocop-ast (1.12.0)
+      parser (>= 3.0.1.1)
+    ruby-progressbar (1.11.0)
     ruby2_keywords (0.0.5)
     rufus-scheduler (3.8.0)
       fugit (~> 1.1, >= 1.1.6)
@@ -47,6 +69,7 @@ GEM
       concurrent-ruby (~> 1.0)
     tzinfo (2.0.4)
       concurrent-ruby (~> 1.0)
+    unicode-display_width (2.1.0)
     yard (0.9.26)
 
 PLATFORMS
@@ -54,7 +77,9 @@ PLATFORMS
 
 DEPENDENCIES
   elasticsearch
+  method_profiler
   packetfu
+  rubocop
   rufus-scheduler
   semantic_logger
   yard

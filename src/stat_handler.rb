@@ -113,7 +113,7 @@ class StatHandler
           end
           stat[:known_streams] = RadsecStreamHelper.instance.known_streams.length
 
-          client.write stat.to_json
+        client.write stat.to_json
           client.close
         end
       end
@@ -166,6 +166,16 @@ class StatHandler
 
   # Private function for logging the current statistics
   def priv_log_stat
+
+    if BlackBoard.config[:profiler]
+      timestamp = Time.now.to_i.to_s
+      # Create Folder
+      Dir.mkdir(File.join('statistics', timestamp))
+      BlackBoard.profilers.each do |k,v|
+        File.write(File.join('statistics', timestamp, k), v.report)
+      end
+    end
+
     logmsg = ''
     cur_stat = {}
     @statistics.synchronize do

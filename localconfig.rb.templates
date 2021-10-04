@@ -15,4 +15,6 @@
   ],
   elastic_username: 'username',
   elastic_password: 'password',
+  certificate_dontsave: false,
+  profiler: false,
 }

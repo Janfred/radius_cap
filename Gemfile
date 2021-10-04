@@ -16,4 +16,6 @@ gem 'semantic_logger'
 gem 'rufus-scheduler'
 
 # RuboCop
-#gem 'rubocop'
+gem 'rubocop'
+# For profiling method calls
+gem 'method_profiler'
