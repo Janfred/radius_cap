@@ -13,6 +13,9 @@ class TLSCertStoreOnly
     @saved_certs = []
   end
 
+  # Save certificates to file system
+  # @param certs Array<OpenSSL::X509::Certificate> certificates to store
+  # @return Array SHA256Sum of the certificate (PEM encoded) as hex string
   def self.save_certificates(certs)
     to_ret = []
     certs.each do |crt|
@@ -51,6 +54,7 @@ class TLSCertStoreHelper
     priv_add_known_intermediates
   end
 
+  # Synchronize the given block for non-simultanious file system access
   def sync(&block)
     StackParser.instance.threadmutex.synchronize(&block)
   end

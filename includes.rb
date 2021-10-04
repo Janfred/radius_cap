@@ -11,7 +11,10 @@ require 'singleton'
 require 'openssl'
 require 'socket'
 if @nopacketfu
+
+  # Stub module if the PacketFu gem is not included
   module PacketFu
+    # Stub class if the PacketFu gem is not included
     class Packet
       # left blank intentionally
     end

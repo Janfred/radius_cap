@@ -37,6 +37,8 @@ class RadsecStream
                  " from #{@client} to #{@server} and pktid #{@current_pktid}"
   end
 
+  # Add Request to the Stream
+  # @raise PacketFlowInsertionError
   def add_request(pkt)
     logger.trace('Add Request packet')
     unless @last_from_server
@@ -55,6 +57,8 @@ class RadsecStream
     nil
   end
 
+  # Adds Response to the Stream
+  # @raise PacketFlowInsertionError
   def add_response(pkt)
     logger.trace('Add response packet')
     if @last_from_server

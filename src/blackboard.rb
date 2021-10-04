@@ -86,9 +86,13 @@ class BlackBoard
   def self.config=(conf)
     BlackBoard.instance.config = conf
   end
+
+  # Getter for the profiler
   def self.profilers
     BlackBoard.instance.profilers
   end
+
+  # Setter for the profiler
   def self.profilers=(p)
     BlackBoard.instance.profilers=p
   end

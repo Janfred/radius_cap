@@ -11,24 +11,26 @@ class TLSCipherSuite
   end
 
   # Get all encryption algorithms present
-  # @return Array<String>
+  # @return Array L
+  # ist of all encryption algorithms
   def all_encr
     @internal_cs.map { |x| x[:encryption] || (!x[:scsv] && 'NULL') }.uniq - [nil, false]
   end
+
   # Get all key exchange algorithms present
-  # @return Array<String>
+  # @return Array List of all key exchange algorithms
   def all_keyx
     @internal_cs.map { |x| x[:keyxchange] || (!x[:scsv] && !x[:tlsv13] && 'NULL') }.uniq - [nil, false]
   end
 
   # Get all authentication algorithms present
-  # @return Array<String>
+  # @return Array List of all authentication algorithms
   def all_auth
     @internal_cs.map { |x| x[:auth] || (!x[:scsv] && !x[:tlsv13] && 'NULL') }.uniq - [nil, false]
   end
 
   # Get all MAC algorithms present
-  # @return Array<String>
+  # @return Array List of all MAC algorithms
   def all_mac
     @internal_cs.map { |x| x[:mac] || (!x[:scsv] && 'NULL') }.uniq - [nil, false]
   end
