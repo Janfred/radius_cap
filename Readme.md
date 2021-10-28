@@ -2,7 +2,7 @@
 
 This tool is designed to capture and observe EAP-TLS logins, especially in the eduroam environment.
 
-It was developed by Jan-Frederik Rieckers as part of a bachelor thesis at the University of Bremen.
+It was developed by Jan-Frederik Rieckers as part of a bachelor thesis at the University of Bremen in cooperation with the German Research Network (DFN-Verein).
 This bachelor thesis is [publicly available][ba-thesis].
 
 ## Features
@@ -65,11 +65,11 @@ $> gem install bundler
 # Clone repository and install gems
 $> git clone https://github.com/Janfred/radius_cap.git /srv/radius_cap
 $> cd /srv/radius_cap
-#> bundle config set deployment 'true'
-#> bundle install
+$> bundle config set deployment 'true'
+$> bundle install
 
 # To check the correct functionality run
-#> ruby radius_cap.rb
+$> ruby radius_cap.rb
 # You can abort with Ctrl+C
 ```
 
