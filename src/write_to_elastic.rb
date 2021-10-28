@@ -232,7 +232,7 @@ class ElasticHelper
       if ElasticHelper.bulk_data.length >= ElasticHelper.bulk_insert
         begin
           unless no_direct_elastic
-            ElasticHelper.client.bulk index: 'tlshandshakes', type: 'tlshandshake',
+            ElasticHelper.client.bulk index: 'tlshandshakes',
                                       body: ElasticHelper.bulk_data.map do |x|
               { index: { _id: x[:id], data: x[:data] } }
             end
@@ -246,7 +246,7 @@ class ElasticHelper
         ElasticHelper.clear_bulk_data
       end
     else
-      ElasticHelper.client.index index: 'tlshandshakes', type: 'tlshandshake',
+      ElasticHelper.client.index index: 'tlshandshakes',
                                  id: to_ins[:id], body: to_ins[:data] unless no_direct_elastic
     end
     if elastic_exists
