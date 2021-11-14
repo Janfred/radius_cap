@@ -10,7 +10,7 @@ GEM
     elasticsearch-transport (7.15.0)
       faraday (~> 1)
       multi_json
-    et-orbi (1.2.5)
+    et-orbi (1.2.6)
       tzinfo
     faraday (1.8.0)
       faraday-em_http (~> 1.0)
