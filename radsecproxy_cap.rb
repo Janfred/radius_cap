@@ -22,8 +22,6 @@
 
 @nopacketfu = true
 
-@nopacketfu = true
-
 require_relative './includes'
 require 'method_profiler'
 @config[:debug] = false if @config[:debug].nil?
@@ -52,7 +50,8 @@ logger.info('Requirements done. Loading radsecproxy_cap.rb functions')
 
 
 
-
+# This is used for the memory profiler.
+# In production this is not needed.
 if @config[:profiler]
   [
     #EAPPacket,
