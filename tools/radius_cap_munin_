@@ -1,12 +1,13 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
 
 require 'json'
 require 'socket'
 
-match = __FILE__.match /radius_cap_munin_(.*)$/
+match = __FILE__.match(/radius_cap_munin_(.*)$/)
 exit 1 unless match
 exit 1 unless match[1]
-exit 1 if match[1] == ""
+exit 1 if match[1] == ''
 
 stat = match[1]
 
@@ -17,19 +18,19 @@ client.close
 
 exit 1 unless data_raw
 
-data = nil
 begin
   data = JSON.parse(data_raw)
-rescue => e
+rescue StandardError
   exit 1
 end
 
-if ARGV.include? "config"
-  exit 1 if data.length == 0
+if ARGV.include? 'config'
+  exit 1 if data.empty?
   puts "graph_title radsecproxy_cap #{stat}"
-  puts "graph_category radiuscap"
-  data[0].keys.each do |key|
-    next unless key.match /^#{stat}/
+  puts 'graph_category radiuscap'
+  data[0].each_key do |key|
+    next unless key.match(/^#{stat}/)
+
     puts "#{key}.label #{key}"
   end
   exit
@@ -37,14 +38,14 @@ end
 
 values = {}
 data.each do |item|
-  item.each do |k,v|
-    next unless k.match /^#{stat}/
+  item.each do |k, v|
+    next unless k.match(/^#{stat}/)
+
     values[k] ||= 0
     values[k] += v
   end
 end
 
-values.each do |k,v|
-  puts k + ".value " + v.to_s
+values.each do |k, v|
+  puts "#{k}.value #{v}"
 end
-
