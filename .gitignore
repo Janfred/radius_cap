@@ -17,3 +17,5 @@
 !/known_certs/.gitkeep
 /seen_certs/*
 !/seen_certs/.gitkeep
+/seen_certs_raw/*
+!/seen_certs_raw/.gitkeep
