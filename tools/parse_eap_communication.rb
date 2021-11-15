@@ -1,5 +1,5 @@
 
-require '../includes'
+require_relative '../includes'
 
 @config[:debug] = true
 @config[:no_stat_server] = true
