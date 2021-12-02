@@ -105,7 +105,7 @@ class TLSServerHello
         to_ret[:certificate][:public_trust_anchor] = @public_trusted[:chain].last.subject.to_s
       else
         to_ret[:certificate][:complete_public_chain_length] = 0
-        to_ret[:certificate][:public_trust_anchor] = "UNKNOWN"
+        to_ret[:certificate][:public_trust_anchor] = 'UNKNOWN'
       end
 
       index = 0
@@ -138,7 +138,7 @@ class TLSServerHello
 
 
   # Inspect the current Server Hello
-  # @return [String] descritpion of the current ServerHello
+  # @return [String] description of the current ServerHello
   def inspect
     str = "#<#{self.class.name}:"
     # str += " v1.2" if @innververs == 0x0303
