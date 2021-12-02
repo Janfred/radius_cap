@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative './errors'
+
 # Class for EAP Stream. This then does the distinction between EAP-TLS communication
 # (EAP-TLS, EAP-TTLS, EAP-PEAP) and all other EAP Communication
 # @!attribute [r] first_eap_payload
@@ -251,9 +253,6 @@ class EAPStream
   end
 end
 
-# Error to be thrown when the EAP Protocol is violated
-class EAPStreamError < StandardError
-end
 
 # Stream of EAP-TLS Packets.
 # This class handles some properties of the EAP-TLS specification e.g. the Fragmentation.

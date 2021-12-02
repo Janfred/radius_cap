@@ -1,23 +1,6 @@
 # frozen_string_literal: true
 
-# Error to be raised if the actual length of the packet does not match the specified length.
-# This could happen if the IP packet was fragmented or the Radius Packet is faulty
-class PacketLengthNotValidError < StandardError
-end
-
-# Error to be raised if a Radius Packet includes multiple State Attributes.
-# This is forbidden by RFC 2865 Section 5.24
-class PacketMultipleState < StandardError
-end
-
-# Error to be thrown if the RADIUS Packet violates the RFC.
-# E.g. multiple State Attributes or a State Attribute in an Accept/Reject.
-class ProtocolViolationError < StandardError; end
-
-# Error to be thrown if the RADIUS Packet violates the eduroam Policy
-# Currently checks against v2.8 from 2012-07-26
-# https://www.eduroam.org/wp-content/uploads/2016/05/GN3-12-192_eduroam-policy-service-definition_ver28_26072012.pdf
-class PolicyViolationError < StandardError; end
+require_relative './errors'
 
 # A Radius Packet with all attributes and a reassembled EAP Message
 class RadiusPacket

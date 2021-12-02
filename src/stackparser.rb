@@ -1,3 +1,5 @@
+require_relative './errors'
+
 # Class for parsing Streams
 class StackParser
 
@@ -92,10 +94,6 @@ class StackParser
   end
 
   private :parser
-end
-
-# Error to be thrown if the ProtocolStack parser encounters an error
-class ProtocolStackError < StandardError
 end
 
 # ProtocolStack for Parsing all Layers

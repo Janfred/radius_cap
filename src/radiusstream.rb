@@ -1,10 +1,7 @@
 # frozen_string_literal: true
 
 require 'singleton'
-
-# Error to be thrown if a Packet can not be inserted into a PacketFlow
-class PacketFlowInsertionError < StandardError
-end
+require_relative './errors'
 
 # Class for handling Streams of Radius Packets
 class RadiusStream

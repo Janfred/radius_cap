@@ -1,11 +1,8 @@
 # frozen_string_literal: true
 
+require_relative './errors'
 require_relative './tlsciphersuites'
 require 'openssl'
-
-# Error to be thrown whenever the parsing of the TLS Server Hello fails.
-class TLSServerHelloError < StandardError
-end
 
 # Class for parsing the TLS Server Hello
 class TLSServerHello

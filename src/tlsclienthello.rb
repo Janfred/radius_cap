@@ -3,10 +3,7 @@
 require 'digest'
 require_relative './tlsciphersuites'
 require_relative './fingerprint'
-
-# Error thrown when the TLS Client Hello parsing fails.
-class TLSClientHelloError < StandardError
-end
+require_relative './errors'
 
 # Container for all TLS related constants
 module TLSTypes

@@ -1,3 +1,5 @@
+require_relative './errors'
+
 # TLS Stream
 class TLSStream
 
@@ -231,9 +233,4 @@ end
 
 # TLS ApplicationData Record
 class TLSApplicationDataRecord < TLSRecord
-end
-
-# TLS Parse Error
-# Is thrown on any error in parsing the TLS data.
-class TLSParseError < StandardError
 end
