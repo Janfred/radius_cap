@@ -211,9 +211,12 @@ class TLSServerHello
         break
       end
       unless cur_record.is_a? TLSHandshakeRecord
-        raise ProtocolStackError, 'The Record in the TLS Server Hello was not a TLSHandshakeRecord'
+        if cur_record.is_a? TLSAlertRecord
+          # TODO: Set descriptions for the client hello inserts
+        end
+        raise NonterminalProtocolStackError, 'The Record in the TLS Server Hello was not a TLSHandshakeRecord'
       end
-      raise ProtocolStackError, 'The Handshake type was not set' if cur_record.handshake_type.nil?
+      raise NonterminalProtocolStackError, 'The Handshake type was not set' if cur_record.handshake_type.nil?
 
       cur_data = cur_record.data
       type = cur_record.handshake_type

@@ -152,6 +152,11 @@ class ProtocolStack
         # Something weird here.
         logger.warn "Seen unknown type #{to_parse[:type]}. Doing nothing."
       end
+    rescue NonterminalProtocolStackError => e
+      # TODO: Here the error should be analyzed, to prepare for the client hello insert.
+      write_debug_capture_log 'nonterminal'
+      StatHandler.increase :streams_errored
+      raise e
     rescue StandardError => e
       write_debug_capture_log
       StatHandler.increase :streams_errored
@@ -475,7 +480,7 @@ class ProtocolStack
 
     logger.trace "Client Hello Data: #{@tls_data[:tlsclienthello].inspect}"
 
-    raise ProtocolStackError, 'The next EAP-TLS Packet with the ServerHello does not exist' if tlspackets[1].nil?
+    raise NonterminalProtocolStackError, 'The next EAP-TLS Packet with the ServerHello does not exist' if tlspackets[1].nil?
 
     tlsserverhello = TLSServerHello.new(tlspackets[1])
     @tls_data[:tlsserverhello] = tlsserverhello.to_h
