@@ -233,8 +233,7 @@ class ElasticHelper
         begin
           unless no_direct_elastic
             bulk_data = ElasticHelper.bulk_data.map { |x| { index: { _id: x[:id], data: x[:data] } } }
-            ElasticHelper.client.bulk index: 'tlshandshakes',
-                                      body: bulk_data
+            ElasticHelper.client.bulk index: 'tlshandshakes', body: bulk_data
           end
         rescue => e
           logger.warn 'Error in Bulk indexing.', e
@@ -264,8 +263,7 @@ class ElasticHelper
   # Should only be called to flush the queue on script exit
   def self.flush_bulk
     bulk_data = ElasticHelper.bulk_data.map { |x| { index: { _id: x[:id], data: x[:data] } } }
-    ElasticHelper.client.bulk index: 'tlshandshakes', type: 'tlshandshake',
-                              body: bulk_data
+    ElasticHelper.client.bulk index: 'tlshandshakes', body: bulk_data
     ElasticHelper.clear_bulk_data
   end
 end
