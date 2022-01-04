@@ -1,7 +1,8 @@
 ---
-image: ruby:2.6
+image: ruby:2.7
 
 cache:
+  key: 'rubygems'
   paths:
     - vendor/bundle
 
@@ -13,6 +14,12 @@ variables:
   - apt-get install -y libpcap-dev
   - gem install bundler
   - bundle check || bundle install
+
+test:
+  before_script:
+    - *beforescript
+  script:
+    - bundle exec rspec
 
 pages:
   before_script:

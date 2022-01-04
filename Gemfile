@@ -15,7 +15,14 @@ gem 'semantic_logger'
 # For scheduling the diagnostic output
 gem 'rufus-scheduler'
 
-# RuboCop
-gem 'rubocop'
-# For profiling method calls
-gem 'method_profiler'
+group :development do
+  # RuboCop
+  gem 'rubocop'
+  # For profiling method calls
+  gem 'method_profiler'
+end
+
+group :test do
+  gem 'simplecov', require: false
+  gem 'rspec'
+end
