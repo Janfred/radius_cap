@@ -117,7 +117,7 @@ class TLSCipherSuite
   # Is a PFS Cipher Suite available in the CipherSuites?
   # @return [Boolean]
   def pfs_avail?
-    @internal_cs.select { |x| x[:pfs] }.empty?
+    !@internal_cs.select { |x| x[:pfs] }.empty?
   end
 
   # Are all offered CipherSuites PFS?
