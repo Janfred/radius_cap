@@ -1,0 +1,8 @@
+[Unit]
+Description=Periodically archive old data
+
+[Timer]
+OnCalendar=daily
+
+[Install]
+WantedBy=timers.target

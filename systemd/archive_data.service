@@ -1,0 +1,19 @@
+[Unit]
+Description=Archive old data
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/radius_cap/radius_cap/
+ProtectSystem=full
+PrivateDevices=true
+PrivateTmp=true
+ProtectHome=true
+User=radius_cap
+Group=radius_cap
+
+# If radsecproxy_cap
+Environment=BUNDLE_GEMFILE=Gemfile.radsec
+ExecStart=/srv/radius_cap/.rbenv/shims/ruby /srv/radius_cap/radius_cap/archive_old_data.rb
+
+# If radius_cap
+#ExecStart=/srv/radius_cap/archive_old_data.rb
