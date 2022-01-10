@@ -10,7 +10,7 @@ require 'date'
 
 require_relative './localconfig'
 
-months = 6
+months = 3
 now = DateTime.now
 limit = now << months
 
@@ -26,7 +26,7 @@ def random_id
 end
 
 loop do
-  data = client.search index: 'tlshandshakes', body: { size: 50, query: {
+  data = client.search index: 'tlshandshakes', body: { size: 500, query: {
     bool: { filter: [{ range: {
       "meta.last_seen": {
         format: 'strict_date_optional_time',

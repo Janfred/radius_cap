@@ -110,14 +110,23 @@ $> su - radius_cap
 ```
 
 
-### Systemd Unit
+### Systemd Units
 
 To run the capturing as systemd units, systemd files can be found in the `systemd/` directory.
-Copy the according file to the directory `/etc/systemd/system` and execute `systemctl daemon-reload`.
+Copy the according file (`radius_cap.service` or `radsecproxy_cap.service`) to the directory `/etc/systemd/system` and execute `systemctl daemon-reload`.
 
 After that you can start the capturing tool with `systemctl start radius_cap` or `systemctl start radsecproxy_cap`
 
 To start the tool on startup run `systemctl enable radius_cap` or `systemctl enable radsecproxy_cap`
+
+In order to ensure data protection, the data older than 3 months can be archived.
+This archiving process will use a randomly generated identifier, thus ensuring that the data is completely anonymized.
+
+To enable this process, copy the files `radiuscap_archive.service` and `radiuscap_archive.timer` to the directory `/etc/systemd/system`.
+Depending on your environment you may have to modify the content of `radiuscap_archive.service`.
+To enable the archive process, run `systemctl enable radiuscap_archive.timer` to enable the timer for the next boot and `systemctl start radiuscap_archive.timer` to activate the timer.
+
+If you want to run the achive process manually, you can run `systemctl start radiuscap_archive.service`.
 
 ## Configuration
 
