@@ -40,12 +40,6 @@ class EAPPWDFragment
 
   attr_reader :indicated_length, :payload, :exch_type
 
-  @length_included
-  @more_fragments
-  @indicated_length
-  @payload
-  @exch_type
-
   # Create new Instance of the class
   # @param data [Array<Byte>] EAP-PWD Fragment as Byte-Array
   def initialize(data)
@@ -54,6 +48,7 @@ class EAPPWDFragment
       @more_fragments = false
       @length_included = false
       @exch_type = nil
+      @indicated_length = nil
     end
     logger.trace "Length of the EAP Packet: #{data.length}"
     flags = data[0]
@@ -103,8 +98,6 @@ class EAPPWDStream
   include SemanticLogger::Loggable
 
   attr_reader :packets
-
-  @packets
 
   # Create new Instance of the class
   # @param eapstream [Array<EAPPacket>] EAP Stream as Array of EAPPacket

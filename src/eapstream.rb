@@ -265,8 +265,6 @@ class EAPTLSStream
 
   attr_reader :packets
 
-  @packets
-
   # Initialize new EAP-TLS Stream
   # @param eapstream [Array<EAPPacket>] EAP Stream to parse
   def initialize(eapstream)
@@ -372,21 +370,17 @@ class EAPTLSFragment
     START          = 0x20
   end
 
-  # Attribute reader for some attributes.
-  # The other attributes have a dedicated getter method below.
-  attr_reader :indicated_length, :payload
-
   # [Boolean] Is Start Flag set?
-  @tlsstart
+  attr_reader :tlsstart
   # [Boolean] Is the Length Included Flag set?
-  @length_included
+  attr_reader :length_included
   # [Boolean] Is the More Fragments Option set?
-  @more_fragments
+  attr_reader :more_fragments
   # [Integer] Indicated Length as set by the EAP-TLS Length parameter.
   # Set to @payload_length if the Length Included Flag is not set.
-  @indicated_length
+  attr_reader :indicated_length
   # [Array<Bytes>] Payload of the packet without Flags and Length
-  @payload
+  attr_reader :payload
 
   # Initialize new EAP TLS Fragment
   # @param data [Array<Byte>] Payload of the EAP TLS Fragment

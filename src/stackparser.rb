@@ -1,6 +1,16 @@
 require_relative './errors'
 
 # Class for parsing Streams
+# @!attribute [r] priv_stack_data
+#   @return [Array<Hash>] Data to parse. Saved in format type: <symbol>, data: Data
+#   @private
+# @!attribute [r] priv_waitcond
+#   @return [MonitorMixin::ConditionVariable] Wait condition for synchronizing
+#   @private
+# @!attribute [r] parsethreads
+#   @return [Array<Thread>] List of parser threads
+# @!attribute [r] threadmutex
+#   @return [Array] Empty array acting as mutex for synchronized method calls
 class StackParser
 
   # Number of threads to start for parsing
@@ -9,26 +19,7 @@ class StackParser
   include SemanticLogger::Loggable
   include Singleton
 
-  # [Array<Hash>] Data to parse. Saved in format type: <symbol>, data: Data
-  # @private
-  attr_reader :priv_stack_data
-
-  @priv_stack_data
-
-  # Wait Condition for synchronizing
-  # @private
-  attr_reader :priv_waitcond
-
-  @priv_waitcond
-
-  # Parser Thread
-  attr_reader :parsethreads
-
-  @parsethreads
-
-  attr_reader :threadmutex
-
-  @threadmutex
+  attr_reader :priv_stack_data, :priv_waitcond, :parsethreads, :threadmutex
 
   def initialize
     @priv_stack_data = []
@@ -183,6 +174,7 @@ class ProtocolStack
   private
 
   # Write the complete RADIUS Stream to a pcap File
+  # @param [String] msg optional additional information to add to the filename
   def write_debug_capture_log(msg = nil)
     if @radius_stream.is_a?(RadiusStream)
       pcapng_file = PacketFu::PcapNG::File.new

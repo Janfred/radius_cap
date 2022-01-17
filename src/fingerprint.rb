@@ -26,7 +26,7 @@ class Fingerprint
   end
 
   # Loads a new fingerprint database if a new file version is available or the database is not yet initialized
-  # This allows hotswaping the fingerprint database without the need to restart the capture process
+  # This allows hotswapping the fingerprint database without the need to restart the capture process
   # @return nil
   def self.check_new_file
     thisupdate = File.mtime(File.join('resources', "./fingerprint.#{VERSION}.txt"))

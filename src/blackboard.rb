@@ -4,7 +4,8 @@
 class BlackBoard
   include Singleton
 
-  attr_accessor :logger, :pktbuf, :pktbuf_empty, :policy_logger, :sock_threads, :policy_detail_logger, :config, :profilers
+  attr_accessor :logger, :pktbuf, :pktbuf_empty, :policy_logger, :sock_threads, :policy_detail_logger, :config,
+                :profilers
 
   def initialize
     @logger = nil

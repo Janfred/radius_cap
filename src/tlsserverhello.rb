@@ -332,23 +332,21 @@ class TLSServerHello
     if BlackBoard.config[:certificate_dontsave]
       @cert_hashes = TLSCertStoreOnly.save_certificates(@cert_data)
     else
-      if @cert_data.length > 0
+      unless @cert_data.empty?
         server_cert = @cert_data.first
         chain = @cert_data[1..-1]
 
         TLSCertStoreHelper.save_server_cert(server_cert)
 
         chain.each do |c|
-          if TLSCertStoreHelper.check_trust_anchor(c)
-            TLSCertStoreHelper.add_trust_anchor(c)
-          end
+          TLSCertStoreHelper.add_trust_anchor(c) if TLSCertStoreHelper.check_trust_anchor(c)
           TLSCertStoreHelper.add_known_intermediate(c)
         end
 
         @public_trusted = TLSCertStoreHelper.check_public_trust(server_cert, chain)
-        logger.trace 'Public Cert Result: ' + @public_trusted.inspect
+        logger.trace "Public Cert Result: #{@public_trusted.inspect}"
         @additional_trusted = TLSCertStoreHelper.check_additional_trust(server_cert, chain)
-        logger.trace 'Additional Cert Result: ' + @additional_trusted.inspect
+        logger.trace "Additional Cert Result: #{@additional_trusted.inspect}"
       end
     end
     nil

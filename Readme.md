@@ -126,7 +126,7 @@ To enable this process, copy the files `radiuscap_archive.service` and `radiusca
 Depending on your environment you may have to modify the content of `radiuscap_archive.service`.
 To enable the archive process, run `systemctl enable radiuscap_archive.timer` to enable the timer for the next boot and `systemctl start radiuscap_archive.timer` to activate the timer.
 
-If you want to run the achive process manually, you can run `systemctl start radiuscap_archive.service`.
+If you want to run the archive process manually, you can run `systemctl start radiuscap_archive.service`.
 
 ## Configuration
 

@@ -6,23 +6,21 @@ require 'digest'
 require_relative './macvendor'
 
 # Helper class for dealing with ElasticSearch
+# @!attribute [r] priv_elasticdata
+#   @return [Array] Data to be inserted in ElasticSearch.
+#     Access to this variable must be synchronized.
+#   @private
+# @!attribute [r] priv_waitcond
+#   @return [Object] Wait condition helper for synchronizing access to elasticdata
+#   @private
+# @!attribute [r] priv_client
+#   @return [Object] Client connection to elasticsearch
+#   @private
 class ElasticHelper
   include Singleton
   include SemanticLogger::Loggable
 
   attr_reader :priv_elasticdata, :priv_waitcond, :priv_client
-
-  # Data to be inserted in ElasticSearch. Access to this variable must be synchronized.
-  # @private
-  @priv_elasticdata = []
-  # Wait condition helper for synchronizing access to @@elasticdata
-  # @private
-  @priv_waitcond = nil
-  # Client connection
-  # @private
-  @priv_client = nil
-
-  @priv_known_ids
 
   def initialize
     @priv_known_ids = []

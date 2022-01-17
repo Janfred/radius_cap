@@ -3,6 +3,25 @@
 require 'singleton'
 
 # Class for handling Streams of Radsec Packets
+# @!attribute [r] time_created
+#   @return [Time] Time the RadiusStream was created
+# @!attribute [r] last_updated
+#   @return [Time] Timestamp of the last recorded packet. Used for timeouts.
+# @!attribute [r] current_pktid
+#   @return [Integer] Current Packet identifier
+# @!attribute [r] current_state
+#   @return [Object] current value of the state attribute
+#   @todo find out what type this actually is.
+# @!attribute [r] packets
+#   @return [Array<RadiusPacket>] Array of packets in received order
+# @!attribute [r] username
+#   @return [String] Value of the Username attribute
+# @!attribute [r] callingstationid
+#   @return [String] Value of the CallingStationID attribute
+# @!attribute [r] client
+#   @return [Object] Information about the requesting client
+# @!attribute [r] server
+#   @return [Object] Information about the server
 class RadsecStream
   include SemanticLogger::Loggable
 
@@ -10,16 +29,7 @@ class RadsecStream
               :client, :server,
               :packets, :username, :callingstationid
 
-  @time_created
-  @last_updated
-  @current_state
-  @current_pktid
-  @client
-  @server
   @last_from_server
-  @packets
-  @username
-  @callingstationid
 
   def initialize(pkt, client, server)
     @time_created = Time.now
@@ -38,6 +48,7 @@ class RadsecStream
   end
 
   # Add Request to the Stream
+  # @param [RadiusPacket] pkt RADIUS request to add
   # @raise PacketFlowInsertionError
   def add_request(pkt)
     logger.trace('Add Request packet')
@@ -58,6 +69,7 @@ class RadsecStream
   end
 
   # Adds Response to the Stream
+  # @param [RadiusPacket] pkt RADIUS response to add
   # @raise PacketFlowInsertionError
   def add_response(pkt)
     logger.trace('Add response packet')
@@ -82,17 +94,16 @@ class RadsecStream
 end
 
 # Helper Class for inserting Data into the Radsec Streams
+# @!attribute [r] known_streams
+#   @return [Array<RadiusStream>] Currently known streams
+# @!attribute [rw] timeout
+#   @return [Integer] Number of seconds after a Steam is considered timed out.
 class RadsecStreamHelper
   include Singleton
   include SemanticLogger::Loggable
 
   attr_reader :known_streams
-
-  @known_streams
-
-  attr_writer :timeout
-
-  @timeout
+  attr_accessor :timeout
 
   @housekeeping_counter
 

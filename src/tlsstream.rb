@@ -46,14 +46,16 @@ class TLSStream
 end
 
 # Generic TLS Record
+# @!attribute [r] version
+#   @return [Array<Byte>] Version of the TLS Record
+# @!attribute [r] data
+#   @return [Array<Byte>] TLS Record Payload as Byte Array.
 class TLSRecord
 
   include SemanticLogger::Loggable
 
   attr_reader :version, :data
 
-  @version
-  @data
   @record_type
 
   # Create new instance of this class
@@ -137,10 +139,10 @@ class TLSRecord
 end
 
 # Class for TLS Handshake Records
+# @!attribute [r] handshake_type
+#   @return [Byte] Handshake type
 class TLSHandshakeRecord < TLSRecord
   attr_reader :handshake_type
-
-  @handshake_type
 
   def initialize(version, length, data)
     @handshake_type = nil

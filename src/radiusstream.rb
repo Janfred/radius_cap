@@ -4,36 +4,39 @@ require 'singleton'
 require_relative './errors'
 
 # Class for handling Streams of Radius Packets
+# @!attribute [r] time_created
+#   @return [Time] Time the RadiusStream was created
+# @!attribute [r] last_updated
+#   @return [Time] Timestamp of the last recorded packet. Used for timeouts.
+# @!attribute [r] current_pktid
+#   @return [Integer] Current Packet identifier
+# @!attribute [r] current_state
+#   @return [Object] current value of the state attribute
+#   @todo find out what type this actually is.
+# @!attribute [r] udp_src_ip
+#   @return [String] IP Address of the NAS (e.g. the WiFi-Controller)
+# @!attribute [r] udp_dst_ip
+#   @return [String] IP Address of the RADIUS server
+# @!attribute [r] udp_src_port
+#   @return [Integer] UDP source port on the NAS side
+# @!attribute [r] udp_dst_port
+#   @return [Integer] UDP destination port on the RADIUS server side.
+#     For now this will always be `1812`, but it may be configurable in future.
+# @!attribute [r] packets
+#   @return [Array<RadiusPacket>] Array of packets in received order
+# @!attribute [r] username
+#   @return [String] Value of the Username attribute
+# @!attribute [r] callingstationid
+#   @return [String] Value of the CallingStationID attribute
 class RadiusStream
   include SemanticLogger::Loggable
 
   attr_reader :time_created, :last_updated, :current_pktid, :current_state,
               :udp_src_ip, :udp_dst_ip, :udp_src_port, :udp_dst_port, :packets, :username, :callingstationid
 
-  # Timestamp of the Creation
-  @time_created
-  # Timestamp of the last update of this specific stream. Used for timeouts.
-  @last_updated
-  # Current value of the State Attribute
-  @current_state
-  # Current Radius Identifier
-  @current_pktid
-  # IP Address of the NAS (e.g. the WiFi-Controller)
-  @udp_src_ip
-  # IP Address of the RADIUS Server
-  @udp_dst_ip
-  # UDP Source Port at the NAS (e.g. WiFi-Controller)
-  @udp_src_port
-  # UDP Destination Port at the RADIUS Server.
-  # @todo Currently this will always be `1812` but maybe this should be configurable.
-  @udp_dst_port
   # Indicates if the last package was sent by the server (true) or the client (false)
   @last_from_server
 
-  @username
-  @callingstationid
-  # [Array<RadiusPacket>] Array of packets (RadiusPacket) in received order
-  @packets
 
   # Create a new Instance of a RadiusStream
   # @param pkt [RadiusPacket] Initial packet of the stream
@@ -134,19 +137,16 @@ class RadiusStream
 end
 
 # Helper Class for inserting Data into the RadiusSteams
+# @!attribute [r] known_steams
+#   @return [Array<RadiusStream>] Currently known streams
+# @!attribute [rw] timeout
+#   @return [Integer] Number of seconds after a Radius Stream is considered timed out.
 class RadiusStreamHelper
   include Singleton
   include SemanticLogger::Loggable
 
-  # [Array<RadiusStream>] Currently known streams
   attr_reader :known_streams
-
-  @known_streams
-
-  # [Integer] Number of seconds after a Radius Stream is considered timed out.
-  attr_writer :timeout
-
-  @timeout
+  attr_accessor :timeout
 
   # Counter for housekeeping calls. The Housekeeping is only executed every 10 packets.
   @housekeeping_counter
