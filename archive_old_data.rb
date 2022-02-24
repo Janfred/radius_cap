@@ -21,6 +21,8 @@ client = Elasticsearch::Client.new log: false,
                                    user: @config[:elastic_username],
                                    password: @config[:elastic_password]
 
+@seen_ids = []
+
 def random_id
   Digest::SHA2.hexdigest (('a'..'z').to_a * 50).sample(50).join('')
 end
@@ -46,6 +48,9 @@ loop do
   data['hits']['hits'].each do |hit|
     body = hit['_source']
     id = hit['_id']
+    next if @seen_ids.include? id
+
+    @seen_ids << id
 
     lastseen = body['meta']['last_seen']
     lastseen_d = DateTime.parse(lastseen)
