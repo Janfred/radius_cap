@@ -120,7 +120,11 @@ class EAPPacket
     @identifier = data[1]
     @length = data[2] * 256 + data[3]
 
-    raise PacketLengthNotValidError, 'EAP Length does not match data length' if @length != data.length
+    logger.trace "EAP Packet code #{EAPPacket::Code.get_code_name_by_code(@code)} ID #{@identifier} length #{@length}"
+
+    if @length != data.length
+      raise PacketLengthNotValidError, "EAP Length (#{@length}) does not match data length (#{data.length})"
+    end
 
     return if @code == EAPPacket::Code::SUCCESS || @code == EAPPacket::Code::FAILURE
 
@@ -128,6 +132,6 @@ class EAPPacket
 
     @type = data[4]
     @type_data = data[5..-1]
-    logger.trace "EAP Type Content: #{@type_data.pack('C*').unpack1('H*')}"
+    logger.trace "EAP Type #{EAPPacket::Type.get_type_name_by_code(@type)} Content: #{@type_data.pack('C*').unpack1('H*')}"
   end
 end

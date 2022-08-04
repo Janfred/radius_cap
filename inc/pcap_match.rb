@@ -2,34 +2,39 @@
 
 Thread.start do
   Thread.current.name = 'Packet Matcher (PCAP)'
+  lg = BlackBoard.logger
+  lg.debug 'Starting packet matcher thread'
   loop do
     p = nil
+
     BlackBoard.pktbuf.synchronize do
       BlackBoard.pktbuf_empty.wait_while { BlackBoard.pktbuf.empty? }
       p = BlackBoard.pktbuf.shift
     end
 
-    pkt = Packet.parse p
+
+    pkt = PacketFu::Packet.parse p
     # Skip all packets other then ip
-    next unless pkt.is_ip?
+    lg.debug 'Not an IP packet' and next unless pkt.is_ip?
     # Skip all fragmented ip packets
     # TODO This may cause a number of packets to skip analysis, as RADIUS packets may be fragmented.
-    next if pkt.ip_frag & 0x2000 != 0
+    lg.debug 'Fragmented packet' and next if pkt.ip_frag & 0x2000 != 0
     # only look on copied packets
-    next if ([pkt.ip_daddr, pkt.ip_saddr] & @config[:ipaddrs]).empty?
+    lg.debug 'Not one of the captured ip addresses' and next if ([pkt.ip_daddr, pkt.ip_saddr] & @config[:ipaddrs]).empty?
     # Skip packets with ignored ip addresses
-    next unless ([pkt.ip_daddr, pkt.ip_saddr] & @config[:ignoreips]).empty?
+    lg.debug 'Ignored IP addresses' and next unless ([pkt.ip_daddr, pkt.ip_saddr] & @config[:ignoreips]).empty?
     # Skip non-udp packets
-    next unless pkt.is_udp?
+    lg.debug 'Not a UDP packet' and next unless pkt.is_udp?
     # Skip packets for other port then radius
     # TODO RADIUS port is hardcoded here. Should maybe refactored
-    next unless [pkt.udp_sport, pkt.udp_dport].include? 1812
+    lg.debug 'Not the correct port' and next unless [pkt.udp_sport, pkt.udp_dport].include? 1812
 
     rp = nil
 
     begin
       # Parse Radius packets
       rp = RadiusPacket.new(pkt)
+      next if rp.status_server?
       rp.check_policies
     rescue PacketLengthNotValidError => e
       puts 'PacketLengthNotValidError'
@@ -66,5 +71,9 @@ Thread.start do
       puts e.backtrace.join "\n"
       StatHandler.increase :packet_errored
     end
+  rescue StandardError => e
+    BlackBoard.logger.warn "Error in packet parsing"
+    puts e.message
+    puts e.backtrace.join "\n"
   end
 end

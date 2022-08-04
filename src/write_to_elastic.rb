@@ -153,7 +153,6 @@ class ElasticHelper
   # @param data [Hash] Data from TLS Handshake Parsing
   # @return [Hash] Data in Elasticsearch format
   def self.convert_data_to_elasticsearch(data)
-
     # Get Username and MAC-Address and remove it from the data
     username = nil
     if data[:radius] && data[:radius][:attributes] && data[:radius][:attributes][:username]
@@ -205,7 +204,7 @@ class ElasticHelper
     meta[:capture_ver] = 4
     meta[:realm] = realm.downcase
     meta[:realm_tld] = meta[:realm].split('.').last
-    meta[:oui] = mac.split(':')[0,3].join ':'
+    meta[:oui] = mac.split(':')[0, 3].join ':'
     meta[:vendor] = MacVendor.by_oid(meta[:oui])
 
     data[:meta] = meta

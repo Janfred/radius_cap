@@ -4,13 +4,9 @@ require_relative './errors'
 
 # TLS Stream
 class TLSStream
-
   include SemanticLogger::Loggable
 
   attr_reader :tlspackets, :alerted
-
-  @tlspackets
-  @alerted
 
   # Initialize new TLS Stream based on EAP-TLS Packets
   # @param eaptlspackets
@@ -41,7 +37,6 @@ class TLSStream
       end
       @tlspackets << cur_records
     end
-
   end
 end
 
@@ -50,13 +45,13 @@ end
 #   @return [Array<Byte>] Version of the TLS Record
 # @!attribute [r] data
 #   @return [Array<Byte>] TLS Record Payload as Byte Array.
+# @!attribute [r] record_type
+#   @return [Integer] custom record type from [TLSTypes::TLSRecord]
 class TLSRecord
 
   include SemanticLogger::Loggable
 
-  attr_reader :version, :data
-
-  @record_type
+  attr_reader :version, :data, :record_type
 
   # Create new instance of this class
   # @param version [Array<Byte>]  Version of the Record as 2-Byte array

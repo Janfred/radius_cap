@@ -58,8 +58,8 @@ loop do
     body['tls']['tlsclienthello']['cipherdata']['export'] = cipher.includes_export?
     body['tls']['tlsclienthello']['cipherdata']['broken'] = cipher.includes_broken?
     body['tls']['tlsclienthello']['cipherdata']['outdated'] = cipher.includes_old_outdated?
-    body['tls']['tlsclienthello']['cipherdata']['min_sec_lvl'] = cipher.get_min_sec_level
-    body['tls']['tlsclienthello']['cipherdata']['max_sec_lvl'] = cipher.get_max_sec_level
+    body['tls']['tlsclienthello']['cipherdata']['min_sec_lvl'] = cipher.min_sec_level
+    body['tls']['tlsclienthello']['cipherdata']['max_sec_lvl'] = cipher.max_sec_level
     body['tls']['tlsclienthello']['cipherdata']['all_keyx'] = cipher.all_keyx
     body['tls']['tlsclienthello']['cipherdata']['all_auth'] = cipher.all_auth
     body['tls']['tlsclienthello']['cipherdata']['all_encr'] = cipher.all_encr

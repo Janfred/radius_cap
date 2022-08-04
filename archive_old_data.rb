@@ -38,7 +38,7 @@ loop do
     } }] }
   } }
 
-  puts data['hits']['hits'].length
+  #puts data['hits']['hits'].length
 
   break if data['hits']['hits'].empty?
 
@@ -60,7 +60,7 @@ loop do
     insert_bulk[lastseen_d.year] << { index: { _id: random_id, data: body } }
   end
 
-  client.bulk index: 'tlshandshakes', body: delete_bulk
+  client.bulk index: 'tlshandshakes', body: delete_bulk unless delete_bulk.empty?
   insert_bulk.each_key do |year|
     client.bulk index: "tlshandshakes_archive_#{year}", body: insert_bulk[year]
   end

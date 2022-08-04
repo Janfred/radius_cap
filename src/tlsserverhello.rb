@@ -6,7 +6,6 @@ require 'openssl'
 
 # Class for parsing the TLS Server Hello
 class TLSServerHello
-
   include SemanticLogger::Loggable
 
   # [Array] Outer TLS Version (TLS Record Version) as Array of two bytes (e.g. [0x03,0x01])
@@ -15,7 +14,8 @@ class TLSServerHello
   # Might differ from Outer TLS Version, especially for TLSv1.3
   attr_reader :innervers
   # [Array] Server Random as Array of 32 Bytes.
-  # This might also include Information about Downgrade (e.g. the ASCII DOWNGRD followed by 0x00 or 0x01 if the server supports a higher version then the client requested)
+  # This might also include Information about Downgrade (e.g. the ASCII DOWNGRD followed by 0x00 or 0x01 if the server
+  #   supports a higher version then the client requested)
   attr_reader :random
   # [Array] Session ID as Array of Bytes. Might be an empty array if no Session ID is present.
   attr_reader :sessionid
@@ -35,7 +35,6 @@ class TLSServerHello
   # This will be false until the Record was seen and remains false if it is
   # a session resumption.
   attr_reader :serverhellodone
-
 
   # Converts parsed TLS Server Hello to Hash
   # @todo Lacks support for TLSv1.3
@@ -130,12 +129,13 @@ class TLSServerHello
 
       to_ret[:certificate][:additional_trusted] = @additional_trusted[:valid]
       to_ret[:certificate][:complete_additional_chain_length] = @additional_trusted[:chain].length
-      to_ret[:certificate][:additional_trust_anchor] = @additional_trusted[:chain].last.subject.to_s unless @additional_trusted[:chain].last.nil?
+      unless @additional_trusted[:chain].last.nil?
+        to_ret[:certificate][:additional_trust_anchor] = @additional_trusted[:chain].last.subject.to_s
+      end
 
     end
     to_ret
   end
-
 
   # Inspect the current Server Hello
   # @return [String] description of the current ServerHello
@@ -258,12 +258,12 @@ class TLSServerHello
     @random = data[cur_ptr, 32]
     cur_ptr += 32
 
-    case @random[24, 8]
-    when [0x44, 0x4F, 0x57, 0x4E, 0x47, 0x52, 0x44, 0x01]
-      @downgrade = 'DOWNGRD1'
-    when [0x44, 0x4F, 0x57, 0x4E, 0x47, 0x52, 0x44, 0x00]
-      @downgrade = 'DOWNGRD0'
-    end
+    @downgrade = case @random[24, 8]
+                 when [0x44, 0x4F, 0x57, 0x4E, 0x47, 0x52, 0x44, 0x01]
+                   'DOWNGRD1'
+                 when [0x44, 0x4F, 0x57, 0x4E, 0x47, 0x52, 0x44, 0x00]
+                   'DOWNGRD0'
+                 end
 
     # Session ID (optional)
     sessionid_len = data[cur_ptr]

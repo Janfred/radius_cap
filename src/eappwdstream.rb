@@ -52,10 +52,12 @@ class EAPPWDFragment
     end
     logger.trace "Length of the EAP Packet: #{data.length}"
     flags = data[0]
-    logger.trace 'Flags/PWD-Exch: 0x%02X' % flags
+    logger.trace format('Flags/PWD-Exch: 0x%02X', flags)
     @length_included = (flags & EAPPWDFragment::Flags::LENGTHINCLUDED) != 0
     @more_fragments = (flags & EAPPWDFragment::Flags::MOREFRAGMENTS) != 0
     @exch_type = (flags & EAPPWDFragment::Flags::PWDEXCHBITS)
+
+    raise EAPStreamError, 'The packet had a wrong format' unless @exch_type.is_a? Integer
 
     logger.trace "PWD-Exch #{PWDEXCHTypes.get_name_by_code(@exch_type)}" \
                  " Flags: #{@length_included ? ' Length included' : ''}#{@more_fragments ? ' More Fragments' : ''}"
@@ -206,12 +208,12 @@ class PWDStream
     server_id_pkt = PWDPackets::ID.new(packets[0][:data])
     raise StandardError unless packets[1][:type] == EAPPWDFragment::PWDEXCHTypes::ID
 
-    peer_id_pkt = PWDPackets::ID.new(packets[1][:data])
+    _peer_id_pkt = PWDPackets::ID.new(packets[1][:data])
 
     @data = {}
-    @data[:group]     = '0x%04X' % server_id_pkt.group
-    @data[:rand_func] = '0x%02X' % server_id_pkt.random_func
-    @data[:prf]       = '0x%02X' % server_id_pkt.prf
-    @data[:prep]      = '0x%02X' % server_id_pkt.prep
+    @data[:group]     = format('0x%04X', server_id_pkt.group)
+    @data[:rand_func] = format('0x%02X', server_id_pkt.random_func)
+    @data[:prf]       = format('0x%02X', server_id_pkt.prf)
+    @data[:prep]      = format('0x%02X', server_id_pkt.prep)
   end
 end

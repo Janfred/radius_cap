@@ -73,7 +73,7 @@ class TLSCipherSuite
   # Get the worst security level of all offered cipher suites.
   # This is solely based on the key length of the encryption algorithm.
   # @return [Integer] minimum security level or -1 if an unknown cipher suite is included
-  def get_min_sec_level
+  def min_sec_level
     cur_level = 1000
     @internal_cs.each do |x|
       next if x[:scsv]
@@ -89,7 +89,7 @@ class TLSCipherSuite
   # Get the best security level of all offered cipher suites.
   # This is solely based on the key length of the encryption algorithm.
   # @return [Integer] maximum security level
-  def get_max_sec_level
+  def max_sec_level
     cur_level = -1
     @internal_cs.each do |x|
       next if x[:scsv]
@@ -111,7 +111,7 @@ class TLSCipherSuite
   # Converts the Cipher Suite to a concatenated string for fingerprinting
   # @return [String] String containing all offered CipherSuites as Hex separated by space
   def cipherset
-    @internal_cs.map { |x| '0x%02X%02X' % x[:code] }.join ' '
+    @internal_cs.map { |x| format('0x%<byte1>02X%<byte2>02X', byte1: x[:code][0], byte2: x[:code][1]) }.join ' '
   end
 
   # Is a PFS Cipher Suite available in the CipherSuites?
@@ -173,12 +173,13 @@ class TLSCipherSuite
   def self.by_arr (val)
     p = KNOWN_CIPHERSUITES.select { |x| x[0] == val }
     $stderr.puts "Unknown Ciphersuite #{val}" if p.empty?
-    if p.empty? || p.length != 1
+    to_ret = p.first
+    if p.empty? || p.length != 1 || to_ret.nil?
       return { code: val, keyxchange: 'UNKNOWN', auth: 'UNKNOWN', encryption: 'UNKNOWN', mode: 'UNKNOWN',
                mac: 'UNKNOWN', pfs: false, scsv: false, tlsv13: false,
                name: "UNKNOWN_0x#{val.pack('C*').unpack1('H*')}" }
     end
-    cipher_to_h(p.first)
+    cipher_to_h(to_ret)
   end
 
   # Converts a given entry from the CipherSuite array to a hash
@@ -189,8 +190,10 @@ class TLSCipherSuite
       scsv: val[7], tlsv13: val[8], name: val[9] }
   end
 
+
   # List of security levels of different encryption methods
   SECURITY_LEVELS = {
+    # rubocop:disable Layout/HashAlignment
     nil           =>   0,
     'RC2-40'      =>  40,
     'RC4-40'      =>  40,
@@ -206,11 +209,15 @@ class TLSCipherSuite
     'SEED'        => 128,
     'ARIA128'     => 128,
     'ARIA256'     => 256,
-    'CHACHA20'    => 128,
+    'CHACHA20'    => 128
+    # rubocop:enable Layout/HashAlignment
   }.freeze
+
   # List of all supported Cipher Suites
   KNOWN_CIPHERSUITES = [
-#     Ciphersuite   KeyX       Auth       Encry          Mode       MAC         PFS    SCSV   TLS1.3 Humanreadable Name
+    # rubocop:disable Layout/SpaceInsideArrayLiteralBrackets
+    # rubocop:disable Layout/LineLength
+    # Ciphersuite   KeyX       Auth       Encry          Mode       MAC         PFS    SCSV   TLS1.3 Humanreadable Name
     [ [0x00, 0x00], nil,       nil,       nil,           nil,       nil,        false, false, false, 'TLS_NULL_WITH_NULL_NULL'],
     [ [0x00, 0x01], 'RSA',     'RSA',     nil,           nil,       'MD5',      false, false, false, 'TLS_RSA_WITH_NULL_MD5'],
     [ [0x00, 0x02], 'RSA',     'RSA',     nil,           nil,       'SHA',      false, false, false, 'TLS_RSA_WITH_NULL_SHA'],
@@ -277,7 +284,10 @@ class TLSCipherSuite
     [ [0x00, 0x6B], 'DHE',     'RSA',     'AES256',      'CBC',     'SHA256',   true,  false, false, 'TLS_DHE_RSA_WITH_AES_256_CBC_SHA256'],
     [ [0x00, 0x6C], 'DH',      nil,       'AES128',      'CBC',     'SHA256',   false, false, false, 'TLS_DH_anon_WITH_AES_128_CBC_SHA256'],
     [ [0x00, 0x6D], 'DH',      nil,       'AES256',      'CBC',     'SHA256',   false, false, false, 'TLS_DH_anon_WITH_AES_256_CBC_SHA256'],
+    [ [0x00, 0x80], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, false, 'TLS_GOSTR341094_WITH_28147_CNT_IMIT'], # https://datatracker.ietf.org/doc/draft-chudov-cryptopro-cptls/
     [ [0x00, 0x81], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, false, 'TLS_GOSTR341001_WITH_28147_CNT_IMIT'],
+    [ [0x00, 0x81], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, false, 'TLS_GOSTR341094_WITH_NULL_GOSTR3411'],
+    [ [0x00, 0x81], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, false, 'TLS_GOSTR341001_WITH_NULL_GOSTR3411'],
     [ [0x00, 0x84], 'RSA',     'RSA',     'CAMELLIA256', 'CBC',     'SHA256',   false, false, false, 'TLS_RSA_WITH_CAMELLIA_256_CBC_SHA'],
     [ [0x00, 0x85], 'DH',      'DSS',     'CAMELLIA256', 'CBC',     'SHA256',   false, false, false, 'TLS_DH_DSS_WITH_CAMELLIA_256_CBC_SHA'],
     [ [0x00, 0x86], 'DH',      'RSA',     'CAMELLIA256', 'CBC',     'SHA256',   false, false, false, 'TLS_DH_RSA_WITH_CAMELLIA_256_CBC_SHA'],
@@ -405,6 +415,8 @@ class TLSCipherSuite
     [ [0xC0, 0x45], 'DHE',     'RSA',     'ARIA256',     'CBC',     'SHA384',   true,  false, false, 'TLS_DHE_RSA_WITH_ARIA_256_CBC_SHA384'],
     [ [0xC0, 0x46], 'DH',      nil,       'ARIA128',     'CBC',     'SHA256',   false, false, false, 'TLS_DH_anon_WITH_ARIA_128_CBC_SHA256'],
     [ [0xC0, 0x47], 'DH',      nil,       'ARIA256',     'CBC',     'SHA384',   false, false, false, 'TLS_DH_anon_WITH_ARIA_256_CBC_SHA384'],
+    [ [0xC0, 0x48], 'ECDHE',   'ECDSA',   'ARIA128',     'CBC',     'SHA256',   true,  false, false, 'TLS_ECDHE_ECDSA_WITH_ARIA_128_CBC_SHA256'],
+    [ [0xC0, 0x49], 'ECDHE',   'ECDSA',   'ARIA256',     'CBC',     'SHA384',   true,  false, false, 'TLS_ECDHE_ECDSA_WITH_ARIA_256_CBC_SHA384'],
     [ [0xC0, 0x72], 'ECDHE',   'ECDSA',   'CAMELLIA128', 'CBC',     'SHA256',   true,  false, false, 'TLS_ECDHE_ECDSA_WITH_CAMELLIA_128_CBC_SHA256'],
     [ [0xC0, 0x73], 'ECDHE',   'ECDSA',   'CAMELLIA256', 'CBC',     'SHA384',   true,  false, false, 'TLS_ECDHE_ECDSA_WITH_CAMELLIA_256_CBC_SHA384'],
     [ [0xC0, 0x74], 'ECDH',    'ECDSA',   'CAMELLIA128', 'CBC',     'SHA256',   false, false, false, 'TLS_ECDH_ECDSA_WITH_CAMELLIA_128_CBC_SHA256'],
@@ -453,13 +465,13 @@ class TLSCipherSuite
     [ [0xC0, 0xAD], 'ECDHE',   'ECDSA',   'AES256',      'CTR',     'CCM',      true,  false, false, 'TLS_ECDHE_ECDSA_WITH_AES_256_CCM'],
     [ [0xC0, 0xAE], 'ECDHE',   'ECDSA',   'AES128',      'CTR',     'CCM8',     true,  false, false, 'TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8'],
     [ [0xC0, 0xAF], 'ECDHE',   'ECDSA',   'AES256',      'CTR',     'CCM8',     true,  false, false, 'TLS_ECDHE_ECDSA_WITH_AES_256_CCM_8'],
-    # [ [0xC1, 0x00], 'TLS_GOSTR341112_256_WITH_KUZNYECHIK_CTR_OMAC'],
-    # [ [0xC1, 0x01], 'TLS_GOSTR341112_256_WITH_MAGMA_CTR_OMAC'],
-    # [ [0xC1, 0x02], 'TLS_GOSTR341112_256_WITH_28147_CNT_IMIT'],
-    # [ [0xC1, 0x03], 'TLS_GOSTR341112_256_WITH_KUZNYECHIK_MGM_L']
-    # [ [0xC1, 0x04], 'TLS_GOSTR341112_256_WITH_MAGMA_MGM_L']
-    # [ [0xC1, 0x05], 'TLS_GOSTR341112_256_WITH_KUZNYECHIK_MGM_S']
-    # [ [0xC1, 0x06], 'TLS_GOSTR341112_256_WITH_MAGMA_MGM_S']
+    [ [0xC1, 0x00], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, false, 'TLS_GOSTR341112_256_WITH_KUZNYECHIK_CTR_OMAC'], # https://datatracker.ietf.org/doc/draft-smyshlyaev-tls12-gost-suites
+    [ [0xC1, 0x01], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, false, 'TLS_GOSTR341112_256_WITH_MAGMA_CTR_OMAC'],
+    [ [0xC1, 0x02], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, false, 'TLS_GOSTR341112_256_WITH_28147_CNT_IMIT'],
+    [ [0xC1, 0x03], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, true,  'TLS_GOSTR341112_256_WITH_KUZNYECHIK_MGM_L'], # https://datatracker.ietf.org/doc/draft-smyshlyaev-tls13-gost-suites/
+    [ [0xC1, 0x04], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, true,  'TLS_GOSTR341112_256_WITH_MAGMA_MGM_L'],
+    [ [0xC1, 0x05], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, true,  'TLS_GOSTR341112_256_WITH_KUZNYECHIK_MGM_S'],
+    [ [0xC1, 0x06], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, true,  'TLS_GOSTR341112_256_WITH_MAGMA_MGM_S'],
     [ [0xCC, 0xA8], 'ECDHE',   'RSA',     'CHACHA20',    nil,       'POLY1305', true,  false, false, 'TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256'],
     [ [0xCC, 0xA9], 'ECDHE',   'ECDSA',   'CHACHA20',    nil,       'POLY1305', true,  false, false, 'TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256'],
     [ [0xCC, 0xAA], 'DHE',     'RSA',     'CHACHA20',    nil,       'POLY1305', true,  false, false, 'TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256'],
@@ -467,15 +479,19 @@ class TLSCipherSuite
     [ [0xFF, 0x80], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, false, 'PRIVATE_0XFF_0x80'],
     [ [0xFF, 0x82], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, false, 'PRIVATE_0XFF_0x82'],
     [ [0xFF, 0x83], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, false, 'PRIVATE_0XFF_0x83'],
-    [ [0xFF, 0x85], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, false, 'PRIVATE_0xFF_0x85'],
-
+    [ [0xFF, 0x85], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, false, 'PRIVATE_0xFF_0x85']
+    # rubocop:enable Layout/SpaceInsideArrayLiteralBrackets
+    # rubocop:enable Layout/LineLength
   ].freeze
+
 end
 
 # TLS Signature Schemes
 class TLSSignatureScheme
+
   # List of all known Signature Schemes
   KNOWN_SIGNATURESCHEMES = [
+    # rubocop:disable Layout/SpaceInsideArrayLiteralBrackets
     # SigScheme     Name
     [ [0x01, 0x01], 'MD5 RSA'],
     [ [0x01, 0x02], 'MD5 DSA'],
@@ -502,8 +518,10 @@ class TLSSignatureScheme
     [ [0x08, 0x08], 'ed448'],
     [ [0x08, 0x09], 'rsa_pss_pss_sha256'],
     [ [0x08, 0x0A], 'rsa_pss_pss_sha384'],
-    [ [0x08, 0x0B], 'rsa_pss_pss_sha512'],
+    [ [0x08, 0x0B], 'rsa_pss_pss_sha512']
+    # rubocop:enable Layout/SpaceInsideArrayLiteralBrackets
   ].freeze
+
 
   # Get a SignatureScheme by a hex string
   # @param val [String] Hex-String of the SignatureScheme in format "0xXXXX"
@@ -517,7 +535,7 @@ class TLSSignatureScheme
   # @param val [Array<Byte>] SignatureScheme value as array of two bytes
   # @return [Hash] SignatureScheme Hash value
   def self.by_arr(val)
-    p = KNOWN_SIGNATURESCHEMES.select { |x| x[0] == val}
+    p = KNOWN_SIGNATURESCHEMES.select { |x| x[0] == val }
     return { code: val, name: "UNKNOWN_0x#{val.pack('C*').unpack1('H*')}" } if p.empty? || p.length != 1
 
     sigscheme_to_h(p.first)
@@ -530,10 +548,12 @@ class TLSSignatureScheme
     { code: val[0], name: val[1] }
   end
 end
+
 # TLS Supported Groups
 class TLSSupportedGroups
   # List of all known Supported Groups
   KNOWN_SUPPORTEDGROUPS = [
+    # rubocop:disable Layout/SpaceInsideArrayLiteralBrackets
     # Group         name
     [ [0x00, 0x01], 'sect163k1'],
     [ [0x00, 0x02], 'sect163r1'],
@@ -569,7 +589,8 @@ class TLSSupportedGroups
     [ [0x01, 0x01], 'ffdhe3072'],
     [ [0x01, 0x02], 'ffdhe4096'],
     [ [0x01, 0x03], 'ffdhe6144'],
-    [ [0x01, 0x04], 'ffdhe8192'],
+    [ [0x01, 0x04], 'ffdhe8192']
+    # rubocop:enable Layout/SpaceInsideArrayLiteralBrackets
   ].freeze
 
   # Get a SupportedGroup by a hex string
@@ -583,11 +604,12 @@ class TLSSupportedGroups
   # Get a SupportedGroup by an array of two bytes
   # @param val [Array<Byte>] SupportedGroup value as array of two bytes
   # @return [Hash] SupportedGroup Hash value
-  def self.by_arr (val)
+  def self.by_arr(val)
     p = KNOWN_SUPPORTEDGROUPS.select { |x| x[0] == val }
-    return { code: val, name: "UNKNOWN_#{val.pack('C*').unpack1('H*')}" } if p.empty? || p.length != 1
+    to_ret = p.first
+    return { code: val, name: "UNKNOWN_#{val.pack('C*').unpack1('H*')}" } if p.empty? || p.length != 1 || to_ret.nil?
 
-    group_to_h(p.first)
+    group_to_h(to_ret)
   end
 
   # Converts a given entry from the SupportedGroups Array to a hash
@@ -622,7 +644,7 @@ class TLSServerKeyExchange
           @curve_name = TLSSupportedGroups.by_arr(curve)
           curve_length = data[3]
           cur_ptr = 4
-          curve_pubkey = data[cur_ptr, curve_length]
+          _curve_pubkey = data[cur_ptr, curve_length]
           cur_ptr += curve_length
           if [[0x03, 0x03], [0x03, 0x04]].include?(version)
             @curve_sig_algo = TLSSignatureScheme.by_arr(data[cur_ptr, 2])
@@ -632,9 +654,10 @@ class TLSServerKeyExchange
           end
           sig_length = data[cur_ptr] * 256 + data[cur_ptr + 1]
           cur_ptr += 2
-          sig = data[cur_ptr, sig_length]
+          _sig = data[cur_ptr, sig_length]
         else
-          @curve_name = { name: "Unsupported (#{'0x%02X%02X' % curve})" }
+          @curve_name = { name: "Unsupported (#{format('0x%<byte1>02X%<byte2>02X', byte1: curve[0],
+                                                                                   byte2: curve[1])})" }
           @curve_sig_algo = { name: 'Not captured' }
           $stderr.puts "Unsupported Curve #{data[1, 2]}"
         end
@@ -647,7 +670,7 @@ class TLSServerKeyExchange
     # @return [Hash] Hash of the parsed details, may be empty if no details were found.
     def to_h
       if @curve_sig_algo && @curve_name
-        {sig_scheme: @curve_sig_algo[:name], curve_name: @curve_name[:name]}
+        { sig_scheme: @curve_sig_algo[:name], curve_name: @curve_name[:name] }
       else
         {}
       end

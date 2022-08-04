@@ -18,7 +18,8 @@ require_relative './errors'
 #   @return [Integer] EAP Type of the communication in this stream. Might be nil, if the
 #     client and server don't agree on an EAP Type.
 # @!attribute [r] wanted_eap_types
-#   @return [Array<Integer>] Requested EAP Types of the client. Defaults to empty Array and is only changed if the initial eap type suggested
+#   @return [Array<Integer>] Requested EAP Types of the client.
+#     Defaults to empty Array and is only changed if the initial eap type suggested
 #     by the server does not match the actual EAP Type or the Server rejects the wanted
 #     EAP Type (e.g. because the client is configured to do EAP-PWD, but the server does not
 #     support it.)
@@ -43,36 +44,14 @@ class EAPStream
     @eap_identity = ''
     case pktstream
     when RadiusStream, RadsecStream
-      logger.trace("Initialize new EAP Stream. Packet Stream length: #{pktstream.packets.length}")
-      # Here the EAP Stream is parsed based on the RADIUS Packets.
-      pktstream.packets.each do |radius_packet|
-        eap_msg = []
-        radius_packet.attributes.each do |attr|
-          next unless attr[:type] == RadiusPacket::Attribute::EAPMESSAGE
-
-          eap_msg += attr[:data]
-        end
-        if eap_msg == []
-          case radius_packet.packettype
-          when RadiusPacket::Type::ACCEPT,
-              RadiusPacket::Type::REJECT
-            logger.trace 'Seen empty EAP Message with a Accept or Reject type'
-            next
-          else
-            StatHandler.increase :eaperror_other
-            logger.error 'Seen a RADIUS Packet without an EAP Content and it was not a final Message'
-            raise EAPStreamError, 'Ongoing RADIUS Packet without EAP Content captured'
-          end
-        end
-        logger.trace "EAP Content: #{eap_msg.pack('C*').unpack1('H*')}"
-
-        @eap_packets << EAPPacket.new(eap_msg)
-      end
+      initialize_radius_stream(pktstream)
     when Array
       logger.trace("Initialize new EAP Stream. Packet Stream length: #{pktstream.length}")
       pktstream.each do |pkt|
         @eap_packets << EAPPacket.new(pkt)
       end
+    else
+      raise EAPStreamError, 'Unknown stream format. Aborting.'
     end
 
     if @eap_packets.length < 2
@@ -82,6 +61,37 @@ class EAPStream
     end
 
     set_eap_type
+  end
+
+  # Initialize the EAP stream from a RADIUS/Radsec Stream
+  # @param pktstream [RadiusStream,RadsecStream] packet stream to parse
+  # @private
+  def initialize_radius_stream(pktstream)
+    logger.trace("Initialize new EAP Stream. Packet Stream length: #{pktstream.packets.length}")
+    # Here the EAP Stream is parsed based on the RADIUS Packets.
+    pktstream.packets.each do |radius_packet|
+      eap_msg = []
+      radius_packet.attributes.each do |attr|
+        next unless attr[:type] == RadiusPacket::Attribute::EAPMESSAGE
+
+        eap_msg += attr[:data]
+      end
+      if eap_msg == []
+        case radius_packet.packettype
+        when RadiusPacket::Type::ACCEPT,
+          RadiusPacket::Type::REJECT
+          logger.trace 'Seen empty EAP Message with a Accept or Reject type'
+          next
+        else
+          StatHandler.increase :eaperror_other
+          logger.error 'Seen a RADIUS Packet without an EAP Content and it was not a final Message'
+          raise EAPStreamError, 'Ongoing RADIUS Packet without EAP Content captured'
+        end
+      end
+      logger.trace "EAP Content: #{eap_msg.pack('C*').unpack1('H*')}"
+
+      @eap_packets << EAPPacket.new(eap_msg)
+    end
   end
 
   # Check for unusual eap communication (e.g. double identity transmission)
@@ -190,7 +200,6 @@ class EAPStream
       return nil
     end
 
-
     # If we're not done yet, the client most likely wants another EAP Type, so it
     # must answer with a Legacy NAK
     if @eap_packets[cur_ptr].type != EAPPacket::Type::NAK
@@ -252,7 +261,6 @@ class EAPStream
     @eap_packets[@first_eap_payload..-1]
   end
 end
-
 
 # Stream of EAP-TLS Packets.
 # This class handles some properties of the EAP-TLS specification e.g. the Fragmentation.
@@ -390,7 +398,7 @@ class EAPTLSFragment
 
     logger.trace "Length of the EAP Packet: #{data.length}"
     flags = data[0]
-    logger.trace 'Flags: 0x%02X' % flags
+    logger.trace format('Flags: 0x%02X', flags)
     @length_included = (flags & EAPTLSFragment::TLSFlags::LENGTHINCLUDED) != 0
     @more_fragments = (flags & EAPTLSFragment::TLSFlags::MOREFRAGMENTS) != 0
     @tlsstart = (flags & EAPTLSFragment::TLSFlags::START) != 0

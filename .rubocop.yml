@@ -1,2 +1,12 @@
 Metrics/BlockNesting:
   Enabled: No
+Metrics/MethodLength:
+  Max: 30
+Metrics/ClassLength:
+  Max: 200
+Metrics/PerceivedComplexity:
+  Max: 15
+Metrics/AbcSize:
+  Max: 50
+Metrics/CyclomaticComplexity:
+  Max: 15

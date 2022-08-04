@@ -31,6 +31,7 @@ require_relative './includes'
 @config[:debug_level] ||= :warn
 @config[:elastic_filter] ||= []
 # @config[:socket_files] ||= ['/tmp/radsecproxy.sock']  # Not used in radius_cap.rb
+@config[:ignoreips] ||= []
 
 SemanticLogger.default_level = :debug
 SemanticLogger.add_appender(file_name: 'development.log', level: @config[:debug_level])
@@ -93,7 +94,26 @@ rescue SignalException
   logger.info('Captured Interrupt')
 end
 
+BlackBoard.pktbuf.synchronize do
+BlackBoard.pktbuf_empty.signal
+end
+gets
+
 logger.info('Terminating Capture')
+
+logger.info('Waiting for empty packet buffer')
+
+pktbufempty = false
+until pktbufempty
+  BlackBoard.pktbuf.synchronize do
+    pktbufempty = BlackBoard.pktbuf.empty?
+  end
+  sleep 1
+end
+
+logger.info('Packet buffer is empty.')
+
+sleep 0.5
 
 logger.info('Waiting for empty parser buffer')
 
@@ -107,21 +127,9 @@ end
 
 logger.info('Parser buffer is empty.')
 
-sleep 0.5
-
-logger.info('Waiting for empty packet buffer')
-
-pktbufempty = false
-until pktbufempty
-  BlackBoard.pktbuf.synchronize do
-    pktbufempty = BlackBoard.pktbuf.empty?
-  end
-  sleep 1
-end
-
-logger.info('Packet buffer is empty.')
 # We should leave the parser thread a short time to finish the parsing, before we look for an empty elastic queue
 sleep 0.5
+
 logger.info('Waiting for empty elastic buffer')
 
 elasticempty = false

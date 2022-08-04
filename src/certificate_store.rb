@@ -54,7 +54,7 @@ class TLSCertStoreHelper
     priv_add_known_intermediates
   end
 
-  # Synchronize the given block for non-simultanious file system access
+  # Synchronize the given block for non-simultaneous file system access
   def sync(&block)
     StackParser.instance.threadmutex.synchronize(&block)
   end
@@ -80,7 +80,7 @@ class TLSCertStoreHelper
   # Save a server certificate to the certificate store
   # @param cert [OpenSSL::X509::Certificate] certificate to save
   def self.save_server_cert(cert)
-    TLSCertStoreHelper.instance.priv_add_cert(cert, false)
+    TLSCertStoreHelper.instance.priv_add_cert(cert, intermediate: false)
   end
 
   # Get the subject key identifier fo the certificate.
@@ -94,11 +94,14 @@ class TLSCertStoreHelper
     if subject_key_identifier_exten.empty?
       logger.warn 'Found certificate without subjectKeyIdentifier. Using SHA-2 Hash of the certificate'
       Digest::SHA2.hexdigest(cert.to_der).upcase
-    elsif subject_key_identifier_exten.length == 1
-      subject_key_identifier_exten.first.value.gsub(/:/, '')
     else
-      logger.warn "Found multiple subjectKeyIdentifier Extensions in X.509 Cert for #{cert.subject}"
-      subject_key_identifier_exten.first.value.gsub(/:/, '')
+      first_exten = subject_key_identifier_exten.first
+      return Digest::SHA2.hexdigest(cert.to_der).upcase unless first_exten.is_a? OpenSSL::X509::Extension
+
+      if subject_key_identifier_exten.length > 1
+        logger.warn "Found multiple subjectKeyIdentifier Extensions in X.509 Cert for #{cert.subject}"
+      end
+      first_exten.value.gsub(/:/, '')
     end
   end
 
@@ -106,7 +109,7 @@ class TLSCertStoreHelper
   # If this is an intermediate certificate, it is also stored in the additional cert store for future reference
   # @param cert [OpenSSL::X509::Certificate] certificate to save
   # @param intermediate [Boolean]
-  def priv_add_cert(cert, intermediate = false)
+  def priv_add_cert(cert, intermediate: false)
     raise StandardError unless cert.is_a? OpenSSL::X509::Certificate
 
     issuer = cert.issuer.to_s
@@ -115,23 +118,7 @@ class TLSCertStoreHelper
 
     subject_key_identifier = get_subj_key_identifier(cert)
 
-    authority_key_identifier_exten = cert.extensions.select { |x| x.oid == 'authorityKeyIdentifier' }
-    authority_key_identifier = ''
-    if authority_key_identifier_exten.empty?
-      authority_key_identifier = 'UNKNOWN'
-    elsif authority_key_identifier_exten.length == 1
-      authority_key_identifier = authority_key_identifier_exten.first.value
-    else
-      logger.warn "Found multiple authorityKeyIdentifier Extensions in X.509 Cert for #{cert_name}"
-      authority_key_identifier = authority_key_identifier_exten.first.value
-    end
-
-    match = authority_key_identifier.match(/^keyid:(.*)$/)
-    authority_key_identifier = if match
-                                 match[1].gsub(/:/, '')
-                               else
-                                 'UNKNOWN'
-                               end
+    authority_key_identifier = get_auth_key_identifier(cert)
 
     logger.trace "Issuer: #{issuer} | Serial: #{cert_serial} | Cert Name: #{cert_name}"
 
@@ -145,6 +132,31 @@ class TLSCertStoreHelper
         @additional_cert_store.add_cert(cert) if intermediate
       end
     end
+  end
+
+  # Get the authority key identifier
+  # @param cert [OpenSSL::X509::Certificate] certificate
+  # @return [String] authority key identifier or "UNKNOWN" if not included
+  def get_auth_key_identifier(cert)
+    authority_key_identifier_exten = cert.extensions.select { |x| x.oid == 'authorityKeyIdentifier' }
+
+    return 'UNKNOWN' if authority_key_identifier_exten.empty?
+
+    if authority_key_identifier_exten.length > 1
+      logger.warn "Found multiple authorityKeyIdentifier Extensions in X.509 Cert for #{cert.subject}"
+    end
+    first_exten = authority_key_identifier_exten.first
+
+    authority_key_identifier = if first_exten.is_a? OpenSSL::X509::Extension
+                                 first_exten.value
+                               else
+                                 'UNKNOWN'
+                               end
+
+    match = authority_key_identifier.match(/^keyid:(.*)$/)
+    return match[1].gsub(/:/, '') if match
+
+    'UNKNOWN'
   end
 
   # Add a possible Trust anchor to the Cert store
@@ -171,7 +183,7 @@ class TLSCertStoreHelper
   # Add an intermediate certificate to the cert store
   # @param cert [OpenSSL::X509::Certificate] certificate to add
   def self.add_known_intermediate(cert)
-    TLSCertStoreHelper.instance.priv_add_cert(cert, true)
+    TLSCertStoreHelper.instance.priv_add_cert(cert, intermediate: true)
   end
 
   # Check if a given certificate may be a trust anchor (based on same Issuer and Subject)

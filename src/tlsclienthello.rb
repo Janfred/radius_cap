@@ -143,9 +143,10 @@ module TLSTypes
     KEY_SHARE               =    51
     # TLS Extension Renegotiation Info
     # Indicates Support for Secure Renegotiation
-    # May be used in ServerHello Extensions even if not included in the ClientHello extensions, if the client indicated support via SCSV
+    # May be used in ServerHello Extensions even if not included in the ClientHello extensions,
+    #   if the client indicated support via SCSV
     # Defined in RFC5746
-    RENEGOTIATION_INFO      = 65281
+    RENEGOTIATION_INFO      = 65_281
 
     # Get the extension name by the given code
     # @param code [Integer] Code of the Extension
@@ -204,7 +205,6 @@ end
 
 # Class for parsing the TLS Client Hello
 class TLSClientHello
-
   # [Integer] Length of inner TLS Data (in this case TLS Client Hello)
   attr_reader :innerlen
   # [Array] Version of the TLS Client Hello as Array of two bytes (e.g. [0x03,0x04])
@@ -278,8 +278,8 @@ class TLSClientHello
     to_ret[:cipherdata][:export] = cdata.includes_export?
     to_ret[:cipherdata][:broken] = cdata.includes_broken?
     to_ret[:cipherdata][:outdated] = cdata.includes_old_outdated?
-    to_ret[:cipherdata][:min_sec_lvl] = cdata.get_min_sec_level
-    to_ret[:cipherdata][:max_sec_lvl] = cdata.get_max_sec_level
+    to_ret[:cipherdata][:min_sec_lvl] = cdata.min_sec_level
+    to_ret[:cipherdata][:max_sec_lvl] = cdata.max_sec_level
     to_ret[:cipherdata][:all_keyx] = cdata.all_keyx
     to_ret[:cipherdata][:all_auth] = cdata.all_auth
     to_ret[:cipherdata][:all_encr] = cdata.all_encr
@@ -331,7 +331,7 @@ class TLSClientHello
 
     cur_ptr = 2
     to_ret = []
-    while cur_ptr < data.length do
+    while cur_ptr < data.length
       algo = TLSSignatureScheme.by_arr(data[cur_ptr, 2])
       to_ret << if algo.nil?
                   "Unknown (#{data[cur_ptr, 2]})"
@@ -361,11 +361,11 @@ class TLSClientHello
   # @return Parsed Extension content
   def parse_supported_groups(data)
     length = data[0] * 256 + data[1]
-    return if data.length != length+2
+    return if data.length != length + 2
 
     cur_ptr = 2
     to_ret = []
-    while cur_ptr < data.length do
+    while cur_ptr < data.length
       algo = TLSSupportedGroups.by_arr(data[cur_ptr, 2])
       to_ret << if algo.nil?
                   "Unknown (#{data[cur_ptr, 2]})"
@@ -382,11 +382,11 @@ class TLSClientHello
   # @return Parsed Extension content
   def parse_supported_versions(data)
     length = data[0]
-    return [] if length+1!=data.length
+    return [] if length + 1 != data.length
 
     cur_ptr = 1
     to_ret = []
-    while cur_ptr < data.length do
+    while cur_ptr < data.length
       to_ret << data[cur_ptr, 2]
       cur_ptr += 2
     end
@@ -397,14 +397,14 @@ class TLSClientHello
   # @param data Extension Data as Byte Array
   # @return Parsed Extension content
   def parse_servername(data)
-    total_length = data[0]*256 + data[1]
+    total_length = data[0] * 256 + data[1]
     cur_ptr = 2
     return if cur_ptr + total_length != data.length
 
     to_ret = []
-    while cur_ptr<data.length do
+    while cur_ptr < data.length
       type = data[cur_ptr]
-      length = data[cur_ptr+1]*256 + data[cur_ptr+2]
+      length = data[cur_ptr + 1] * 256 + data[cur_ptr + 2]
       cur_ptr += 3
       to_ret << data[cur_ptr, length].pack('C*') if type == TLSTypes::ExtenData::ServerName::HOST_NAME
       cur_ptr += length
@@ -471,49 +471,48 @@ class TLSClientHello
   def initialize(data)
     raise TLSClientHelloError, 'Not a TLS Client Hello' unless data[0] == TLSTypes::HandshakeType::CLIENTHELLO
 
-    @innerlen = data[1]*256*256 + data[2]*256 + data[3]
+    @innerlen = data[1] * 256 * 256 + data[2] * 256 + data[3]
     @innervers = data[4, 2]
     @random = data[6, 32]
     cur_ptr = 38
 
     # Session ID (optional)
     sessionid_len = data[cur_ptr]
-    @session = data[cur_ptr+1..cur_ptr+sessionid_len]
-    cur_ptr += sessionid_len+1
+    @session = data[cur_ptr + 1..cur_ptr + sessionid_len]
+    cur_ptr += sessionid_len + 1
 
     # Available Ciphersuites
-    cipher_len = data[cur_ptr]*256 + data[cur_ptr+1]
+    cipher_len = data[cur_ptr] * 256 + data[cur_ptr + 1]
     cur_ptr += 2
-    cipher_end = cur_ptr+cipher_len
+    cipher_end = cur_ptr + cipher_len
     @ciphersuites = []
-    while cur_ptr < cipher_end do
-      @ciphersuites << [data[cur_ptr], data[cur_ptr+1]]
+    while cur_ptr < cipher_end
+      @ciphersuites << [data[cur_ptr], data[cur_ptr + 1]]
       cur_ptr += 2
     end
 
     # Compression Methods
     comp_len = data[cur_ptr]
-    @compression = data[cur_ptr+1..cur_ptr+comp_len]
-    cur_ptr += comp_len+1
+    @compression = data[cur_ptr + 1..cur_ptr + comp_len]
+    cur_ptr += comp_len + 1
 
     @extensions = []
     @byexten = {}
-    exten_len = 0
 
     if data.length <= cur_ptr
       # No extensions present
       return
     end
 
-    exten_len = data[cur_ptr]*256 + data[cur_ptr+1]
+    exten_len = data[cur_ptr] * 256 + data[cur_ptr + 1]
     cur_ptr += 2
     exten_end = cur_ptr + exten_len
-    while cur_ptr < exten_end do
+    while cur_ptr < exten_end
       exten = {}
-      exten[:type] = data[cur_ptr]*256 + data[cur_ptr+1]
-      exten[:length] = data[cur_ptr+2]*256 + data[cur_ptr+3]
+      exten[:type] = data[cur_ptr] * 256 + data[cur_ptr + 1]
+      exten[:length] = data[cur_ptr + 2] * 256 + data[cur_ptr + 3]
       cur_ptr += 4
-      exten[:data] = data[cur_ptr..cur_ptr+exten[:length]-1]
+      exten[:data] = data[cur_ptr..cur_ptr + exten[:length] - 1]
       cur_ptr += exten[:length]
       @extensions << exten
       @byexten[exten[:type]] = exten[:data]

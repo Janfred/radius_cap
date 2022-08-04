@@ -16,6 +16,8 @@ class RadiusPacket
     REJECT    =  3
     # Access-Challenge (Sent by server if not final answer)
     CHALLENGE = 11
+    # Status Server (Sent by client to check if server is alive)
+    STATUS_SERVER = 12
 
     # Get Attribute name by the given code
     # @param code [Byte] Code of the Attribute
@@ -209,7 +211,7 @@ class RadiusPacket
     @attributes_by_type[RadiusPacket::Attribute::CALLINGSTATIONID] ||= []
 
     cur_ptr = 20
-    while cur_ptr < @length do
+    while cur_ptr < @length
       attribute = {}
       attribute[:type] = @raw_data[cur_ptr]
       attribute[:length] = @raw_data[cur_ptr + 1]
@@ -256,6 +258,12 @@ class RadiusPacket
   end
 
   private :attr_to_hex, :attr_to_string
+
+  # Checks if the RADIUS Packet is a status server packet
+  # @return [TrueClass,FalseClass] true if StatusServer, false otherwise
+  def status_server?
+    @packettype == RadiusPacket::Type::STATUS_SERVER
+  end
 
   # Check RADIUS Protocol violations
   # @raise [ProtocolViolationError] if violations are found

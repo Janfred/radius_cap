@@ -95,7 +95,7 @@ end
 
 # Helper Class for inserting Data into the Radsec Streams
 # @!attribute [r] known_streams
-#   @return [Array<RadiusStream>] Currently known streams
+#   @return [Array<RadsecStream>] Currently known streams
 # @!attribute [rw] timeout
 #   @return [Integer] Number of seconds after a Steam is considered timed out.
 class RadsecStreamHelper

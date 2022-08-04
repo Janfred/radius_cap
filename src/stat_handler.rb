@@ -113,7 +113,7 @@ class StatHandler
           end
           stat[:known_streams] = RadsecStreamHelper.instance.known_streams.length
 
-        client.write stat.to_json
+          client.write stat.to_json
           client.close
         end
       end

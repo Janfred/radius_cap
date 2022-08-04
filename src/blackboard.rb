@@ -9,12 +9,8 @@ class BlackBoard
 
   def initialize
     @logger = nil
-    @policy_logger
-    @policy_detail_logger
     @pktbuf = nil
     @pktbuf_empty = nil
-    @sock_threads
-    @config
     @profilers = {}
   end
 
@@ -94,8 +90,7 @@ class BlackBoard
   end
 
   # Setter for the profiler
-  def self.profilers=(p)
-    BlackBoard.instance.profilers=p
+  def self.profilers=(profiler)
+    BlackBoard.instance.profilers = profiler
   end
 end
-
