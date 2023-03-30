@@ -15,7 +15,9 @@ Thread.start do
     begin
       # Parse Radius packets
       rp = RadiusPacket.new(pkt[:pkt].unpack('C*'))
+      rp.insert_other_src_info("#{pkt[:from]}:#{pkt[:from_sock]}", "#{pkt[:to]}:#{pkt[:to_sock]}")
       rp.check_policies
+      rp.parse_eap!
     rescue PacketLengthNotValidError => e
       puts 'PacketLengthNotValidError'
       puts e.message
@@ -28,6 +30,15 @@ Thread.start do
     rescue PolicyViolationError => e
       BlackBoard.policy_logger.debug "#{e.class} #{e.message} From: #{pkt[:from].inspect} To: #{pkt[:to].inspect}" \
                                      " Realm: #{rp.realm || ''}"
+    rescue PreliminaryEAPParsingError => e
+      BlackBoard.logger.warn "Seen malformed EAP packet from #{pkt[:from]} to #{pkt[:to]} with realm #{rp.realm || ''}, Message: #{e.message}"
+      ElasticHelper.eapdebug.synchronize do
+        ElasticHelper.eapdebug.push rp
+        ElasticHelper.eapwaitcond.signal
+      end
+      # This exchange will never yield to a valid EAP exchange, so we might as well discard it here already.
+      StatHandler.increase :packet_errored
+      next
     rescue StandardError => e
       puts 'General error in Parsing!'
       puts e.message

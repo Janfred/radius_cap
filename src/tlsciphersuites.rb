@@ -170,7 +170,7 @@ class TLSCipherSuite
   # Get a Cipher Suite by a array of two bytes
   # @param val [Array] CipherSuite Value as Array of two bytes (e.g. [0xFF,0x00])
   # @return [Hash] CipherSuite Hash value
-  def self.by_arr (val)
+  def self.by_arr(val)
     p = KNOWN_CIPHERSUITES.select { |x| x[0] == val }
     $stderr.puts "Unknown Ciphersuite #{val}" if p.empty?
     to_ret = p.first
@@ -194,6 +194,7 @@ class TLSCipherSuite
   # List of security levels of different encryption methods
   SECURITY_LEVELS = {
     # rubocop:disable Layout/HashAlignment
+    # rubocop:disable Style/TrailingCommaInHashLiteral
     nil           =>   0,
     'RC2-40'      =>  40,
     'RC4-40'      =>  40,
@@ -209,7 +210,8 @@ class TLSCipherSuite
     'SEED'        => 128,
     'ARIA128'     => 128,
     'ARIA256'     => 256,
-    'CHACHA20'    => 128
+    'CHACHA20'    => 128,
+    # rubocop:enable Style/TrailingCommaInHashLiteral
     # rubocop:enable Layout/HashAlignment
   }.freeze
 
@@ -217,6 +219,7 @@ class TLSCipherSuite
   KNOWN_CIPHERSUITES = [
     # rubocop:disable Layout/SpaceInsideArrayLiteralBrackets
     # rubocop:disable Layout/LineLength
+    # rubocop:disable Style/TrailingCommaInArrayLiteral
     # Ciphersuite   KeyX       Auth       Encry          Mode       MAC         PFS    SCSV   TLS1.3 Humanreadable Name
     [ [0x00, 0x00], nil,       nil,       nil,           nil,       nil,        false, false, false, 'TLS_NULL_WITH_NULL_NULL'],
     [ [0x00, 0x01], 'RSA',     'RSA',     nil,           nil,       'MD5',      false, false, false, 'TLS_RSA_WITH_NULL_MD5'],
@@ -479,7 +482,8 @@ class TLSCipherSuite
     [ [0xFF, 0x80], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, false, 'PRIVATE_0XFF_0x80'],
     [ [0xFF, 0x82], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, false, 'PRIVATE_0XFF_0x82'],
     [ [0xFF, 0x83], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, false, 'PRIVATE_0XFF_0x83'],
-    [ [0xFF, 0x85], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, false, 'PRIVATE_0xFF_0x85']
+    [ [0xFF, 0x85], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, false, 'PRIVATE_0xFF_0x85'],
+    # rubocop:enable Style/TrailingCommaInArrayLiteral
     # rubocop:enable Layout/SpaceInsideArrayLiteralBrackets
     # rubocop:enable Layout/LineLength
   ].freeze
@@ -492,6 +496,7 @@ class TLSSignatureScheme
   # List of all known Signature Schemes
   KNOWN_SIGNATURESCHEMES = [
     # rubocop:disable Layout/SpaceInsideArrayLiteralBrackets
+    # rubocop:disable Style/TrailingCommaInArrayLiteral
     # SigScheme     Name
     [ [0x01, 0x01], 'MD5 RSA'],
     [ [0x01, 0x02], 'MD5 DSA'],
@@ -518,7 +523,8 @@ class TLSSignatureScheme
     [ [0x08, 0x08], 'ed448'],
     [ [0x08, 0x09], 'rsa_pss_pss_sha256'],
     [ [0x08, 0x0A], 'rsa_pss_pss_sha384'],
-    [ [0x08, 0x0B], 'rsa_pss_pss_sha512']
+    [ [0x08, 0x0B], 'rsa_pss_pss_sha512'],
+    # rubocop:enable Style/TrailingCommaInArrayLiteral
     # rubocop:enable Layout/SpaceInsideArrayLiteralBrackets
   ].freeze
 
@@ -554,6 +560,7 @@ class TLSSupportedGroups
   # List of all known Supported Groups
   KNOWN_SUPPORTEDGROUPS = [
     # rubocop:disable Layout/SpaceInsideArrayLiteralBrackets
+    # rubocop:disable Style/TrailingCommaInArrayLiteral
     # Group         name
     [ [0x00, 0x01], 'sect163k1'],
     [ [0x00, 0x02], 'sect163r1'],
@@ -589,7 +596,8 @@ class TLSSupportedGroups
     [ [0x01, 0x01], 'ffdhe3072'],
     [ [0x01, 0x02], 'ffdhe4096'],
     [ [0x01, 0x03], 'ffdhe6144'],
-    [ [0x01, 0x04], 'ffdhe8192']
+    [ [0x01, 0x04], 'ffdhe8192'],
+    # rubocop:enable Style/TrailingCommaInArrayLiteral
     # rubocop:enable Layout/SpaceInsideArrayLiteralBrackets
   ].freeze
 
@@ -680,7 +688,9 @@ class TLSServerKeyExchange
   # Handling Class for DHE Key Exchange
   # @todo this is just a stub
   class DHE
-    def initialize(data, version); end
+    # Initialize the DHE Exchange
+    # @todo this is currently just a stub
+    def initialize(_data, _version); end
 
     # Convert DHE Exchange details to hash
     # @return [Hash]

@@ -29,3 +29,4 @@ fb855a002eaa4f1189edcc8a55fa92a17d1d6f54aabdf6701fafd8d657a0296d|Android  |Andro
 0f193f1dc16910b73c27609de96bd87fbabb0cdbd03545c1f0b957316b87b903|Windows  |Windows XP    |Windows XP SP1, Via Asus Tool|
 08c052491a8904c7ed15e2a8835992dc906b9c9328d9bbdb3a62ac291d6d9a57|Windows  |Windows 10    |Windows 10 Pro, Version 21H1 Build 19043.985 oder Version 20H2 Build 19042.1052
 06298ba0ee8c098aac2ba6c3b5101713fbbb1fe7450f1437322b14ed3b5fb7ba|Android  |Android 10    |LineageOS 17.1-20210619-NIGHTLY-FP2
+8b9cc72be5259934498932fd3b7133e15a985addb4bf3f7d86b577f54ec5b17c|Windows  |Windows 8.1   |Windows 8.1

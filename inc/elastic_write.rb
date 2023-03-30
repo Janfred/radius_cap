@@ -62,3 +62,20 @@ Thread.start do
     BlackBoard.logger.error('Error in Elastic Write', exception: e)
   end
 end
+
+Thread.start do
+  Thread.current.name = 'EAP Debug Elastic Writer'
+  loop do
+    toins = nil
+    ElasticHelper.eapdebug.synchronize do
+      ElasticHelper.eapwaitcond.wait_while { ElasticHelper.eapdebug.empty? }
+      toins = ElasticHelper.eapdebug.shift
+    end
+
+    next if toins.nil?
+
+    ElasticHelper.add_eapdebug(toins, debug: @config[:debug], no_direct_elastic: @config[:noelastic])
+  rescue StandardError => e
+    BlackBoard.logger.error('Error in EAP Debug elastic write', exception: e)
+  end
+end

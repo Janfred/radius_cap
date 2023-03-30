@@ -2,6 +2,9 @@
 
 require_relative './errors'
 
+# Preliminary error, raised if the EAP message contained in the RADIUS message is malformed
+class PreliminaryEAPParsingError < StandardError; end
+
 # A Radius Packet with all attributes and a reassembled EAP Message
 class RadiusPacket
   include SemanticLogger::Loggable
@@ -165,7 +168,7 @@ class RadiusPacket
   end
 
   attr_reader :packetfu_pkt, :raw_data, :packettype, :identifier, :length, :authenticator, :attributes, :eap,
-              :udp, :state, :username, :callingstationid, :realm
+              :udp, :state, :username, :callingstationid, :realm, :other_src_info, :eapdetails
 
   def initialize(pkt)
     case pkt
@@ -174,6 +177,7 @@ class RadiusPacket
 
       # Save UDP Header information (needed for matching packets
       @udp = { src: { ip: pkt.ip_saddr, port: pkt.udp_sport }, dst: { ip: pkt.ip_daddr, port: pkt.udp_dport } }
+      @other_src_info = nil
 
       @raw_data = pkt.payload.unpack('C*')
       @packetfu_pkt = pkt
@@ -181,6 +185,8 @@ class RadiusPacket
       raise PacketLengthNotValidError, 'Length of packet violates RFC2865' if pkt.length < 20
 
       @udp = { src: { ip: nil, port: nil }, dst: { ip: nil, port: nil } }
+      @other_src_info = nil
+
       @packetfu_pkt = nil
       @raw_data = pkt
     else
@@ -235,6 +241,14 @@ class RadiusPacket
     parse_eap
   end
 
+  # Insert alternative source information.
+  # Used for packets originating from radsecproxy captures
+  # @param src [String] Source of the packet
+  # @param dst [String] Destination of the packet
+  def insert_other_src_info(src, dst)
+    @other_src_info = { src: src, dst: dst }
+  end
+
   # Check RADIUS Packet against RFC and eduroam service Policy
   # @raise [ProtocolViolationError] if the Packet violates the RFC
   # @raise [PolicyViolationError] if the Packet violates the eduroam service policy
@@ -268,8 +282,6 @@ class RadiusPacket
   # Check RADIUS Protocol violations
   # @raise [ProtocolViolationError] if violations are found
   def check_radius_protocol
-
-
     # Check Usernames. (0-1 in Request and accept, otherwise 0)
     if @packettype == RadiusPacket::Type::ACCEPT || @packettype == RadiusPacket::Type::REQUEST
       if @attributes_by_type[RadiusPacket::Attribute::USERNAME].length > 1
@@ -337,6 +349,32 @@ class RadiusPacket
       @eap ||= []
       @eap += a[:data]
     end
+  end
+
+  # Parses the EAP message contained in the RADIUS message to check for illegal EAP messages
+  # @raise PreliminaryEAPParsingError
+  def parse_eap!
+    return unless @eap && !@eap.empty?
+
+    @eapdetails = {}
+    @eapdetails[:code] = @eap[0] if @eap[0]
+    @eapdetails[:encoded_length] = @eap[2] * 256 + @eap[3] if @eap[2] && @eap[3]
+    @eapdetails[:type] = @eap[4] if @eap[4]
+
+    @eapdetails[:actual_length] = @eap.length
+    # rubocop:disable Style/GuardClause
+    # rubocop:disable Style/NumericPredicate
+    # rubocop:disable Style/IfUnlessModifier
+    if @eapdetails[:code] == 0 || @eapdetails[:code] > 5
+      raise PreliminaryEAPParsingError, "Seen invalid EAP code: #{@eapdetails[:code]}"
+    end
+
+    if @eapdetails[:encoded_length] != @eapdetails[:actual_length]
+      raise PreliminaryEAPParsingError, "Encoded Length (#{@eapdetails[:encoded_length]}) did not match actual length (#{@eapdetails[:actual_length]})"
+    end
+    # rubocop:enable Style/GuardClause
+    # rubocop:enable Style/NumericPredicate
+    # rubocop:enable Style/IfUnlessModifier
   end
 
   # Inspect the RADIUS Packet

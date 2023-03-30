@@ -72,7 +72,7 @@ class TLSCertStoreHelper
   def subj_to_filename(orig_name)
     to_return = orig_name
     to_return.gsub!(%r{/}, '§')
-    to_return.gsub!(/[^0-9a-zA-Z. _=§-]/, '_')
+    to_return.gsub!(/[^\da-zA-Z. _=§-]/, '_')
 
     to_return
   end

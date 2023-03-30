@@ -71,18 +71,19 @@ require_relative './inc/pcap_match'
 
 require_relative './inc/stat_pcap'
 
-# pcap_file = PacketFu::PcapNG::File.new
-# pcap_array = pcap_file.file_to_array(filename: './debugcapture2.pcapng')
-# pcap_id = 0
-# pcap_array.each do |p|
+pcap_file = PacketFu::PcapNG::File.new
+pcap_array = pcap_file.file_to_array(filename: '/home/rieckers/hmt.pcapng')
+pcap_id = 0
+pcap_array.each do |p|
 
-logger.info('Start Packet capture')
-iface = PacketFu::Utils.default_int
-cap = Capture.new(iface: iface, start: true, filter: 'port 1812')
-begin
-  cap.stream.each do |p|
-    # pcap_id += 1
-    # puts "Packet #{pcap_id}"
+#logger.info('Start Packet capture')
+#iface = PacketFu::Utils.default_int
+#cap = Capture.new(iface: iface, start: true, filter: 'port 1812')
+#begin
+#  cap.stream.each do |p|
+    pcap_id += 1
+    puts "Packet #{pcap_id}"
+    puts p.inspect
     logger.trace('Packet captured.')
     StatHandler.increase :packet_captured
     BlackBoard.pktbuf.synchronize do
@@ -90,9 +91,14 @@ begin
       BlackBoard.pktbuf_empty.signal
     end
   end
-rescue SignalException
-  logger.info('Captured Interrupt')
+#rescue SignalException
+#  logger.info('Captured Interrupt')
+#end
+
+BlackBoard.pktbuf.synchronize do
+BlackBoard.pktbuf_empty.signal
 end
+gets
 
 BlackBoard.pktbuf.synchronize do
 BlackBoard.pktbuf_empty.signal

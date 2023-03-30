@@ -20,12 +20,14 @@ class ElasticHelper
   include Singleton
   include SemanticLogger::Loggable
 
-  attr_reader :priv_elasticdata, :priv_waitcond, :priv_client
+  attr_reader :priv_elasticdata, :priv_waitcond, :priv_client,
+              :priv_eapdebug, :priv_eapwaitcond
 
   def initialize
     @priv_known_ids = []
     @priv_bulk = nil
     @bulk_data_store = []
+    @bulk_eap_store = []
   end
 
   # Set Bulk insert size
@@ -54,6 +56,32 @@ class ElasticHelper
     instance.priv_bulk_insert
   end
 
+  # Set Bulk insert size for EAP
+  # @private
+  # @param value [Integer,NilClass] Bulk size or nil for no bulk insertion
+  def priv_bulk_insert_eap=(value)
+    @priv_bulk_eap = value
+  end
+
+  # Get Bulk insert size for EAP
+  # @private
+  # @return [Integer,NilClass] Insertion bulk size or nil if bulk insertion not active
+  def priv_bulk_insert_eap
+    @priv_bulk_eap
+  end
+
+  # Set Bulk insert size for EAP
+  # @param value [Integer,NilClass] Bulk size or nil for no bulk insertion
+  def self.bulk_insert_eap=(value)
+    instance.priv_bulk_insert_eap = value
+  end
+
+  # Get Bulk insert size for EAP
+  # @return [Integer,NilClass] Insertion bulk size or nil if bulk insertion not active
+  def self.bulk_insert_eap
+    instance.priv_bulk_insert_eap
+  end
+
   # Bulk data to insert
   # @private
   # @return [Array] Data to insert
@@ -67,6 +95,19 @@ class ElasticHelper
     @bulk_data_store = []
   end
 
+  # Bulk eap data to insert
+  # @private
+  # @return [Array] EAP Data to insert
+  def priv_bulk_eap
+    @bulk_eap_store
+  end
+
+  # Clear bulk eap data
+  # @private
+  def priv_clear_bulk_eap
+    @bulk_eap_store = []
+  end
+
   # Clear bulk data
   def self.clear_bulk_data
     instance.priv_clear_bulk_data
@@ -76,6 +117,17 @@ class ElasticHelper
   # @return [Array] Data to insert
   def self.bulk_data
     instance.priv_bulk_data
+  end
+
+  # Clear EAP Bulk data
+  def self.clear_bulk_eap
+    instance.priv_clear_bulk_eap
+  end
+
+  # Bulk data to insert in EAP-Debug
+  # @return [Array] Data to insert
+  def self.bulk_eap
+    instance.priv_bulk_eap
   end
 
   # Initializes the Connection to Elasticsearch and loads MacVendor Database
@@ -93,6 +145,10 @@ class ElasticHelper
     @priv_elasticdata = []
     @priv_elasticdata.extend(MonitorMixin)
     @priv_waitcond = @priv_elasticdata.new_cond
+
+    @priv_eapdebug = []
+    @priv_eapdebug.extend(MonitorMixin)
+    @priv_eapwaitcond = @priv_eapdebug.new_cond
     unless debug
       @priv_client = Elasticsearch::Client.new log: false,
                                                user: BlackBoard.config[:elastic_username],
@@ -142,6 +198,15 @@ class ElasticHelper
   # Get Wait condition helper
   def self.waitcond
     instance.priv_waitcond
+  end
+
+  # Get current EAP-Debug data
+  def self.eapdebug
+    instance.priv_eapdebug
+  end
+
+  def self.eapwaitcond
+    instance.priv_eapwaitcond
   end
 
   # Get the client connection
@@ -214,6 +279,94 @@ class ElasticHelper
     to_insert
   end
 
+  # Takes the given RADIUS packet and brings it in the correct form for elasticsearch
+  # @param radpkt [RadiusPacket] RADIUS Packet with erroneous EAP message
+  # @return [Hash] Data in elasticsearch format
+  def self.convert_eapdump(radpkt)
+    data = {}
+
+    data[:meta] = {}
+    data[:meta][:observed] = Time.now.utc.iso8601
+    data[:meta][:scheme_ver] = 0
+    data[:meta][:capture_ver] = 0
+
+    if radpkt.udp.src.ip
+      data[:meta][:src] = "#{radpkt.udp.src.ip}:#{radpkt.udp.src.port}"
+      data[:meta][:dst] = "#{radpkt.udp.dst.ip}:#{radpkt.udp.dst.port}"
+    else
+      data[:meta][:src] = radpkt.other_src_info[:src]
+      data[:meta][:dst] = radpkt.other_src_info[:dst]
+    end
+
+    data[:radius] = {}
+    # Parse CallingStationIdMAC address
+    macaddr_l = radpkt.attributes.select { |x| x[:type] == RadiusPacket::Attribute::CALLINGSTATIONID }
+    macaddr_p = macaddr_l.first
+    if macaddr_l.empty?
+      data[:radius][:macvendor] = 'NONEXISTENT'
+    elsif macaddr_l.length > 1 || macaddr_p.nil?
+      data[:radius][:macvendor] = 'INVALID'
+    else
+      macaddr = macaddr_p[:data].pack('C*').downcase
+      mac_match = macaddr.match(/^([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2}).*([0-9a-f]{2})$/i)
+      if mac_match
+        oui = mac_match[1, 3].join ':'
+        data[:radius][:macvendor] = MacVendor.by_oid(oui)
+      else
+        data[:radius][:macvendor] = 'MALFORMED'
+        data[:radius][:raw_mac] = macaddr
+      end
+    end
+
+    # Parse CalledStationId MAC address
+    calledsta_l = radpkt.attributes.select { |x| x[:type] == RadiusPacket::Attribute::CALLEDSTATIONID }
+    calledsta_p = calledsta_l.first
+    if calledsta_l.empty?
+      data[:radius][:apvendor] = 'NONEXISTENT'
+    elsif calledsta_l.length > 1 || calledsta_p.nil?
+      data[:radius][:apvendor] = 'INVALID'
+    else
+      calledsta = calledsta_p[:data].pack('C*')
+      calledsta_match = calledsta.match(/^([0-9a-f]{2})[.:-]?([0-9a-f]{2})[.:-]?([0-9a-f]{2})[.:-]?([0-9a-f]{2})[.:-]?([0-9a-f]{2})[.:-]?([0-9a-f]{2})/i)
+      if calledsta_match
+        oui = calledsta_match[1, 3].join(':')
+        data[:radius][:apvendor] = MacVendor.by_oid(oui)
+      else
+        data[:radius][:apvendor] = 'MALFORMED'
+        data[:radius][:raw_calledsta] = calledsta
+      end
+    end
+
+    radattrs = {}
+    avail_attrs = []
+    radpkt.attributes.each do |x|
+      case x[:type]
+        # First filter out all attributes that don't interest us, because they won't contain any meaningful information
+      when RadiusPacket::Attribute::CALLINGSTATIONID,
+           RadiusPacket::Attribute::CALLEDSTATIONID,
+        #RadiusPacket::Attribute::MESSAGEAUTHENTICATOR,
+           RadiusPacket::Attribute::EAPMESSAGE
+        # Intentionally left blank
+      else
+        radattrs[x[:type]] ||= []
+        radattrs[x[:type]] << x[:data].pack('C*').unpack1('H*')
+      end
+      avail_attrs << x[:type]
+    end
+
+    data[:radius][:attributes] = radattrs
+    data[:radius][:seen_attributes] = avail_attrs.uniq
+
+    data[:eap] = {}
+    data[:eap][:code] = radpkt.eapdetails[:code]
+    data[:eap][:type] = radpkt.eapdetails[:type]
+    data[:eap][:encoded_length] = radpkt.eapdetails[:encoded_length]
+    data[:eap][:actual_length] = radpkt.eapdetails[:actual_length]
+    data[:eap][:length_matches] = data[:eap][:encoded_length] == data[:eap][:actual_length]
+
+    { id: SecureRandom.hex(32), data: data }
+  end
+
   # Inserts data into Elasticsearch
   # @param raw_data [Hash] Hash with data to insert.
   # @param debug [Boolean] If set to true the data will be printed on stdout. Defaults to false.
@@ -262,6 +415,34 @@ class ElasticHelper
     bulk_data = ElasticHelper.bulk_data.map { |x| { index: { _id: x[:id], data: x[:data] } } }
     ElasticHelper.client.bulk index: 'tlshandshakes', body: bulk_data
     ElasticHelper.clear_bulk_data
+  end
+
+  def self.add_eapdebug(raw_packet, debug: false, no_direct_elastic: false)
+    to_ins = ElasticHelper.convert_eapdump(raw_packet)
+    if ElasticHelper.bulk_insert
+      ElasticHelper.bulk_eap << to_ins
+      if ElasticHelper.bulk_eap.length >= ElasticHelper.bulk_insert
+        begin
+          unless no_direct_elastic
+            bulk_data = ElasticHelper.bulk_data.map { |x| {index: { _id: x[:id], data: x[:data] } } }
+            ElasticHelper.client.bulk index: 'eapdebug', body: bulk_data
+          end
+        rescue StandardError => e
+          logger.warn 'Error in EAP Bulk indexing', e
+        end
+        ElasticHelper.clear_bulk_data
+      end
+    else
+      ElasticHelper.client.index index: 'eapdebug', id: to_ins[:id], body: to_ins[:data] unless no_direct_elastic
+    end
+    puts to_ins if debug
+    nil
+  end
+
+  def self.flush_eapdebug
+    bulk_data = ElasticHelper.bulk_eap.map { |x| { index: { _id: x[:id], data: x[:data] } } }
+    ElasticHelper.client.bulk index: 'eapdebug', body: bulk_data
+    ElasticHelper.clear_bulk_eap
   end
 end
 
