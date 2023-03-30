@@ -290,9 +290,9 @@ class ElasticHelper
     data[:meta][:scheme_ver] = 0
     data[:meta][:capture_ver] = 0
 
-    if radpkt.udp.src.ip
-      data[:meta][:src] = "#{radpkt.udp.src.ip}:#{radpkt.udp.src.port}"
-      data[:meta][:dst] = "#{radpkt.udp.dst.ip}:#{radpkt.udp.dst.port}"
+    if radpkt.udp[:src][:ip]
+      data[:meta][:src] = "#{radpkt.udp[:src][:ip]}:#{radpkt.udp[:src][:port]}"
+      data[:meta][:dst] = "#{radpkt.udp[:dst][:ip]}:#{radpkt.udp[:dst][:port]}"
     else
       data[:meta][:src] = radpkt.other_src_info[:src]
       data[:meta][:dst] = radpkt.other_src_info[:dst]
