@@ -26,6 +26,7 @@ class ElasticHelper
   def initialize
     @priv_known_ids = []
     @priv_bulk = nil
+    @priv_bulk_eap = nil
     @bulk_data_store = []
     @bulk_eap_store = []
   end
@@ -363,6 +364,7 @@ class ElasticHelper
     data[:eap][:encoded_length] = radpkt.eapdetails[:encoded_length]
     data[:eap][:actual_length] = radpkt.eapdetails[:actual_length]
     data[:eap][:length_matches] = data[:eap][:encoded_length] == data[:eap][:actual_length]
+    data[:eap][:rawmsg] = radpkt.eap.pack('C*').unpack1('H*')
 
     { id: SecureRandom.hex(32), data: data }
   end
@@ -419,9 +421,9 @@ class ElasticHelper
 
   def self.add_eapdebug(raw_packet, debug: false, no_direct_elastic: false)
     to_ins = ElasticHelper.convert_eapdump(raw_packet)
-    if ElasticHelper.bulk_insert
+    if ElasticHelper.bulk_insert_eap
       ElasticHelper.bulk_eap << to_ins
-      if ElasticHelper.bulk_eap.length >= ElasticHelper.bulk_insert
+      if ElasticHelper.bulk_eap.length >= ElasticHelper.bulk_insert_eap
         begin
           unless no_direct_elastic
             bulk_data = ElasticHelper.bulk_data.map { |x| {index: { _id: x[:id], data: x[:data] } } }
