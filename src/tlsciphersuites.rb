@@ -475,6 +475,9 @@ class TLSCipherSuite
     [ [0xC1, 0x04], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, true,  'TLS_GOSTR341112_256_WITH_MAGMA_MGM_L'],
     [ [0xC1, 0x05], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, true,  'TLS_GOSTR341112_256_WITH_KUZNYECHIK_MGM_S'],
     [ [0xC1, 0x06], 'UNKNOWN', 'UNKNOWN', 'UNKNOWN',     'UNKNOWN', 'UNKNOWN',  false, false, true,  'TLS_GOSTR341112_256_WITH_MAGMA_MGM_S'],
+    [ [0xCC, 0x13], 'ECDHE',   'RSA',     'CHACHA20',    nil,       'POLY1305', true,  false, false, 'OLD_TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256'], # https://datatracker.ietf.org/doc/draft-agl-tls-chacha20poly1305/
+    [ [0xCC, 0x14], 'ECDHE',   'ECDSA',   'CHACHA20',    nil,       'POLY1305', true,  false, false, 'OLD_TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256'],
+    [ [0xCC, 0x15], 'DHE',     'RSA',     'CHACHA20',    nil,       'POLY1305', true,  false, false, 'OLD_TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256'],
     [ [0xCC, 0xA8], 'ECDHE',   'RSA',     'CHACHA20',    nil,       'POLY1305', true,  false, false, 'TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256'],
     [ [0xCC, 0xA9], 'ECDHE',   'ECDSA',   'CHACHA20',    nil,       'POLY1305', true,  false, false, 'TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256'],
     [ [0xCC, 0xAA], 'DHE',     'RSA',     'CHACHA20',    nil,       'POLY1305', true,  false, false, 'TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256'],
