@@ -420,6 +420,8 @@ class TLSCipherSuite
     [ [0xC0, 0x47], 'DH',      nil,       'ARIA256',     'CBC',     'SHA384',   false, false, false, 'TLS_DH_anon_WITH_ARIA_256_CBC_SHA384'],
     [ [0xC0, 0x48], 'ECDHE',   'ECDSA',   'ARIA128',     'CBC',     'SHA256',   true,  false, false, 'TLS_ECDHE_ECDSA_WITH_ARIA_128_CBC_SHA256'],
     [ [0xC0, 0x49], 'ECDHE',   'ECDSA',   'ARIA256',     'CBC',     'SHA384',   true,  false, false, 'TLS_ECDHE_ECDSA_WITH_ARIA_256_CBC_SHA384'],
+    [ [0xC0, 0x50], 'RSA',     'RSA',     'ARIA128',     'GCM',     'SHA256',   false, false, false, 'TLS_RSA_WITH_ARIA_128_GCM_SHA256'],
+    [ [0xC0, 0x51], 'RSA',     'RSA',     'ARIA256',     'GCM',     'SHA384',   false, false, false, 'TLS_RSA_WITH_ARIA_256_GCM_SHA384'],
     [ [0xC0, 0x72], 'ECDHE',   'ECDSA',   'CAMELLIA128', 'CBC',     'SHA256',   true,  false, false, 'TLS_ECDHE_ECDSA_WITH_CAMELLIA_128_CBC_SHA256'],
     [ [0xC0, 0x73], 'ECDHE',   'ECDSA',   'CAMELLIA256', 'CBC',     'SHA384',   true,  false, false, 'TLS_ECDHE_ECDSA_WITH_CAMELLIA_256_CBC_SHA384'],
     [ [0xC0, 0x74], 'ECDH',    'ECDSA',   'CAMELLIA128', 'CBC',     'SHA256',   false, false, false, 'TLS_ECDH_ECDSA_WITH_CAMELLIA_128_CBC_SHA256'],
