@@ -288,7 +288,7 @@ class ElasticHelper
 
     data[:meta] = {}
     data[:meta][:observed] = Time.now.utc.iso8601
-    data[:meta][:scheme_ver] = 0
+    data[:meta][:scheme_ver] = 2
     data[:meta][:capture_ver] = 0
 
     if radpkt.udp[:src][:ip]
@@ -365,6 +365,25 @@ class ElasticHelper
     data[:eap][:actual_length] = radpkt.eapdetails[:actual_length]
     data[:eap][:length_matches] = data[:eap][:encoded_length] == data[:eap][:actual_length]
     data[:eap][:rawmsg] = radpkt.eap.pack('C*').unpack1('H*')
+
+    if data[:radius][:attributes][1] && data[:radius][:attributes][1].length == 1
+      data[:eap][:matches_username_length] = data[:eap][:rawmsg].length == (data[:radius][:attributes][1][0].length + 10)
+    end
+
+    if data[:eap][:matches_username_length]
+      eapmsg = data[:eap][:rawmsg]
+      radmsg = data[:radius][:attributes][1][0]
+
+      total_bytes = radmsg.length / 2
+
+      (0..(total_bytes - 1)).reverse_each do |i|
+        next if eapmsg[i * 2 + 10, 2] == radmsg[i * 2, 2]
+
+        data[:eap][:number_of_equal_bytes] = total_bytes - i
+        data[:eap][:index_of_first_equal] = i
+        break
+      end
+    end
 
     { id: SecureRandom.hex(32), data: data }
   end
