@@ -288,7 +288,7 @@ class ElasticHelper
 
     data[:meta] = {}
     data[:meta][:observed] = Time.now.utc.iso8601
-    data[:meta][:scheme_ver] = 2
+    data[:meta][:scheme_ver] = 3
     data[:meta][:capture_ver] = 0
 
     if radpkt.udp[:src][:ip]
@@ -368,6 +368,7 @@ class ElasticHelper
 
     if data[:radius][:attributes][1] && data[:radius][:attributes][1].length == 1
       data[:eap][:matches_username_length] = data[:eap][:rawmsg].length == (data[:radius][:attributes][1][0].length + 10)
+      data[:eap][:username_length] = data[:radius][:attributes][1][0].length / 2
     end
 
     if data[:eap][:matches_username_length]
@@ -426,7 +427,7 @@ class ElasticHelper
       StatHandler.increase(:elastic_new)
     end
     puts to_ins if debug
-    File.write(File.join('data', to_ins[:id]),to_ins[:data].to_s) if output_to_file
+    File.write(File.join('data', to_ins[:id]), to_ins[:data].to_s) if output_to_file
     nil
   end
 
@@ -445,7 +446,7 @@ class ElasticHelper
       if ElasticHelper.bulk_eap.length >= ElasticHelper.bulk_insert_eap
         begin
           unless no_direct_elastic
-            bulk_data = ElasticHelper.bulk_data.map { |x| {index: { _id: x[:id], data: x[:data] } } }
+            bulk_data = ElasticHelper.bulk_data.map { |x| { index: { _id: x[:id], data: x[:data] } } }
             ElasticHelper.client.bulk index: 'eapdebug', body: bulk_data
           end
         rescue StandardError => e
@@ -466,4 +467,3 @@ class ElasticHelper
     ElasticHelper.clear_bulk_eap
   end
 end
-
