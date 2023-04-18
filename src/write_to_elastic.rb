@@ -288,7 +288,7 @@ class ElasticHelper
 
     data[:meta] = {}
     data[:meta][:observed] = Time.now.utc.iso8601
-    data[:meta][:scheme_ver] = 3
+    data[:meta][:scheme_ver] = 4
     data[:meta][:capture_ver] = 0
 
     if radpkt.udp[:src][:ip]
@@ -380,8 +380,8 @@ class ElasticHelper
       (0..(total_bytes - 1)).reverse_each do |i|
         next if eapmsg[i * 2 + 10, 2] == radmsg[i * 2, 2]
 
-        data[:eap][:number_of_equal_bytes] = total_bytes - i
-        data[:eap][:index_of_first_equal] = i
+        data[:eap][:number_of_equal_bytes] = (total_bytes - 1) - i
+        data[:eap][:index_of_first_equal] = i unless data[:eap][:number_of_equal_bytes].zero?
         break
       end
     end
