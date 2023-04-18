@@ -23,8 +23,8 @@ loop do
     query: {
       range: {
         'meta.scheme_ver': {
-          gte: 2,
-          lt: 3
+          gte: 3,
+          lt: 4
         }
       }
     }
@@ -55,7 +55,7 @@ loop do
 
         body['eap']['number_of_equal_bytes'] = (total_bytes - 1) - i
 
-        if data['eap']['number_of_equal_bytes'].zero?
+        if body['eap']['number_of_equal_bytes'].zero?
           body['eap'].delete 'index_of_first_equal'
         else
           body['eap']['index_of_first_equal'] = i
