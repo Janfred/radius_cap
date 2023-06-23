@@ -31,7 +31,7 @@ Thread.start do
       BlackBoard.policy_logger.debug "#{e.class} #{e.message} From: #{pkt[:from].inspect} To: #{pkt[:to].inspect}" \
                                      " Realm: #{rp.realm || ''}"
     rescue PreliminaryEAPParsingError => e
-      BlackBoard.logger.warn "Seen malformed EAP packet From #{pkt[:from]} to #{pkt[:to]} with realm #{rp.realm || ''}", exception: e
+      BlackBoard.logger.warn "Seen malformed EAP packet from #{pkt[:from]} to #{pkt[:to]} with realm #{rp.realm || ''}, Message: #{e.message}"
       ElasticHelper.eapdebug.synchronize do
         ElasticHelper.eapdebug.push rp
         ElasticHelper.eapwaitcond.signal
