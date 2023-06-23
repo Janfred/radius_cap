@@ -15,7 +15,7 @@ d8ef3c0e14f85730876ea5a46ecb626095f01079ac94bafad7f3b00bb0a1621b|Android  |Andro
 9e0b73b6f202572d33b6faf591ab11e3dd80b7fe9e521d3bbba647269ca6fc59|Android  |Android 9     |LineageOS 16.0 Android 9 Security Patch Level 2020-06-05 (or Nokia Android9, Marburg)
 e5c934f46099e967a10df0f0eaf60e5921f2a7f0ded97559639a8cd3779194cd|Android  |Android 4.0.4 |Android 4.0.4
 17550f82a03f39a90887683584bbaeb6dd00f74e80f8741248528295cacf5c6a|Android  |Android 4.1.2 |Android 4.1.2 (or 4.2.2, Marburg)
-b7682cb06d0b5feb1375b7a54fc9b71eea63a5bcdb7ab663b367fb16dc7dc093|Android  |Android 10    |Android 10, unknown version (Data origin: Marburg)
+b7682cb06d0b5feb1375b7a54fc9b71eea63a5bcdb7ab663b367fb16dc7dc093|Android  |Android 10+   |Android 10, unknown version (Data origin: Marburg)
 2bb9ee228c171dcca87476b94550bd00a6f32abb886f1e5625e7f9b96d1c23e7|Apple    |iPhone 5s     |Apple iPhone 5s IOS 10.1.1 (Data origin: Marburg)
 6946a51f4cb139132cd45ddebe746c18abd68478d1982ba1317bc6a97a867d58|Apple    |iPhone 4s     |Apple iPhone 4s IOS 9 (Data origin: Marburg)
 821739282d60bc7f620947b26e48a993c584ce917f63fd85ae23f90dc7d6c6c0|Android  |Android 2.2   |Android 2.2 (Data origin: Marburg)
@@ -30,3 +30,4 @@ fb855a002eaa4f1189edcc8a55fa92a17d1d6f54aabdf6701fafd8d657a0296d|Android  |Andro
 08c052491a8904c7ed15e2a8835992dc906b9c9328d9bbdb3a62ac291d6d9a57|Windows  |Windows 10    |Windows 10 Pro, Version 21H1 Build 19043.985 oder Version 20H2 Build 19042.1052
 06298ba0ee8c098aac2ba6c3b5101713fbbb1fe7450f1437322b14ed3b5fb7ba|Android  |Android 10    |LineageOS 17.1-20210619-NIGHTLY-FP2
 8b9cc72be5259934498932fd3b7133e15a985addb4bf3f7d86b577f54ec5b17c|Windows  |Windows 8.1   |Windows 8.1
+b88665b76b9f7ea4f84ba7a9f5fdc2ec6b405229e820491952694a36c0b60092|Android  |Android 10+   |Android 12, /e/ OS, OCSP requested
