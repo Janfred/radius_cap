@@ -5,8 +5,9 @@ Dir.chdir '..'
 require 'rubygems'
 require 'bundler/setup'
 require 'elasticsearch'
+require_relative '../localconfig'
 
-client = Elasticsearch::Client.new log: false
+client = Elasticsearch::Client.new log: false, user: @config[:elastic_username], password: @config[:elastic_password]
 
 body_size = 1000
 max_offset = 5000
@@ -42,7 +43,7 @@ loop do
     id = hit['_id']
     body = hit['_source']
 
-    body['meta']['scheme_ver'] = 2
+    body['meta']['scheme_ver'] = 3
 
     if body['radius']['attributes']['1'] && body['radius']['attributes']['1'].length == 1
       body['eap']['username_length'] = body['radius']['attributes']['1'][0].length / 2

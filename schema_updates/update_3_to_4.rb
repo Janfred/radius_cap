@@ -5,9 +5,10 @@ Dir.chdir '..'
 require 'rubygems'
 require 'bundler/setup'
 require 'elasticsearch'
-require './src/tlsciphersuites'
+require_relative '../src/tlsciphersuites'
+require_relative '../localconfig'
 
-client = Elasticsearch::Client.new log: false
+client = Elasticsearch::Client.new log: false, user: @config[:elastic_username], password: @config[:elastic_password]
 
 body_size = 1000
 max_offset = 5000

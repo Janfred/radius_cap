@@ -1,10 +1,13 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
+
 require 'rubygems'
 require 'bundler/setup'
 require 'elasticsearch'
-require './src/fingerprint'
+require_relative './src/fingerprint'
+require_relative './localconfig'
 
-client = Elasticsearch::Client.new log: false
+client = Elasticsearch::Client.new log: false, user: @config[:elastic_username], password: @config[:elastic_password]
 
 Fingerprint.check_new_file
 

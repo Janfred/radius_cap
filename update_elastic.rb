@@ -5,30 +5,32 @@ require 'rubygems'
 require 'bundler/setup'
 require 'elasticsearch'
 require 'digest'
-require './src/tlsciphersuites.rb'
-require './src/macvendor.rb'
+require_relative './src/tlsciphersuites'
+require_relative './src/macvendor'
+require_relative './localconfig'
 
 
 MacVendor.init_data
 
-client = Elasticsearch::Client.new log: false
+client = Elasticsearch::Client.new log: false, user: @config[:elastic_username], password: @config[:elastic_password]
+
 
 loop do
 
 #data = client.search index: 'tlshandshakes', body: { size: 50, query: { bool: { must_not: { exists: { field: "tlsserverhello.cipherdata.auth" } } } } }
 #data = client.search index: 'tlshandshakes', body: { size: 50, query: { bool: { must_not: { exists: { field: "tlsclienthello.cipherdata.humanreadable" } } } } }
-data = client.search index: 'tlshandshakes', body: { size: 50, query: { bool: { must_not: { exists: { field: "vendor" } } } } }
+data = client.search index: 'tlshandshakes', body: { size: 50, query: { bool: { must_not: { exists: { field: 'vendor' } } } } }
 
-puts data["hits"]["hits"].length
+puts data['hits']['hits'].length
 
-break if data["hits"]["hits"].length == 0
+break if data['hits']['hits'].length == 0
 
-data["hits"]["hits"].each do |hit|
-  body = hit["_source"]
+data['hits']['hits'].each do |hit|
+  body = hit['_source']
 
-  body["scheme_ver"] = 2
+  body['scheme_ver'] = 2
 
-  body["vendor"] = MacVendor.by_oid(body["oui"])
+  body['vendor'] = MacVendor.by_oid(body['oui'])
 
 #  body["tlsclienthello"]["cipherdata"]["supported_group_set"] = body["tlsclienthello"]["supportedgroups"].join('+')
 #  body["tlsclienthello"]["cipherdata"]["signature_algorithm_set"] = body["tlsclienthello"]["signaturealgorithms"].join('+')
@@ -64,7 +66,7 @@ data["hits"]["hits"].each do |hit|
 #  body["tlsserverhello"]["cipherdata"]["keyx"] = cipher[:keyxchange]
 #  body["tlsserverhello"]["cipherdata"]["name"] = cipher[:name]
 
-  client.index index: hit["_index"], type: hit["_type"], id: hit["_id"], body: hit["_source"]
+  client.index index: hit['_index'], type: hit['_type'], id: hit['_id'], body: hit['_source']
 end
 
 end
