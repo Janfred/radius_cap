@@ -3,7 +3,7 @@
   "extends": [
     "config:base"
   ],
-  "ruby":{
+  "bundler":{
     "fileMatch": [
       "(^|/)Gemfile$",
       "(^|/)Gemfile.radsec"
